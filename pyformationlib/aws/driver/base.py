@@ -18,7 +18,7 @@ from typing import Iterable, Union
 from itertools import cycle
 from pyformationlib.aws.driver.constants import AuthMode, AWSDriverError
 
-logger = logging.getLogger('pyformationlib.aws.driver.auth')
+logger = logging.getLogger('pyformationlib.aws.driver.base')
 logger.addHandler(logging.NullHandler())
 logging.getLogger("botocore").setLevel(logging.ERROR)
 logging.getLogger("urllib3").setLevel(logging.ERROR)
