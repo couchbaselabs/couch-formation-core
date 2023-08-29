@@ -182,11 +182,17 @@ class AWSImageOwners(object):
 
 @attr.s
 class ComputeTypes(object):
-    general_purpose = 'm5'
-    compute_optimized = 'c5'
-    memory_optimized = 'r5'
+    general_purpose = ['m5', 'm5a', 'm7g']
+    compute_optimized = ['c5', 'c5a', 'c7g']
+    memory_optimized = ['r5', 'r5a', 'r7g']
+
+    def as_list(self) -> list:
+        flat_list = []
+        for element in [self.general_purpose, self.compute_optimized, self.memory_optimized]:
+            flat_list.extend(element)
+        return flat_list
 
 
 @attr.s
 class ArchitectureTypes(object):
-    list = ['x86_64']
+    list = ['x86_64', 'arm64']

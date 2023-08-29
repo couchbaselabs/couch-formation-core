@@ -2,8 +2,18 @@
 ##
 
 import os
+import logging
+from shutil import copyfile
 from pwd import getpwnam
 from grp import getgrnam
+from pyformationlib.exception import FatalError
+
+logger = logging.getLogger('pyformationlib.util')
+logger.addHandler(logging.NullHandler())
+
+
+class FileManagerError(FatalError):
+    pass
 
 
 class FileManager(object):
@@ -35,3 +45,11 @@ class FileManager(object):
             os.chmod(name, mode)
         else:
             self.make_dir(name, owner, group, mode)
+
+    @staticmethod
+    def copy_file(source: str, destination: str) -> None:
+        try:
+            logger.debug(f"Copying {source} to {destination}")
+            copyfile(source, destination)
+        except Exception as err:
+            raise FileManagerError(f"can not copy {source} to {destination}: {err}")

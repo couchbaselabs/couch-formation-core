@@ -164,6 +164,9 @@ class TFRun(object):
             self._init()
         self._destroy()
 
+    def output(self):
+        return self._output()
+
     def _init(self):
         cmd = ['init', '-input=false']
 

@@ -103,11 +103,13 @@ class AWSNetwork(object):
         resource_block.add(cf_sg)
 
         output_block = Output.build()
-        output_block.add(
-            OutputValue.build()
-            .add("${aws_vpc.cf_vpc.id}")
-            .as_name("network_name")
-        )
+
+        for item in ['aws_vpc.cf_vpc', 'aws_security_group.cf_sg', 'aws_route_table.cf_rt', 'aws_internet_gateway.cf_gw']:
+            output_block.add(
+                OutputValue.build()
+                .add(f"${{{item}}}")
+                .as_name(item.split('.')[0])
+            )
 
         for subnet in subnet_names:
             output_block.add(
@@ -133,3 +135,7 @@ class AWSNetwork(object):
         runner = TFRun(self.project, 'network', location)
         logger.info(f"Removing cloud infrastructure for {self.project} in {C.CLOUD_KEY.upper()}")
         runner.destroy()
+
+    def output(self, location: str = None):
+        runner = TFRun(self.project, 'network', location)
+        return runner.output()
