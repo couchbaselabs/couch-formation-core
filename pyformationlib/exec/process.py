@@ -54,6 +54,7 @@ class TFRun(object):
 
         self.log_file = os.path.join(self.working_dir, 'deploy.log')
         self.file_output = logging.getLogger('pyformationlib.tfrun.output')
+        self.file_output.propagate = False
         file_handler = logging.FileHandler(self.log_file)
         file_handler.setFormatter(CustomLogFormatter())
         self.file_output.addHandler(file_handler)

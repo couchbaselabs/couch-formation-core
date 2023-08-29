@@ -126,5 +126,10 @@ class AWSNetwork(object):
     def create(self, location: str = None):
         runner = TFRun(self.project, 'network', location)
         network = self.config_gen()
-        logger.info(f"Creating cloud infrastructure in {C.CLOUD_KEY.upper()}")
+        logger.info(f"Creating cloud infrastructure for {self.project} in {C.CLOUD_KEY.upper()}")
         runner.deploy(network)
+
+    def destroy(self, location: str = None):
+        runner = TFRun(self.project, 'network', location)
+        logger.info(f"Removing cloud infrastructure for {self.project} in {C.CLOUD_KEY.upper()}")
+        runner.destroy()

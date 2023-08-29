@@ -21,6 +21,7 @@ class Params(object):
         parser.add_argument("--cloud", action="store", help="Cloud", default="aws")
         parser.add_argument("--network", action="store_true")
         parser.add_argument("--create", action="store_true")
+        parser.add_argument("--destroy", action="store_true")
         self.args = parser.parse_args()
 
     @property
@@ -40,6 +41,20 @@ def aws_network_create_1():
     net = AWSNetwork(config)
 
     net.create()
+
+
+def aws_network_destroy_1():
+    from pyformationlib.aws.network import AWSNetwork, AWSNetworkConfig, AuthMode
+
+    config = AWSNetworkConfig().create(
+        'pytest_m',
+        'us-east-2',
+        AuthMode.sso
+    )
+
+    net = AWSNetwork(config)
+
+    net.destroy()
 
 
 p = Params()
@@ -65,3 +80,5 @@ if options.network:
     if options.cloud == 'aws':
         if options.create:
             aws_network_create_1()
+        elif options.destroy:
+            aws_network_destroy_1()
