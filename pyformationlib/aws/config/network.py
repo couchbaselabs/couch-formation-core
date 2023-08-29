@@ -9,8 +9,8 @@ class AWSProvider(object):
     provider = attr.ib(validator=io(dict))
 
     @classmethod
-    def for_region(cls, region_var: str):
-        entry = {"region": f"${{var.{region_var}}}"}
+    def for_region(cls, region: str):
+        entry = {"region": region}
         return cls(
             {"aws": [entry]},
             )
@@ -25,9 +25,9 @@ class InternetGatewayResource(object):
     aws_internet_gateway = attr.ib(validator=io(dict))
 
     @classmethod
-    def construct(cls, vpc_name: str, name_var: str):
+    def construct(cls, ig_name: str):
         return cls(
-            InternetGateway.construct(vpc_name, name_var).as_dict
+            InternetGateway.construct(ig_name).as_dict
             )
 
     @property
@@ -40,10 +40,10 @@ class InternetGateway(object):
     cf_gw = attr.ib(validator=io(list))
 
     @classmethod
-    def construct(cls, vpc_name: str, name_var: str):
+    def construct(cls, ig_name: str):
         return cls(
             [
-                InternetGatewayEntry.construct(vpc_name, name_var).as_dict
+                InternetGatewayEntry.construct(ig_name).as_dict
             ]
         )
 
@@ -59,16 +59,15 @@ class InternetGatewayEntry(object):
     vpc_id = attr.ib(validator=io(str))
 
     @classmethod
-    def construct(cls, vpc_name: str, name_var: str):
+    def construct(cls, ig_name: str):
         return cls(
             [
-                f"aws_vpc.{vpc_name}"
+                f"aws_vpc.cf_vpc"
             ],
             {
-                "Environment": f"${{var.{name_var}}}",
-                "Name": f"${{var.{name_var}}}-gw"
+                "Name": ig_name
             },
-            f"${{aws_vpc.{vpc_name}.id}}"
+            "${aws_vpc.cf_vpc.id}"
         )
 
     @property
@@ -81,9 +80,9 @@ class VPCResource(object):
     aws_vpc = attr.ib(validator=io(dict))
 
     @classmethod
-    def construct(cls, cidr_var: str, name_var: str):
+    def construct(cls, cidr: str, vpc_name: str):
         return cls(
-            VPC.construct(cidr_var, name_var).as_dict
+            VPC.construct(cidr, vpc_name).as_dict
             )
 
     @property
@@ -96,10 +95,10 @@ class VPC(object):
     cf_vpc = attr.ib(validator=io(list))
 
     @classmethod
-    def construct(cls, cidr_var: str, name_var: str):
+    def construct(cls, cidr: str, vpc_name: str):
         return cls(
             [
-                VPCEntry.construct(cidr_var, name_var).as_dict
+                VPCEntry.construct(cidr, vpc_name).as_dict
             ]
         )
 
@@ -114,12 +113,11 @@ class VPCEntry(object):
     tags = attr.ib(validator=io(dict))
 
     @classmethod
-    def construct(cls, cidr_var: str, name_var: str):
+    def construct(cls, cidr: str, vpc_name: str):
         return cls(
-            f"${{var.{cidr_var}}}",
+            cidr,
             {
-                "Environment": f"${{var.{name_var}}}",
-                "Name": f"${{var.{name_var}}}-vpc"
+                "Name": vpc_name
             }
         )
 
@@ -168,22 +166,21 @@ class RouteEntry(object):
     vpc_id = attr.ib(validator=io(str))
 
     @classmethod
-    def construct(cls, gw_name: str, vpc_name: str, name_var: str):
+    def construct(cls, rt_name: str):
         return cls(
                 [
-                    f"aws_internet_gateway.{gw_name}",
-                    f"aws_vpc.{vpc_name}"
+                    f"aws_internet_gateway.cf_gw",
+                    f"aws_vpc.cf_vpc"
                 ],
                 [],
                 {
-                    "Environment": f"${{var.{name_var}}}",
-                    "Name": f"${{var.{name_var}}}-rt"
+                    "Name": rt_name
                 },
-                f"${{aws_vpc.{vpc_name}.id}}"
+                "${aws_vpc.cf_vpc.id}"
         )
 
-    def add(self, cidr: str, gw_name: str):
-        resource = Route.construct(cidr, gw_name).as_dict
+    def add(self, cidr: str):
+        resource = Route.construct(cidr).as_dict
         self.route.append(resource)
         return self
 
@@ -197,13 +194,13 @@ class Route(object):
     route = attr.ib(validator=io(dict))
 
     @classmethod
-    def construct(cls, cidr: str, gw_name: str):
+    def construct(cls, cidr: str):
         return cls(
             {
                 "carrier_gateway_id": "",
                 "cidr_block": cidr,
                 "ipv6_cidr_block": None,
-                "gateway_id": f"${{aws_internet_gateway.{gw_name}.id}}",
+                "gateway_id": f"${{aws_internet_gateway.cf_gw.id}}",
                 "core_network_arn": "",
                 "destination_prefix_list_id": "",
                 "egress_only_gateway_id": "",
@@ -246,10 +243,10 @@ class SubnetEntry(object):
     subnet = attr.ib(validator=io(dict))
 
     @classmethod
-    def construct(cls, name: str, az_var: str, cidr_var: str, pub_ip: bool, name_var: str, vpc_name: str):
+    def construct(cls, subnet_name: str, zone: str, cidr: str, pub_ip: bool):
         return cls(
-            {name: [
-               SubnetElements.construct(name, az_var, cidr_var, pub_ip, name_var, vpc_name).as_dict
+            {subnet_name: [
+               SubnetElements.construct(subnet_name, zone, cidr, pub_ip).as_dict
             ]}
         )
 
@@ -267,16 +264,15 @@ class SubnetElements(object):
     vpc_id = attr.ib(validator=io(str))
 
     @classmethod
-    def construct(cls, name: str, az_var: str, cidr_var: str, pub_ip: bool, name_var: str, vpc_name: str):
+    def construct(cls, subnet_name: str, zone: str, cidr: str, pub_ip: bool):
         return cls(
-            f"${{var.{az_var}}}",
-            f"${{var.{cidr_var}}}",
+            zone,
+            cidr,
             pub_ip,
             {
-                "Environment": f"${{var.{name_var}}}",
-                "Name": f"${{var.{name_var}}}_{name}"
+                "Name": subnet_name
             },
-            f"${{aws_vpc.{vpc_name}.id}}"
+            "${aws_vpc.cf_vpc.id}"
         )
 
     @property
@@ -294,8 +290,8 @@ class SubnetResource(object):
             {}
         )
 
-    def add(self, name: str, az_var: str, cidr_var: str, pub_ip: bool, name_var: str, vpc_name: str):
-        subnet_item = SubnetEntry.construct(name, az_var, cidr_var, pub_ip, name_var, vpc_name).as_dict
+    def add(self, subnet_name: str, zone: str, cidr: str, pub_ip: bool):
+        subnet_item = SubnetEntry.construct(subnet_name, zone, cidr, pub_ip).as_dict
         self.aws_subnet.update(subnet_item)
         return self
 
@@ -309,10 +305,10 @@ class RTAssociationEntry(object):
     subnet = attr.ib(validator=io(dict))
 
     @classmethod
-    def construct(cls, rt_table_name: str, subnet_name: str):
+    def construct(cls, subnet_name: str):
         return cls(
             {subnet_name: [
-               RTAssociationElements.construct(rt_table_name, subnet_name).as_dict
+               RTAssociationElements.construct(subnet_name).as_dict
             ]}
         )
 
@@ -327,9 +323,9 @@ class RTAssociationElements(object):
     subnet_id = attr.ib(validator=io(str))
 
     @classmethod
-    def construct(cls, rt_table_name: str, subnet_name: str):
+    def construct(cls, subnet_name: str):
         return cls(
-            f"${{aws_route_table.{rt_table_name}.id}}",
+            "${aws_route_table.cf_rt.id}",
             f"${{aws_subnet.{subnet_name}.id}}"
         )
 
@@ -348,8 +344,8 @@ class RTAssociationResource(object):
             {}
         )
 
-    def add(self, rt_table_name: str, subnet_name: str):
-        association = RTAssociationEntry.construct(rt_table_name, subnet_name).as_dict
+    def add(self, subnet_name: str):
+        association = RTAssociationEntry.construct(subnet_name).as_dict
         self.aws_route_table_association.update(association)
         return self
 
@@ -401,21 +397,20 @@ class SecurityGroupEntry(object):
     vpc_id = attr.ib(validator=io(str))
 
     @classmethod
-    def construct(cls, vpc_name: str, name_var: str):
+    def construct(cls, sg_name: str):
         description_text = "Couchbase Default Security Group"
         return cls(
                 [
-                    f"aws_vpc.{vpc_name}"
+                    f"aws_vpc.cf_vpc"
                 ],
                 description_text,
                 [Egress.construct("0.0.0.0/0", "::/0").as_dict],
-                [Ingress.construct(f"${{aws_vpc.{vpc_name}.cidr_block}}", 0, "-1", 0).as_dict],
-                f"${{var.{name_var}}}-sg",
+                [Ingress.construct("${aws_vpc.cf_vpc.cidr_block}", 0, "-1", 0).as_dict],
+                sg_name,
                 {
-                    "Environment": f"${{var.{name_var}}}",
-                    "Name": f"${{var.{name_var}}}-sg"
+                    "Name": sg_name
                 },
-                f"${{aws_vpc.{vpc_name}.id}}"
+                "${aws_vpc.cf_vpc.id}"
         )
 
     def add_ingress(self, cidr_v4: str, from_port: int, protocol: str, to_port: int):

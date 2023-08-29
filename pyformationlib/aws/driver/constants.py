@@ -4,13 +4,8 @@ import attr
 from enum import Enum
 from attr.validators import instance_of as io
 from typing import Iterable
-from pyformationlib.exception import FatalError
 
 CLOUD_KEY = "aws"
-
-
-class AWSDriverError(FatalError):
-    pass
 
 
 class AuthMode(Enum):

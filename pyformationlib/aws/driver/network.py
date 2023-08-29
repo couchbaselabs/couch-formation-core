@@ -2,25 +2,11 @@
 ##
 
 import logging
-import boto3
-import botocore.exceptions
-from botocore.config import Config
-import os
-import attr
-import webbrowser
-import time
-from datetime import datetime
-from Crypto.PublicKey import RSA
-from attr.validators import instance_of as io
-from typing import Iterable, Union
-from itertools import cycle
-from lib.exceptions import AWSDriverError, EmptyResultSet
-from lib.util.filemgr import FileManager
-from lib.util.db_mgr import LocalDB
-from lib.config_values import CloudTable
-import lib.config as config
+from typing import Union, List
+from pyformationlib.aws.driver.base import CloudBase, AWSDriverError, EmptyResultSet
+from pyformationlib.aws.driver.constants import AWSTagStruct, AWSTag
 
-logger = logging.getLogger('pyformationlib.aws.driver.auth')
+logger = logging.getLogger('pyformationlib.aws.driver.network')
 logger.addHandler(logging.NullHandler())
 logging.getLogger("botocore").setLevel(logging.ERROR)
 logging.getLogger("urllib3").setLevel(logging.ERROR)
@@ -30,9 +16,8 @@ class Network(CloudBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.logger = logging.getLogger(self.__class__.__name__)
 
-    def list(self, filter_keys_exist: Union[list[str], None] = None) -> list[dict]:
+    def list(self) -> List[dict]:
         vpc_list = []
         vpcs = []
         extra_args = {}
@@ -51,10 +36,6 @@ class Network(CloudBase):
             vpc_block = {'cidr': vpc_entry['CidrBlock'],
                          'default': vpc_entry['IsDefault'],
                          'id': vpc_entry['VpcId']}
-            vpc_block.update(self.process_tags(vpc_entry))
-            if filter_keys_exist:
-                if not all(key in vpc_block for key in filter_keys_exist):
-                    continue
             vpc_list.append(vpc_block)
 
         if len(vpc_list) == 0:
@@ -92,7 +73,6 @@ class Network(CloudBase):
             vpc_block = {'cidr': vpc_entry['CidrBlock'],
                          'default': vpc_entry['IsDefault'],
                          'id': vpc_entry['VpcId']}
-            vpc_block.update(self.process_tags(vpc_entry))
             return vpc_block
         except (KeyError, IndexError):
             return None

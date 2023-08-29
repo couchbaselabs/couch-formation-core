@@ -10,5 +10,5 @@ push:
 		$(eval REV_FILE := $(shell ls dist/*.gz | tail -1))
 		twine upload $(REV_FILE)
 pypi: setup push
-test:
+net_create:
 		python -m pytest tests/test_1.py

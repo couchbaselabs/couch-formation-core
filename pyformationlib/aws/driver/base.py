@@ -7,21 +7,25 @@ import botocore.exceptions
 import botocore.session
 from botocore.config import Config
 import os
-import attr
 import webbrowser
 import time
 import configparser
 from datetime import datetime
-from Crypto.PublicKey import RSA
-from attr.validators import instance_of as io
-from typing import Iterable, Union
-from itertools import cycle
-from pyformationlib.aws.driver.constants import AuthMode, AWSDriverError
+from pyformationlib.aws.driver.constants import AuthMode
+from pyformationlib.exception import FatalError, NonFatalError
 
 logger = logging.getLogger('pyformationlib.aws.driver.base')
 logger.addHandler(logging.NullHandler())
 logging.getLogger("botocore").setLevel(logging.ERROR)
 logging.getLogger("urllib3").setLevel(logging.ERROR)
+
+
+class AWSDriverError(FatalError):
+    pass
+
+
+class EmptyResultSet(NonFatalError):
+    pass
 
 
 class CloudBase(object):
@@ -75,8 +79,6 @@ class CloudBase(object):
             self.ec2_client = boto3.client('ec2', region_name=self.aws_region)
         except Exception as err:
             raise AWSDriverError(f"can not initialize AWS driver: {err}")
-
-        # self.set_zone()
 
     def read_config(self):
         if os.path.exists(self.config_file):
@@ -218,44 +220,41 @@ class CloudBase(object):
         self.token_expiration = session_creds['expiration']
         self.save_auth()
 
-    # def init(self):
-    #     logger.info(f"importing region and zone information")
-    #     regions = config.cloud_base().get_all_regions()
-    #     count = 1
-    #     for region in regions:
-    #         try:
-    #             logger.info(f" ... importing {region}")
-    #             zones = config.cloud_base(region=region).zones()
-    #             row = {
-    #                 "id": count,
-    #                 "name": region,
-    #                 "zones": ','.join(zones),
-    #                 "cloud": CLOUD_KEY
-    #             }
-    #             self.db.update_cloud(CloudTable.REGION, row)
-    #             count += 1
-    #         except (botocore.exceptions.ClientError, botocore.exceptions.ConnectTimeoutError):
-    #             continue
-    #
-    #     logger.info(f"importing compute information")
-    #     count = 1
-    #     for region in regions:
-    #         logger.info(f" ... generating compute for {region}")
-    #         compute_list = config.cloud_machine_type(region=region).list()
-    #         compute_list = sorted(compute_list, key=lambda c: c['name'])
-    #         subset = set()
-    #         compute_list = [x for x in compute_list if [(x['cpu'], x['memory']) not in subset, subset.add((x['cpu'], x['memory']))][0]]
-    #         for compute in compute_list:
-    #             config_str = f"{compute['cpu']}x{int(compute['memory'] / 1024)}"
-    #             row = {
-    #                 "id": count,
-    #                 "name": compute['name'],
-    #                 "config": config_str,
-    #                 "cpu": compute['cpu'],
-    #                 "memory": compute['memory'],
-    #                 "architecture": compute['arch'][0],
-    #                 "cloud": CLOUD_KEY,
-    #                 "region": region
-    #             }
-    #             self.db.update_cloud(CloudTable.COMPUTE, row)
-    #             count += 1
+    @property
+    def region(self):
+        return self.aws_region
+
+    @staticmethod
+    def tag_exists(key, tags):
+        for i in range(len(tags)):
+            if tags[i]['Key'] == key:
+                return True
+        return False
+
+    @staticmethod
+    def get_tag(key, tags):
+        for i in range(len(tags)):
+            if tags[i]['Key'] == key:
+                return tags[i]['Value']
+        return None
+
+    def get_all_regions(self) -> list:
+        regions = self.ec2_client.describe_regions(AllRegions=False)
+        region_list = list(r['RegionName'] for r in regions['Regions'])
+        return region_list
+
+    def zones(self) -> list:
+        try:
+            zone_list = self.ec2_client.describe_availability_zones()
+        except Exception as err:
+            raise AWSDriverError(f"error getting availability zones: {err}")
+
+        for availability_zone in zone_list['AvailabilityZones']:
+            self.zone_list.append(availability_zone['ZoneName'])
+
+        self.zone_list = sorted(set(self.zone_list))
+
+        if len(self.zone_list) == 0:
+            raise AWSDriverError("can not get AWS availability zones")
+
+        return self.zone_list

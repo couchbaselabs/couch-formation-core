@@ -12,6 +12,7 @@ import pyformationlib.constants as C
 from datetime import datetime
 from typing import Union
 from pyformationlib.exception import FatalError
+from pyformationlib.util import FileManager
 
 logger = logging.getLogger('pyformationlib.exec.process')
 logger.addHandler(logging.NullHandler())
@@ -40,13 +41,18 @@ class CustomLogFormatter(logging.Formatter):
 
 class TFRun(object):
 
-    def __init__(self, name: str, working_dir=None):
+    def __init__(self, name: str, tag: str = 'resources', working_dir: str = None):
         if not working_dir:
-            self.working_dir = os.path.join(C.STATE_DIRECTORY, name)
+            self.working_dir = os.path.join(C.STATE_DIRECTORY, name, tag)
         else:
-            self.working_dir = os.path.join(working_dir, name)
+            self.working_dir = os.path.join(working_dir, name, tag)
 
-        self.log_file = os.path.join(working_dir, 'deploy.log')
+        try:
+            FileManager().make_dir(self.working_dir)
+        except Exception as err:
+            raise ExecError(f"can not create working dir: {err}")
+
+        self.log_file = os.path.join(self.working_dir, 'deploy.log')
         self.file_output = logging.getLogger('pyformationlib.tfrun.output')
         file_handler = logging.FileHandler(self.log_file)
         file_handler.setFormatter(CustomLogFormatter())
