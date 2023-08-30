@@ -23,6 +23,7 @@ class Params(object):
         parser.add_argument("--nodes", action="store_true")
         parser.add_argument("--create", action="store_true")
         parser.add_argument("--destroy", action="store_true")
+        parser.add_argument("--list", action="store_true")
         self.args = parser.parse_args()
 
     @property
@@ -70,10 +71,8 @@ def aws_node_create_1():
         '22.04',
         '/Users/michael/.ssh/mminichino-default-key-pair.pem',
         '4x16',
-        '3000',
         '250',
-        'gp3',
-        AuthMode.sso
+        auth_mode=AuthMode.sso
     )
 
     node = AWSNode(config)
@@ -82,7 +81,45 @@ def aws_node_create_1():
 
 
 def aws_node_destroy_1():
-    pass
+    from pyformationlib.aws.node import AWSNode, AWSNodeConfig, AuthMode
+
+    config = AWSNodeConfig().create(
+        'pytest_m',
+        'test-cluster',
+        3,
+        'us-east-2',
+        'ubuntu',
+        '22.04',
+        '/Users/michael/.ssh/mminichino-default-key-pair.pem',
+        '4x16',
+        '250',
+        auth_mode=AuthMode.sso
+    )
+
+    node = AWSNode(config)
+
+    node.destroy()
+
+
+def aws_node_list_1():
+    from pyformationlib.aws.node import AWSNode, AWSNodeConfig, AuthMode
+
+    config = AWSNodeConfig().create(
+        'pytest_m',
+        'test-cluster',
+        3,
+        'us-east-2',
+        'ubuntu',
+        '22.04',
+        '/Users/michael/.ssh/mminichino-default-key-pair.pem',
+        '4x16',
+        '250',
+        auth_mode=AuthMode.sso
+    )
+
+    node = AWSNode(config)
+
+    node.list()
 
 
 p = Params()
@@ -117,3 +154,5 @@ if options.nodes:
             aws_node_create_1()
         elif options.destroy:
             aws_node_destroy_1()
+        elif options.list:
+            aws_node_list_1()

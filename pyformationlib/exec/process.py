@@ -147,14 +147,7 @@ class TFRun(object):
         return result
 
     def deploy(self, config_data: dict):
-        cfg_file = os.path.join(self.working_dir, "main.tf.json")
-        try:
-            with open(cfg_file, 'w') as cfg_file_h:
-                json.dump(config_data, cfg_file_h, indent=2)
-                cfg_file_h.write('\n')
-        except Exception as err:
-            raise ExecError(f"can not write to config file {cfg_file}: {err}")
-
+        self.write_file(config_data)
         self._init()
         if not self._validate():
             raise ExecError("Configuration validation failed, please check the log and try again.")
@@ -167,6 +160,15 @@ class TFRun(object):
 
     def output(self):
         return self._output()
+
+    def write_file(self, config_data: dict):
+        cfg_file = os.path.join(self.working_dir, "main.tf.json")
+        try:
+            with open(cfg_file, 'w') as cfg_file_h:
+                json.dump(config_data, cfg_file_h, indent=2)
+                cfg_file_h.write('\n')
+        except Exception as err:
+            raise ExecError(f"can not write to config file {cfg_file}: {err}")
 
     def _init(self):
         cmd = ['init', '-input=false']

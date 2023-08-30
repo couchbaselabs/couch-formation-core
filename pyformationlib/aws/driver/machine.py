@@ -57,6 +57,7 @@ class MachineType(CloudBase):
                          'arch': machine.get('ProcessorInfo', {}).get('SupportedArchitectures'),
                          'clock': machine.get('ProcessorInfo', {}).get('SustainedClockSpeedInGhz'),
                          'network': machine.get('NetworkInfo', {}).get('NetworkPerformance'),
+                         'nvme': machine.get('EbsInfo', {}).get('NvmeSupport'),
                          'hypervisor': machine.get('Hypervisor')}
             type_list.append(key_block)
 

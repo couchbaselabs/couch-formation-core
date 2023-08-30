@@ -80,6 +80,13 @@ class CloudBase(object):
         except Exception as err:
             raise AWSDriverError(f"can not initialize AWS driver: {err}")
 
+    def test_session(self):
+        try:
+            client = boto3.client('s3', region_name=self.aws_region)
+            client.list_buckets()
+        except Exception as err:
+            raise AWSDriverError(f"not authorized")
+
     def read_config(self):
         if os.path.exists(self.config_file):
             try:
@@ -121,7 +128,7 @@ class CloudBase(object):
         if timestamp:
             _timestamp = timestamp / 1000
             expires = datetime.fromtimestamp(_timestamp)
-            if datetime.now() < expires:
+            if datetime.utcnow() < expires:
                 return False
         return True
 
