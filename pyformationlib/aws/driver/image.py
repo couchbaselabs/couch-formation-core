@@ -20,7 +20,7 @@ class Image(CloudBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def list(self, filter_keys_exist: Union[List[str], None] = None, is_public: bool = False, owner_id: str = None) -> List[dict]:
+    def list(self, filter_keys_exist: Union[List[str], None] = None, is_public: bool = False, owner_id: str = None, name: str = None) -> List[dict]:
         image_list = []
         if owner_id:
             owner_filter = [owner_id]
@@ -42,6 +42,15 @@ class Image(CloudBase):
                     ]
                 }
             ]
+            if name:
+                ami_filter.append(
+                    {
+                        'Name': 'name',
+                        'Values': [
+                            name
+                        ]
+                    }
+                )
         else:
             ami_filter = [
                 {
@@ -76,21 +85,31 @@ class Image(CloudBase):
 
         return image_list
 
-    def list_standard(self, architecture: str = 'x86_64'):
+    def list_standard(self, architecture: str = 'x86_64', os_id: str = None, os_version: str = None):
+        result_list = []
         for image_type in AWSImageOwners.image_owner_list:
-            image_list = self.list(is_public=True, owner_id=image_type['owner_id'])
+            if os_id and image_type['os_id'] != os_id:
+                continue
+            image_list = self.list(is_public=True, owner_id=image_type['owner_id'], name=image_type['pattern'])
             for version in C.OS_VERSION_LIST[image_type['os_id']]:
+                if os_version and version != os_version:
+                    continue
                 filtered_images = []
                 for image in image_list:
                     if image['arch'] != architecture:
                         continue
-                    if re.search(image_type['pattern'], image['description']):
-                        m = re.search(image_type['version'], image['description'])
-                        if m.group(1) == version:
-                            filtered_images.append(image)
-                filtered_images.sort(key=lambda i: datetime.strptime(i['date'], '%Y-%m-%dT%H:%M:%S.%fZ'))
+                    match = re.search(image_type['version'], image['description'])
+                    if match and match.group(1) == version:
+                        filtered_images.append(image)
                 if len(filtered_images) > 0:
-                    print(f"{image_type['os_id']} {version} {filtered_images[-1]['description']}")
+                    filtered_images.sort(key=lambda i: datetime.strptime(i['date'], '%Y-%m-%dT%H:%M:%S.%fZ'))
+                    result_image = filtered_images[-1]
+                    result_image.update(dict(
+                        os_id=image_type['os_id'],
+                        os_version=version
+                    ))
+                    result_list.append(result_image)
+        return result_list
 
     def details(self, ami_id: str) -> dict:
         ami_filter = {

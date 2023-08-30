@@ -127,7 +127,7 @@ class AWSImageOwners(object):
             "description": "Ubuntu Linux",
             "os_id": "ubuntu",
             "user": "ubuntu",
-            "pattern": r"ubuntu/images/hvm-ssd/ubuntu-.*-server-.*",
+            "pattern": r"ubuntu/images/hvm-ssd/ubuntu-*-server-*",
             "version": r"ubuntu/images/hvm-ssd/ubuntu-.*-(.+?)-.*-server-.*"
         },
         {
@@ -135,7 +135,7 @@ class AWSImageOwners(object):
             "description": "CentOS Linux",
             "os_id": "centos",
             "user": "centos",
-            "pattern": r"CentOS Stream .* .* .*",
+            "pattern": r"CentOS Stream * * *",
             "version": r"CentOS Stream (.+?) .* .*",
         },
         {
@@ -143,7 +143,7 @@ class AWSImageOwners(object):
             "description": "RedHat Linux",
             "os_id": "rhel",
             "user": "ec2-user",
-            "pattern": r"RHEL-[0-9].[0-9].[0-9]_HVM-[0-9]*-.*-.*",
+            "pattern": r"RHEL-?.?.?_HVM-*-*-*",
             "version": r"RHEL-(.+?).[0-9].[0-9]_HVM-[0-9]*-.*-.*"
         },
         {
@@ -151,7 +151,7 @@ class AWSImageOwners(object):
             "description": "Suse Linux",
             "os_id": "sles",
             "user": "ec2-user",
-            "pattern": r"suse-sles-[0-9]*-sp[0-9]-v[0-9]*-hvm-ssd-.*",
+            "pattern": r"suse-sles-*-sp?-v*-hvm-ssd-*",
             "version": r"suse-sles-(.+?)-sp[0-9]-v[0-9]*-hvm-ssd-.*"
         },
         {
@@ -159,7 +159,7 @@ class AWSImageOwners(object):
             "description": "openSUSE Leap",
             "os_id": "opensuse-leap",
             "user": "ec2-user",
-            "pattern": r"openSUSE-Leap-[0-9]*-[0-9]-v[0-9]*-hvm-ssd-.*-.*",
+            "pattern": r"openSUSE-Leap-*-?-v*-hvm-ssd-*-*",
             "version": r"openSUSE-Leap-(.+?)-[0-9]-v[0-9]*-hvm-ssd-.*-.*"
         },
         {
@@ -167,7 +167,7 @@ class AWSImageOwners(object):
             "description": "Debian 9 and earlier",
             "os_id": "debian",
             "user": "admin",
-            "pattern": r"debian-[0-9]*-.*-[0-9]*-[0-9]*",
+            "pattern": r"debian-*-*-*-*",
             "version": r"debian-(.+?)-.*-[0-9]*-[0-9]*"
         },
         {
@@ -175,7 +175,7 @@ class AWSImageOwners(object):
             "description": "Debian 10 and later",
             "os_id": "debian",
             "user": "admin",
-            "pattern": r"debian-[0-9]*-.*-[0-9]*-[0-9]*",
+            "pattern": r"debian-*-*-*-*",
             "version": r"debian-(.+?)-.*-[0-9]*-[0-9]*"
         },
         {
@@ -183,7 +183,7 @@ class AWSImageOwners(object):
             "description": "Oracle Linux",
             "os_id": "ol",
             "user": "ec2-user",
-            "pattern": r"OL[0-9].[0-9]-.*-HVM-[0-9]*-[0-9]*-[0-9]*",
+            "pattern": r"OL?.?-*-HVM-*-*-*",
             "version": r"OL(.+?).[0-9]-.*-HVM-[0-9]*-[0-9]*-[0-9]*"
         },
         {
@@ -191,7 +191,7 @@ class AWSImageOwners(object):
             "description": "Fedora CoreOS Linux",
             "os_id": "fedora",
             "user": "core",
-            "pattern": r"fedora-coreos-[0-9]*.[0-9]*.[0-9].[0-9]-.*",
+            "pattern": r"fedora-coreos-*.*.?.?-*",
             "version": r"fedora-coreos-(.+?).[0-9]*.[0-9].[0-9]-.*"
         },
         {
@@ -199,7 +199,7 @@ class AWSImageOwners(object):
             "description": "Amazon Linux",
             "os_id": "amzn",
             "user": "ec2-user",
-            "pattern": r"[a-z]*[0-9]-ami-.*.[0-9]*.0-.*",
+            "pattern": r"*-ami-*.*.0-*",
             "version": r"[a-z]*(.+?)-ami-.*.[0-9]*.0-.*"
         },
         {
@@ -207,7 +207,7 @@ class AWSImageOwners(object):
             "description": "Arch Linux",
             "os_id": "arch",
             "user": "arch",
-            "pattern": r"none",
+            "pattern": r"arch-linux-*-hvm-*.*.*.*-*",
             "version": r"none"
         },
         {
@@ -215,7 +215,7 @@ class AWSImageOwners(object):
             "description": "Rocky Linux",
             "os_id": "rocky",
             "user": "rocky",
-            "pattern": r"Rocky-[0-9]-EC2-[0-9].[0-9]-[0-9]*.0.*",
+            "pattern": r"Rocky-?-EC2-?.?-*.0*",
             "version": r"Rocky-(.+?)-EC2-[0-9].[0-9]-[0-9]*.0.*"
         },
     ]

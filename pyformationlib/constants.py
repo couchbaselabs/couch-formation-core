@@ -18,7 +18,7 @@ FORMAT_EXTRA = " [%(name)s](%(filename)s:%(lineno)d)"
 FORMAT_TIMESTAMP = "%(asctime)s"
 
 OS_VERSION_LIST = {
-    'amzn': ['2023'],
+    'amzn': ['2', '2023'],
     'rhel': ['8', '9'],
     'centos': ['8'],
     'ol': ['8', '9'],
