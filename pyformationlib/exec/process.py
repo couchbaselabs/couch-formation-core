@@ -151,6 +151,7 @@ class TFRun(object):
         try:
             with open(cfg_file, 'w') as cfg_file_h:
                 json.dump(config_data, cfg_file_h, indent=2)
+                cfg_file_h.write('\n')
         except Exception as err:
             raise ExecError(f"can not write to config file {cfg_file}: {err}")
 

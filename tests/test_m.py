@@ -20,6 +20,7 @@ class Params(object):
         parser = argparse.ArgumentParser()
         parser.add_argument("--cloud", action="store", help="Cloud", default="aws")
         parser.add_argument("--network", action="store_true")
+        parser.add_argument("--nodes", action="store_true")
         parser.add_argument("--create", action="store_true")
         parser.add_argument("--destroy", action="store_true")
         self.args = parser.parse_args()
@@ -57,6 +58,32 @@ def aws_network_destroy_1():
     net.destroy()
 
 
+def aws_node_create_1():
+    from pyformationlib.aws.node import AWSNode, AWSNodeConfig, AuthMode
+
+    config = AWSNodeConfig().create(
+        'pytest_m',
+        'test-cluster',
+        'us-east-2',
+        'ubuntu',
+        '22.04',
+        '/Users/michael/.ssh/mminichino-default-key-pair.pem',
+        '4x16',
+        '3000',
+        '250',
+        'gp3',
+        AuthMode.sso
+    )
+
+    node = AWSNode(config)
+
+    node.create()
+
+
+def aws_node_destroy_1():
+    pass
+
+
 p = Params()
 options = p.parameters
 
@@ -82,3 +109,10 @@ if options.network:
             aws_network_create_1()
         elif options.destroy:
             aws_network_destroy_1()
+
+if options.nodes:
+    if options.cloud == 'aws':
+        if options.create:
+            aws_node_create_1()
+        elif options.destroy:
+            aws_node_destroy_1()

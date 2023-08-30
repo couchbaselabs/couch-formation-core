@@ -106,7 +106,8 @@ class Image(CloudBase):
                     result_image = filtered_images[-1]
                     result_image.update(dict(
                         os_id=image_type['os_id'],
-                        os_version=version
+                        os_version=version,
+                        os_user=image_type['user']
                     ))
                     result_list.append(result_image)
         return result_list

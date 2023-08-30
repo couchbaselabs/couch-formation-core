@@ -23,17 +23,20 @@ class AWSNetworkConfig:
     region: Optional[str] = attr.ib(default=None)
     auth_mode: Optional[AuthMode] = attr.ib(default=AuthMode.default)
     profile: Optional[str] = attr.ib(default='default')
+    location: Optional[str] = attr.ib(default=None)
 
     @classmethod
     def create(cls,
                project: str,
                region: str,
                auth_mode: AuthMode = AuthMode.default,
-               profile: str = 'default'):
+               profile: str = 'default',
+               location: str = None):
         return cls(project,
                    region,
                    auth_mode,
-                   profile
+                   profile,
+                   location
                    )
 
 
@@ -44,8 +47,11 @@ class AWSNetwork(object):
         self.region = config.region
         self.auth_mode = config.auth_mode
         self.profile = config.profile
+        self.location = config.location
+        self.name = 'network'
 
         self.aws_network = Network(self.region, self.auth_mode, self.profile)
+        self.runner = TFRun(self.project, self.name, self.location)
 
     def config_gen(self):
         cidr_util = NetworkDriver()
@@ -125,17 +131,14 @@ class AWSNetwork(object):
 
         return vpc_config
 
-    def create(self, location: str = None):
-        runner = TFRun(self.project, 'network', location)
+    def create(self):
         network = self.config_gen()
         logger.info(f"Creating cloud infrastructure for {self.project} in {C.CLOUD_KEY.upper()}")
-        runner.deploy(network)
+        self.runner.deploy(network)
 
-    def destroy(self, location: str = None):
-        runner = TFRun(self.project, 'network', location)
+    def destroy(self):
         logger.info(f"Removing cloud infrastructure for {self.project} in {C.CLOUD_KEY.upper()}")
-        runner.destroy()
+        self.runner.destroy()
 
-    def output(self, location: str = None):
-        runner = TFRun(self.project, 'network', location)
-        return runner.output()
+    def output(self):
+        return self.runner.output()
