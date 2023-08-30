@@ -64,6 +64,7 @@ def aws_node_create_1():
     config = AWSNodeConfig().create(
         'pytest_m',
         'test-cluster',
+        3,
         'us-east-2',
         'ubuntu',
         '22.04',

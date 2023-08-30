@@ -71,6 +71,7 @@ class Image(CloudBase):
                            'description': image['Name'],
                            'date': image['CreationDate'],
                            'details': image['PlatformDetails'],
+                           'root_disk': image.get('BlockDeviceMappings')[0].get('DeviceName'),
                            'arch': image['Architecture']}
             if is_public:
                 image_block.update({'owner': image['OwnerId']})

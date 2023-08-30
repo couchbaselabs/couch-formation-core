@@ -13,6 +13,8 @@ import pyformationlib.aws.driver.constants as C
 from pyformationlib.aws.driver.image import Image
 from pyformationlib.aws.driver.machine import MachineType
 from pyformationlib.aws.network import AWSNetwork, AWSNetworkConfig
+from pyformationlib.aws.config.network import AWSProvider
+from pyformationlib.common.config.resources import NodeBuild, TimeSleep, ResourceBlock, NodeMain
 from pyformationlib.ssh import SSHUtil
 from pyformationlib.exception import FatalError
 from pyformationlib.common.config.resources import Output, OutputValue
@@ -117,16 +119,85 @@ class AWSNode(object):
         except Exception as err:
             raise AWSNodeError(f"can not get SSH public key: {err}")
 
-        image = Image(self.region, self.auth_mode, self.profile).list_standard(os_id=self.os_id, os_version=self.os_version)
+        image_list = Image(self.region, self.auth_mode, self.profile).list_standard(os_id=self.os_id, os_version=self.os_version)
 
-        if len(image) == 0:
+        if len(image_list) == 0:
             raise AWSNodeError(f"can not find image for os {self.os_id} version {self.os_version}")
 
+        image = image_list[-1]
         machine = MachineType(self.region, self.auth_mode, self.profile).get_machine(self.machine_type)
 
         if not machine:
             raise AWSNodeError(f"can not find machine for type {self.machine_type}")
 
+        root_disk_device = image['root_disk']
+        match = re.search(r"/dev/(.+?)a[0-9]*", root_disk_device)
+        root_disk_prefix = f"/dev/{match.group(1)}"
+
+        header_block = TerraformElement.construct(RequiredProvider.construct(AWSTerraformProvider.construct("hashicorp/aws").as_dict).as_dict)
+
+        provider_block = AWSProvider.for_region("region_name")
+
+        output_block = Output.build().add(
+            OutputValue.build()
+            .add("${[for instance in aws_instance.couchbase_nodes: instance.private_ip]}")
+            .as_name("node-private")
+        ).add(
+            OutputValue.build()
+            .add("${var.use_public_ip ? [for instance in aws_instance.couchbase_nodes: instance.public_ip] : null}")
+            .as_name("node-public")
+        )
+
+        disk_block = BlockDevice.build()
+        disk_block.add(
+            EbsElements.construct(
+                f"{root_disk_prefix}b",
+                "root_volume_iops",
+                "node_ram",
+                "root_volume_type"
+            ).as_dict
+        )
+
+        disk_block.add(
+            EbsElements.construct(
+                f"{root_disk_prefix}c",
+                "root_volume_iops",
+                "node_ram",
+                "root_volume_type"
+            ).as_dict
+        )
+
+        instance_block = AWSInstance.build().add(
+            NodeBuild.construct(
+                NodeConfiguration.construct(
+                    "cf_env_name",
+                    "ami_id",
+                    "node_zone",
+                    "instance_type",
+                    "ssh_key",
+                    RootElements.construct(
+                        "root_volume_iops",
+                        "root_volume_size",
+                        "root_volume_type"
+                    ).as_dict,
+                    "node_subnet",
+                    "security_group_ids",
+                    disk_block.as_dict
+                ).as_dict
+            ).as_name("couchbase_nodes")
+        )
+
+        resource_block = ResourceBlock.build()
+        resource_block.add(instance_block.as_dict)
+
+        main_config = NodeMain.build() \
+            .add(header_block.as_dict) \
+            .add(provider_block.as_dict)\
+            .add(resource_block.as_dict)\
+            .add(output_block.as_dict)
+
+        import json
+        print(json.dumps(main_config.as_dict, indent=2))
         return {}
 
     def create(self):
