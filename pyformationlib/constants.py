@@ -17,6 +17,20 @@ FORMAT_LINE = "(%(filename)s:%(lineno)d)"
 FORMAT_EXTRA = " [%(name)s](%(filename)s:%(lineno)d)"
 FORMAT_TIMESTAMP = "%(asctime)s"
 
+OS_VERSION_LIST = {
+    'amzn': ['2023'],
+    'rhel': ['8', '9'],
+    'centos': ['8'],
+    'ol': ['8', '9'],
+    'rocky': ['8', '9'],
+    'fedora': ['34'],
+    'sles': ['12', '15'],
+    'opensuse-leap': ['15'],
+    'ubuntu': ['20.04', '22.04'],
+    'debian': ['10', '11'],
+    'arch': []
+}
+
 MACHINE_TYPES = [
         {
             "name": "2x4",

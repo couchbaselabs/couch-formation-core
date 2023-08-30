@@ -6,7 +6,7 @@ from pyformationlib.aws.driver.base import CloudBase, AWSDriverError, EmptyResul
 from pyformationlib.aws.driver.constants import ComputeTypes
 import pyformationlib.constants as C
 
-logger = logging.getLogger('pyformationlib.aws.driver.network')
+logger = logging.getLogger('pyformationlib.aws.driver.machine')
 logger.addHandler(logging.NullHandler())
 logging.getLogger("botocore").setLevel(logging.ERROR)
 logging.getLogger("urllib3").setLevel(logging.ERROR)

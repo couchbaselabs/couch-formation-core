@@ -125,57 +125,98 @@ class AWSImageOwners(object):
         {
             "owner_id": "099720109477",
             "description": "Ubuntu Linux",
-            "user": "ubuntu"
+            "os_id": "ubuntu",
+            "user": "ubuntu",
+            "pattern": r"ubuntu/images/hvm-ssd/ubuntu-.*-server-.*",
+            "version": r"ubuntu/images/hvm-ssd/ubuntu-.*-(.+?)-.*-server-.*"
         },
         {
             "owner_id": "125523088429",
             "description": "CentOS Linux",
-            "user": "centos"
+            "os_id": "centos",
+            "user": "centos",
+            "pattern": r"CentOS Stream .* .* .*",
+            "version": r"CentOS Stream (.+?) .* .*",
         },
         {
             "owner_id": "309956199498",
             "description": "RedHat Linux",
-            "user": "ec2-user"
+            "os_id": "rhel",
+            "user": "ec2-user",
+            "pattern": r"RHEL-[0-9].[0-9].[0-9]_HVM-[0-9]*-.*-.*",
+            "version": r"RHEL-(.+?).[0-9].[0-9]_HVM-[0-9]*-.*-.*"
         },
         {
             "owner_id": "013907871322",
             "description": "Suse Linux",
-            "user": "ec2-user"
+            "os_id": "sles",
+            "user": "ec2-user",
+            "pattern": r"suse-sles-[0-9]*-sp[0-9]-v[0-9]*-hvm-ssd-.*",
+            "version": r"suse-sles-(.+?)-sp[0-9]-v[0-9]*-hvm-ssd-.*"
+        },
+        {
+            "owner_id": "679593333241",
+            "description": "openSUSE Leap",
+            "os_id": "opensuse-leap",
+            "user": "ec2-user",
+            "pattern": r"openSUSE-Leap-[0-9]*-[0-9]-v[0-9]*-hvm-ssd-.*-.*",
+            "version": r"openSUSE-Leap-(.+?)-[0-9]-v[0-9]*-hvm-ssd-.*-.*"
         },
         {
             "owner_id": "379101102735",
             "description": "Debian 9 and earlier",
-            "user": "admin"
+            "os_id": "debian",
+            "user": "admin",
+            "pattern": r"debian-[0-9]*-.*-[0-9]*-[0-9]*",
+            "version": r"debian-(.+?)-.*-[0-9]*-[0-9]*"
         },
         {
             "owner_id": "136693071363",
             "description": "Debian 10 and later",
-            "user": "admin"
+            "os_id": "debian",
+            "user": "admin",
+            "pattern": r"debian-[0-9]*-.*-[0-9]*-[0-9]*",
+            "version": r"debian-(.+?)-.*-[0-9]*-[0-9]*"
         },
         {
             "owner_id": "131827586825",
             "description": "Oracle Linux",
-            "user": "ec2-user"
+            "os_id": "ol",
+            "user": "ec2-user",
+            "pattern": r"OL[0-9].[0-9]-.*-HVM-[0-9]*-[0-9]*-[0-9]*",
+            "version": r"OL(.+?).[0-9]-.*-HVM-[0-9]*-[0-9]*-[0-9]*"
         },
         {
             "owner_id": "125523088429",
             "description": "Fedora CoreOS Linux",
-            "user": "core"
+            "os_id": "fedora",
+            "user": "core",
+            "pattern": r"fedora-coreos-[0-9]*.[0-9]*.[0-9].[0-9]-.*",
+            "version": r"fedora-coreos-(.+?).[0-9]*.[0-9].[0-9]-.*"
         },
         {
             "owner_id": "137112412989",
             "description": "Amazon Linux",
-            "user": "ec2-user"
+            "os_id": "amzn",
+            "user": "ec2-user",
+            "pattern": r"[a-z]*[0-9]-ami-.*.[0-9]*.0-.*",
+            "version": r"[a-z]*(.+?)-ami-.*.[0-9]*.0-.*"
         },
         {
             "owner_id": "647457786197",
             "description": "Arch Linux",
-            "user": "arch"
+            "os_id": "arch",
+            "user": "arch",
+            "pattern": r"none",
+            "version": r"none"
         },
         {
             "owner_id": "792107900819",
             "description": "Rocky Linux",
-            "user": "rocky"
+            "os_id": "rocky",
+            "user": "rocky",
+            "pattern": r"Rocky-[0-9]-EC2-[0-9].[0-9]-[0-9]*.0.*",
+            "version": r"Rocky-(.+?)-EC2-[0-9].[0-9]-[0-9]*.0.*"
         },
     ]
 
