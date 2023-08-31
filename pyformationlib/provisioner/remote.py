@@ -53,17 +53,18 @@ class RemoteProvisioner(object):
             ssh.connect(hostname, username=self.config.nodes.username, key_filename=self.config.nodes.ssh_key)
             stdin, stdout, stderr = ssh.exec_command(command)
             last_exit = stdout.channel.recv_exit_status()
-            for line in stdout:
+            for line in stdout.readlines():
                 output.write(line)
-            for line in stderr:
+            for line in stderr.readlines():
                 output.write(line)
             if last_exit != 0:
                 break
+        output.seek(0)
         return hostname, output, last_exit
 
     def exec(self):
         for node_ip in self.config.nodes.list_public_ip():
-            self.tasks.add(self.executor.submit(self.exec, node_ip))
+            self.tasks.add(self.executor.submit(self.dispatch, node_ip))
 
     def join(self):
         while self.tasks:
@@ -73,6 +74,6 @@ class RemoteProvisioner(object):
                     hostname, output, last_exit = task.result()
                     for line in output.readlines():
                         line_out = line.strip()
-                        print(line_out)
+                        print(f"{hostname}: {line_out}")
                 except Exception as err:
                     raise ProvisionerError(err)

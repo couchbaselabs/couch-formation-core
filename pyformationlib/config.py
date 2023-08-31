@@ -129,11 +129,11 @@ class NodeList:
     def list_public_ip(self):
         address_list = []
         for entry in self.nodes:
-            address_list.append(entry['public_ip'])
+            address_list.append(entry.public_ip)
         return address_list
 
     def list_private_ip(self):
         address_list = []
         for entry in self.nodes:
-            address_list.append(entry['private_ip'])
+            address_list.append(entry.private_ip)
         return address_list

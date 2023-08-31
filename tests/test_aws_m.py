@@ -16,6 +16,8 @@ sys.path.append(current)
 from pyformationlib.aws.common import AWSConfig
 from pyformationlib.aws.network import AWSNetwork
 from pyformationlib.aws.node import AWSNode
+from pyformationlib.provisioner.remote import RemoteProvisioner, ProvisionSet
+from pyformationlib.config import NodeList
 
 
 class Params(object):
@@ -25,6 +27,7 @@ class Params(object):
         parser.add_argument("--create", action="store_true")
         parser.add_argument("--destroy", action="store_true")
         parser.add_argument("--list", action="store_true")
+        parser.add_argument("--provision", action="store_true")
         self.options, self.remainder = parser.parse_known_args()
 
     @property
@@ -51,6 +54,21 @@ def aws_destroy_1(config: AWSConfig):
 def aws_list_1(config: AWSConfig):
     node = AWSNode(config)
     node.list()
+
+
+def aws_provision_1():
+    ps = ProvisionSet()
+    ps.add_cmd('uname -a')
+    ps.add_cmd('id -a')
+    nodes = NodeList().create('ubuntu', '/Users/michael/.ssh/mminichino-default-key-pair.pem')
+    nodes.add('node-test-cluster-1', '10.5.1.25', '3.145.76.31')
+    nodes.add('node-test-cluster-2', '10.5.2.238', '3.15.166.170')
+    nodes.add('node-test-cluster-3', '10.5.3.37', '18.222.197.93')
+    ps.add_nodes(nodes)
+    rp = RemoteProvisioner(ps)
+    rp.exec()
+    rp.join()
+    rp.join()
 
 
 p = Params()
@@ -82,3 +100,6 @@ if options.destroy:
 
 if options.list:
     aws_list_1(aws_config)
+
+if options.provision:
+    aws_provision_1()
