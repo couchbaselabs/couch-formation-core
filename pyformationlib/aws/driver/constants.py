@@ -1,16 +1,10 @@
 ##
 ##
 import attr
-from enum import Enum
 from attr.validators import instance_of as io
 from typing import Iterable
 
 CLOUD_KEY = "aws"
-
-
-class AuthMode(Enum):
-    default = 0
-    sso = 1
 
 
 @attr.s

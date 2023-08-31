@@ -1,18 +1,17 @@
 ##
 ##
 
-import attr
 import re
 import logging
-from typing import Optional
 from itertools import cycle
-from pyformationlib.aws.driver.base import AuthMode
 from pyformationlib.exec.process import TFRun
 import pyformationlib.aws.driver.constants as C
 from pyformationlib.aws.driver.image import Image
 from pyformationlib.aws.driver.machine import MachineType
 from pyformationlib.aws.driver.base import CloudBase
-from pyformationlib.aws.network import AWSNetwork, AWSNetworkConfig
+from pyformationlib.aws.network import AWSNetwork
+from pyformationlib.aws.common import AWSConfig
+from pyformationlib.config import NodeList
 from pyformationlib.aws.config.network import AWSProvider
 from pyformationlib.common.config.resources import NodeBuild, ResourceBlock, NodeMain, Output, OutputValue
 from pyformationlib.ssh import SSHUtil
@@ -28,67 +27,15 @@ class AWSNodeError(FatalError):
     pass
 
 
-@attr.s
-class AWSNodeConfig:
-    project: Optional[str] = attr.ib(default=None)
-    name: Optional[str] = attr.ib(default=None)
-    quantity: Optional[int] = attr.ib(default=None)
-    region: Optional[str] = attr.ib(default=None)
-    os_id: Optional[str] = attr.ib(default=None)
-    os_version: Optional[str] = attr.ib(default=None)
-    ssh_key: Optional[str] = attr.ib(default=None)
-    machine_type: Optional[str] = attr.ib(default=None)
-    volume_iops: Optional[str] = attr.ib(default=None)
-    volume_size: Optional[str] = attr.ib(default=None)
-    volume_type: Optional[str] = attr.ib(default=None)
-    root_size: Optional[str] = attr.ib(default=None)
-    auth_mode: Optional[AuthMode] = attr.ib(default=AuthMode.default)
-    profile: Optional[str] = attr.ib(default='default')
-    location: Optional[str] = attr.ib(default=None)
-
-    @classmethod
-    def create(cls,
-               project: str,
-               name: str,
-               quantity: int,
-               region: str,
-               os_id: str,
-               os_version: str,
-               ssh_key: str,
-               machine_type: str,
-               volume_size: str,
-               volume_iops: str = "3000",
-               volume_type: str = "gp3",
-               root_size: str = "256",
-               auth_mode: AuthMode = AuthMode.default,
-               profile: str = 'default',
-               location: str = None):
-        return cls(project,
-                   name,
-                   quantity,
-                   region,
-                   os_id,
-                   os_version,
-                   ssh_key,
-                   machine_type,
-                   volume_iops,
-                   volume_size,
-                   volume_type,
-                   root_size,
-                   auth_mode,
-                   profile,
-                   location
-                   )
-
-
 class AWSNode(object):
 
-    def __init__(self, config: AWSNodeConfig):
-        self.project = config.project
+    def __init__(self, config: AWSConfig):
+        self.config = config
+        self.project = config.core.project
         self.region = config.region
         self.auth_mode = config.auth_mode
         self.profile = config.profile
-        self.name = config.name
+        self.name = config.core.name
         self.quantity = config.quantity
         self.os_id = config.os_id
         self.os_version = config.os_version
@@ -98,24 +45,22 @@ class AWSNode(object):
         self.volume_size = config.volume_size
         self.volume_type = config.volume_type
         self.root_size = config.root_size
-        self.location = config.location
+        config.core.resource_mode()
+
+        try:
+            self.validate()
+        except ValueError as err:
+            raise AWSNodeError(err)
 
         self._name_check(self.name)
-        CloudBase(self.region, self.auth_mode, self.profile).test_session()
-        self.runner = TFRun(self.project, self.name, self.location)
+        CloudBase(config).test_session()
+        self.runner = TFRun(config.core)
 
     def config_gen(self):
         instance_blocks = []
         subnet_list = []
 
-        net_config = AWSNetworkConfig().create(
-            self.project,
-            self.region,
-            self.auth_mode,
-            self.profile,
-            self.location
-        )
-        aws_network = AWSNetwork(net_config)
+        aws_network = AWSNetwork(self.config)
         vpc_data = aws_network.output()
 
         if not vpc_data:
@@ -126,13 +71,13 @@ class AWSNode(object):
         except Exception as err:
             raise AWSNodeError(f"can not get SSH public key: {err}")
 
-        image_list = Image(self.region, self.auth_mode, self.profile).list_standard(os_id=self.os_id, os_version=self.os_version)
+        image_list = Image(self.config).list_standard(os_id=self.os_id, os_version=self.os_version)
 
         if len(image_list) == 0:
             raise AWSNodeError(f"can not find image for os {self.os_id} version {self.os_version}")
 
         image = image_list[-1]
-        machine = MachineType(self.region, self.auth_mode, self.profile).get_machine(self.machine_type)
+        machine = MachineType(self.config).get_machine(self.machine_type)
         machine_name = machine['name']
         machine_ram = str(int(machine['memory'] / 1024))
 
@@ -188,7 +133,7 @@ class AWSNode(object):
         )
 
         instance_block = AWSInstance.build()
-        for n in range(self.quantity):
+        for n in range(int(self.quantity)):
             subnet = next(subnet_cycle)
             node_name = f"node-{self.name}-{n + 1}"
             instance_block.add(
@@ -217,7 +162,7 @@ class AWSNode(object):
         resource_block.add(ssh_block.as_dict)
 
         output_block = Output.build()
-        for n in range(self.quantity):
+        for n in range(int(self.quantity)):
             output_key = f"aws_instance.node-{self.name}-{n + 1}"
             output_block.add(
                 OutputValue.build()
@@ -247,12 +192,17 @@ class AWSNode(object):
         return self.runner.output()
 
     def list(self):
+        username = Image.image_user(self.os_id)
+        if not username:
+            raise AWSNodeError(f"can not get username for os type {self.os_id}")
+        node_list = NodeList().create(username, self.ssh_key)
         node_data = self.output()
         for key, value in node_data.items():
             node_name = key
             node_private_ip = value.get('value', {}).get('private_ip')
             node_public_ip = value.get('value', {}).get('public_ip')
-            print(f"{node_name} {node_private_ip} {node_public_ip}")
+            node_list.add(node_name, node_private_ip, node_public_ip)
+        return node_list
 
     @staticmethod
     def _calc_iops(value: str):
@@ -267,3 +217,9 @@ class AWSNode(object):
             return value
         else:
             raise AWSNodeError("names must only contain letters, numbers, dashes and underscores")
+
+    def validate(self):
+        variables = [attr for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__")]
+        for variable in variables:
+            if getattr(self, variable) is None:
+                raise ValueError(f"setting \"{variable}\" is null")

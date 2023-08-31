@@ -1,15 +1,14 @@
 ##
 ##
 
-import attr
 import logging
-from typing import Optional
 from pyformationlib.network import NetworkDriver
 from pyformationlib.aws.driver.network import Network
-from pyformationlib.aws.driver.base import AuthMode
 from pyformationlib.exec.process import TFRun
 import pyformationlib.aws.driver.constants as C
 from pyformationlib.common.config.resources import Output, OutputValue
+from pyformationlib.aws.common import AWSConfig
+from pyformationlib.exception import FatalError
 from pyformationlib.aws.config.network import (AWSProvider, VPCResource, InternetGatewayResource, RouteEntry, RouteResource, SubnetResource, RTAssociationResource,
                                                SecurityGroupEntry, SGResource, Resources, VPCConfig)
 
@@ -17,41 +16,26 @@ logger = logging.getLogger('pyformationlib.aws.network')
 logger.addHandler(logging.NullHandler())
 
 
-@attr.s
-class AWSNetworkConfig:
-    project: Optional[str] = attr.ib(default=None)
-    region: Optional[str] = attr.ib(default=None)
-    auth_mode: Optional[AuthMode] = attr.ib(default=AuthMode.default)
-    profile: Optional[str] = attr.ib(default='default')
-    location: Optional[str] = attr.ib(default=None)
-
-    @classmethod
-    def create(cls,
-               project: str,
-               region: str,
-               auth_mode: AuthMode = AuthMode.default,
-               profile: str = 'default',
-               location: str = None):
-        return cls(project,
-                   region,
-                   auth_mode,
-                   profile,
-                   location
-                   )
+class AWSNetworkError(FatalError):
+    pass
 
 
 class AWSNetwork(object):
 
-    def __init__(self, config: AWSNetworkConfig):
-        self.project = config.project
+    def __init__(self, config: AWSConfig):
+        self.project = config.core.project
         self.region = config.region
-        self.auth_mode = config.auth_mode
+        self.auth_mode = config.auth
         self.profile = config.profile
-        self.location = config.location
-        self.name = 'network'
+        config.core.common_mode()
 
-        self.aws_network = Network(self.region, self.auth_mode, self.profile)
-        self.runner = TFRun(self.project, self.name, self.location)
+        try:
+            self.validate()
+        except ValueError as err:
+            raise AWSNetworkError(err)
+
+        self.aws_network = Network(config)
+        self.runner = TFRun(config.core)
 
     def config_gen(self):
         cidr_util = NetworkDriver()
@@ -132,6 +116,9 @@ class AWSNetwork(object):
         return vpc_config
 
     def create(self):
+        vpc_data = self.output()
+        if vpc_data:
+            return
         network = self.config_gen()
         logger.info(f"Creating cloud infrastructure for {self.project} in {C.CLOUD_KEY.upper()}")
         self.runner.deploy(network)
@@ -142,3 +129,9 @@ class AWSNetwork(object):
 
     def output(self):
         return self.runner.output()
+
+    def validate(self):
+        variables = [attr for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__")]
+        for variable in variables:
+            if getattr(self, variable) is None:
+                raise ValueError(f"setting \"{variable}\" is null")

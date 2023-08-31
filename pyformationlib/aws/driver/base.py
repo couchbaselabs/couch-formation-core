@@ -11,8 +11,8 @@ import webbrowser
 import time
 import configparser
 from datetime import datetime
-from pyformationlib.aws.driver.constants import AuthMode
 from pyformationlib.exception import FatalError, NonFatalError
+from pyformationlib.aws.common import AWSConfig, AuthMode
 
 logger = logging.getLogger('pyformationlib.aws.driver.base')
 logger.addHandler(logging.NullHandler())
@@ -30,13 +30,14 @@ class EmptyResultSet(NonFatalError):
 
 class CloudBase(object):
 
-    def __init__(self, region: str = None, auth_type: AuthMode = AuthMode.default, profile: str = 'default'):
+    def __init__(self, config: AWSConfig):
+        self.config = config
         self.config_directory = os.path.join(os.environ['HOME'], '.aws')
         self.config_file = os.path.join(self.config_directory, 'config')
         self.credential_file = os.path.join(self.config_directory, 'credentials')
         self.config_data = configparser.ConfigParser()
         self.credential_data = configparser.ConfigParser()
-        self.profile = profile
+        self.profile = config.profile
         self.sso_session = None
         self.sso_account_id = None
         self.sso_role_name = None
@@ -58,13 +59,13 @@ class CloudBase(object):
 
         self.read_config()
 
-        if auth_type == AuthMode.default:
+        if config.auth == AuthMode.default:
             self.default_auth()
         else:
             self.sso_auth()
 
-        if region:
-            os.environ['AWS_DEFAULT_REGION'] = region
+        if config.region:
+            os.environ['AWS_DEFAULT_REGION'] = config.region
         elif self.profile_region:
             os.environ['AWS_DEFAULT_REGION'] = self.profile_region
 
@@ -85,7 +86,7 @@ class CloudBase(object):
             client = boto3.client('s3', region_name=self.aws_region)
             client.list_buckets()
         except Exception as err:
-            raise AWSDriverError(f"not authorized")
+            raise AWSDriverError(f"not authorized: {err}")
 
     def read_config(self):
         if os.path.exists(self.config_file):

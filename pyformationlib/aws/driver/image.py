@@ -113,6 +113,10 @@ class Image(CloudBase):
                     result_list.append(result_image)
         return result_list
 
+    @staticmethod
+    def image_user(os_id: str):
+        return next((image_type['user'] for image_type in AWSImageOwners.image_owner_list if image_type['os_id'] == os_id), None)
+
     def details(self, ami_id: str) -> dict:
         ami_filter = {
             'Name': 'image-id',

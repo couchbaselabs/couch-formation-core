@@ -13,6 +13,7 @@ from datetime import datetime
 from typing import Union
 from pyformationlib.exception import FatalError
 from pyformationlib.util import FileManager
+from pyformationlib.config import BaseConfig
 
 logger = logging.getLogger('pyformationlib.exec.process')
 logger.addHandler(logging.NullHandler())
@@ -41,11 +42,8 @@ class CustomLogFormatter(logging.Formatter):
 
 class TFRun(object):
 
-    def __init__(self, name: str, tag: str = 'resources', working_dir: str = None):
-        if not working_dir:
-            self.working_dir = os.path.join(C.STATE_DIRECTORY, name, tag)
-        else:
-            self.working_dir = os.path.join(working_dir, name, tag)
+    def __init__(self, config: BaseConfig):
+        self.working_dir = config.working_dir
 
         try:
             FileManager().make_dir(self.working_dir)
