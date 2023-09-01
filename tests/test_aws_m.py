@@ -22,7 +22,10 @@ from pyformationlib.config import NodeList
 provision_cmds = [
     'curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | sudo -E bash -s - -s -g https://github.com/mminichino/host-prep-lib',
     'sudo bundlemgr -b CBS',
-    'sudo swmgr cluster -n testdb -l {{ PRIVATE_IP_LIST }}',
+    'sudo swmgr cluster create -n testdb -l {{ PRIVATE_IP_LIST }}',
+]
+post_provision_cmds = [
+    'sudo swmgr cluster rebalance -l {{ PRIVATE_IP_LIST }}',
 ]
 
 
@@ -92,6 +95,7 @@ def aws_list_1(config: AWSConfig):
     nodes = node.list()
     for ip in nodes.provision_list():
         print(ip)
+    print(nodes.ip_csv_list())
 
 
 def aws_provision_1(username, ssh_key, ip_list):
