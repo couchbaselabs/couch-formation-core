@@ -4,6 +4,7 @@
 import re
 import logging
 from itertools import cycle
+from typing import List
 from pyformationlib.exec.process import TFRun
 import pyformationlib.aws.driver.constants as C
 from pyformationlib.aws.driver.image import Image
@@ -16,6 +17,7 @@ from pyformationlib.aws.config.network import AWSProvider
 from pyformationlib.common.config.resources import NodeBuild, ResourceBlock, NodeMain, Output, OutputValue
 from pyformationlib.ssh import SSHUtil
 from pyformationlib.exception import FatalError
+from pyformationlib.provisioner.remote import RemoteProvisioner, ProvisionSet
 from pyformationlib.aws.config.node import (AWSInstance, BlockDevice, EbsElements, RootElements, NodeConfiguration, TerraformElement, RequiredProvider, AWSTerraformProvider,
                                             SSHResource)
 
@@ -181,7 +183,6 @@ class AWSNode(object):
     def create(self):
         nodes = self.config_gen()
         logger.info(f"Creating cloud infrastructure for {self.project} in {C.CLOUD_KEY.upper()}")
-        # self.runner.write_file(nodes)
         self.runner.deploy(nodes)
 
     def destroy(self):
@@ -191,7 +192,7 @@ class AWSNode(object):
     def output(self):
         return self.runner.output()
 
-    def list(self):
+    def list(self) -> NodeList:
         username = Image.image_user(self.os_id)
         if not username:
             raise AWSNodeError(f"can not get username for os type {self.os_id}")
@@ -203,6 +204,15 @@ class AWSNode(object):
             node_public_ip = value.get('value', {}).get('public_ip')
             node_list.add(node_name, node_private_ip, node_public_ip)
         return node_list
+
+    def provision(self, commands: List[str]):
+        nodes = self.list()
+        ps = ProvisionSet()
+        ps.add_cmds(commands)
+        ps.add_nodes(nodes)
+        rp = RemoteProvisioner(ps)
+        rp.exec()
+        rp.join()
 
     @staticmethod
     def _calc_iops(value: str):

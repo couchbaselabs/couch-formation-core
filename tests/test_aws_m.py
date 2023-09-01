@@ -19,6 +19,10 @@ from pyformationlib.aws.node import AWSNode
 from pyformationlib.provisioner.remote import RemoteProvisioner, ProvisionSet
 from pyformationlib.config import NodeList
 
+provision_cmds = [
+    'curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | sudo -E bash -s - -s -g https://github.com/mminichino/host-prep-lib'
+]
+
 
 class Params(object):
 
@@ -42,6 +46,8 @@ def aws_create_1(config: AWSConfig):
     net.create()
     print("Creating nodes")
     node.create()
+    print("Provisioning nodes")
+    node.provision(provision_cmds)
 
 
 def aws_destroy_1(config: AWSConfig):
@@ -53,21 +59,21 @@ def aws_destroy_1(config: AWSConfig):
 
 def aws_list_1(config: AWSConfig):
     node = AWSNode(config)
-    node.list()
+    nodes = node.list()
+    for ip in nodes.provision_list():
+        print(ip)
 
 
-def aws_provision_1():
+def aws_provision_1(username, ssh_key, ip_list):
     ps = ProvisionSet()
     ps.add_cmd('uname -a')
     ps.add_cmd('id -a')
-    nodes = NodeList().create('ubuntu', '/Users/michael/.ssh/mminichino-default-key-pair.pem')
-    nodes.add('node-test-cluster-1', '10.5.1.25', '3.145.76.31')
-    nodes.add('node-test-cluster-2', '10.5.2.238', '3.15.166.170')
-    nodes.add('node-test-cluster-3', '10.5.3.37', '18.222.197.93')
+    nodes = NodeList().create(username, ssh_key)
+    for ip in ip_list:
+        nodes.add('node-test-cluster-1', ip, ip)
     ps.add_nodes(nodes)
     rp = RemoteProvisioner(ps)
     rp.exec()
-    rp.join()
     rp.join()
 
 

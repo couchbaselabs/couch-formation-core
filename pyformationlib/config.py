@@ -25,6 +25,11 @@ class PathMode(Enum):
     common = 1
 
 
+class ProvisionMode(Enum):
+    public = 0
+    private = 1
+
+
 @attr.s
 class BaseConfig:
     project: Optional[str] = attr.ib(default=None)
@@ -107,6 +112,7 @@ class NodeList:
     username: Optional[str] = attr.ib(default=None)
     ssh_key: Optional[str] = attr.ib(default=None)
     nodes: Optional[List[NodeEntry]] = attr.ib(default=[])
+    provision_ip: Optional[ProvisionMode] = attr.ib(default=ProvisionMode.public)
 
     @classmethod
     def create(cls, username: str, ssh_key: str):
@@ -137,3 +143,12 @@ class NodeList:
         for entry in self.nodes:
             address_list.append(entry.private_ip)
         return address_list
+
+    def provision_list(self):
+        if self.provision_ip == ProvisionMode.public:
+            return self.list_public_ip()
+        else:
+            return self.list_private_ip()
+
+    def ip_csv_list(self):
+        return ','.join(self.list_private_ip())
