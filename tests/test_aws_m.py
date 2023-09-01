@@ -20,8 +20,38 @@ from pyformationlib.provisioner.remote import RemoteProvisioner, ProvisionSet
 from pyformationlib.config import NodeList
 
 provision_cmds = [
-    'curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | sudo -E bash -s - -s -g https://github.com/mminichino/host-prep-lib'
+    'curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | sudo -E bash -s - -s -g https://github.com/mminichino/host-prep-lib',
+    'sudo bundlemgr -b CBS',
+    'sudo swmgr cluster -n testdb -l {{ PRIVATE_IP_LIST }}',
 ]
+
+
+class CustomFormatter(logging.Formatter):
+    grey = "\x1b[38;20m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    bold_red = "\x1b[31;1m"
+    green = "\x1b[32;20m"
+    reset = "\x1b[0m"
+    format_level = "%(levelname)s"
+    format_name = "%(name)s"
+    format_message = "%(message)s"
+    format_line = "(%(filename)s:%(lineno)d)"
+    format_extra = " [%(name)s](%(filename)s:%(lineno)d)"
+    FORMATS = {
+        logging.DEBUG: f"{grey}{format_level}{reset} - {format_message}",
+        logging.INFO: f"{green}{format_level}{reset} - {format_message}",
+        logging.WARNING: f"{yellow}{format_level}{reset} - {format_message}",
+        logging.ERROR: f"{red}{format_level}{reset} - {format_message}",
+        logging.CRITICAL: f"{red}{format_level}{reset} - {format_message}"
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        if logging.DEBUG >= logging.root.level:
+            log_fmt += self.format_extra
+        formatter = logging.Formatter(log_fmt)
+        return formatter.format(record)
 
 
 class Params(object):
@@ -85,7 +115,7 @@ aws_config = AWSConfig.create(remainder)
 try:
     debug_level = int(os.environ['DEBUG_LEVEL'])
 except (ValueError, KeyError):
-    debug_level = 3
+    debug_level = 2
 
 if debug_level == 0:
     logger.setLevel(logging.DEBUG)
@@ -96,7 +126,9 @@ elif debug_level == 2:
 else:
     logger.setLevel(logging.CRITICAL)
 
-logging.basicConfig()
+screen_handler = logging.StreamHandler()
+screen_handler.setFormatter(CustomFormatter())
+logger.addHandler(screen_handler)
 
 if options.create:
     aws_create_1(aws_config)
@@ -108,4 +140,7 @@ if options.list:
     aws_list_1(aws_config)
 
 if options.provision:
-    aws_provision_1()
+    _username = os.environ['TEST_USERNAME']
+    _ssh_key = os.environ['TEST_SSH_KEY']
+    _ip_list = os.environ['TEST_IP_LIST'].split(',')
+    aws_provision_1(_username, _ssh_key, _ip_list)

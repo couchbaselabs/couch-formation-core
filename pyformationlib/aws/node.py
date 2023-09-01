@@ -196,7 +196,7 @@ class AWSNode(object):
         username = Image.image_user(self.os_id)
         if not username:
             raise AWSNodeError(f"can not get username for os type {self.os_id}")
-        node_list = NodeList().create(username, self.ssh_key)
+        node_list = NodeList().create(username, self.ssh_key, self.config.core.working_dir, self.config.core.private_ip)
         node_data = self.output()
         for key, value in node_data.items():
             node_name = key

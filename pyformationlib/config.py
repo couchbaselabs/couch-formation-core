@@ -35,6 +35,7 @@ class BaseConfig:
     project: Optional[str] = attr.ib(default=None)
     name: Optional[str] = attr.ib(default=None)
     base_dir: Optional[str] = attr.ib(default=get_base_dir())
+    private_ip: Optional[bool] = attr.ib(default=False)
     path_mode: Optional[PathMode] = attr.ib(default=PathMode.resource)
 
     @classmethod
@@ -112,14 +113,17 @@ class NodeList:
     username: Optional[str] = attr.ib(default=None)
     ssh_key: Optional[str] = attr.ib(default=None)
     nodes: Optional[List[NodeEntry]] = attr.ib(default=[])
+    working_dir: Optional[str] = attr.ib(default=None)
     provision_ip: Optional[ProvisionMode] = attr.ib(default=ProvisionMode.public)
 
     @classmethod
-    def create(cls, username: str, ssh_key: str):
+    def create(cls, username: str, ssh_key: str, working_dir: str = None, use_private_ip: bool = False):
         return cls(
             username,
             ssh_key,
-            []
+            [],
+            working_dir,
+            ProvisionMode(use_private_ip)
         )
 
     def add(self, name: str, private_ip: str, public_ip: str):
