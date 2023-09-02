@@ -93,18 +93,24 @@ class NodeEntry:
     username: Optional[str] = attr.ib(default=None)
     private_ip: Optional[str] = attr.ib(default=None)
     public_ip: Optional[str] = attr.ib(default=None)
+    use_private_ip: Optional[bool] = attr.ib(default=False)
+    availability_zone: Optional[str] = attr.ib(default=None)
 
     @classmethod
     def create(cls,
-               name,
-               username,
-               private_ip,
-               public_ip):
+               name: str,
+               username: str,
+               private_ip: str,
+               public_ip: str = None,
+               use_private_ip: bool = False,
+               zone: str = None):
         return cls(
             name,
             username,
             private_ip,
-            public_ip
+            public_ip,
+            use_private_ip,
+            zone
         )
 
 
@@ -126,15 +132,21 @@ class NodeList:
             ProvisionMode(use_private_ip)
         )
 
-    def add(self, name: str, private_ip: str, public_ip: str):
+    def add(self, name: str, private_ip: str, public_ip: str = None, zone: str = None):
         self.nodes.append(
             NodeEntry.create(
                 name,
                 self.username,
                 private_ip,
-                public_ip
+                public_ip,
+                bool(self.provision_ip.value),
+                zone
             )
         )
+
+    @property
+    def node_list(self) -> List[NodeEntry]:
+        return self.nodes
 
     def list_public_ip(self):
         address_list = []

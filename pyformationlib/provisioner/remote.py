@@ -12,7 +12,7 @@ import jinja2
 from io import StringIO
 from typing import Optional, List
 from pyformationlib.exception import NonFatalError
-from pyformationlib.config import NodeList
+from pyformationlib.config import NodeList, NodeEntry
 import pyformationlib.constants as C
 
 logger = logging.getLogger('pyformationlib.provisioner.remote')
@@ -43,21 +43,28 @@ class CustomLogFormatter(logging.Formatter):
 
 @attr.s
 class ProvisionSet:
-    commands: Optional[List[str]] = attr.ib(default=[])
+    pre_install_cmd: Optional[List[str]] = attr.ib(default=[])
+    install_cmd: Optional[List[str]] = attr.ib(default=[])
+    post_install_cmd: Optional[List[str]] = attr.ib(default=[])
     nodes: Optional[NodeList] = attr.ib(default=None)
 
     @classmethod
     def create(cls):
         return cls(
             [],
+            [],
+            [],
             None
         )
 
-    def add_cmd(self, command: str):
-        self.commands.append(command)
+    def add_pre_install(self, pre_install_cmds: List[str]):
+        self.pre_install_cmd.extend(pre_install_cmds)
 
-    def add_cmds(self, commands: List[str]):
-        self.commands.extend(commands)
+    def add_install(self, install_cmds: List[str]):
+        self.install_cmd.extend(install_cmds)
+
+    def add_post_install(self, post_install_cmds: List[str]):
+        self.post_install_cmd.extend(post_install_cmds)
 
     def add_nodes(self, node_list: NodeList):
         self.nodes = node_list
@@ -82,19 +89,34 @@ class RemoteProvisioner(object):
             self.log_file = None
             self.file_output.addHandler(logging.NullHandler())
 
-    def dispatch(self, hostname: str):
+    def run(self):
+        if self.config.pre_install_cmd:
+            self.exec(self.config.pre_install_cmd)
+            self.join()
+        self.exec(self.config.install_cmd)
+        self.join()
+        if self.config.post_install_cmd:
+            self.exec(self.config.post_install_cmd)
+            self.join()
+
+    def dispatch(self, node: NodeEntry, command_list: List[str]):
         output = StringIO()
         last_exit = 0
+
+        if node.use_private_ip:
+            hostname = node.private_ip
+        else:
+            hostname = node.public_ip
 
         if not self.wait_port(hostname):
             raise ProvisionerError(f"Host {hostname} is not reachable")
 
         logger.info(f"Connection to {hostname} successful")
 
-        for command in self.config.commands:
+        for command in command_list:
             username = self.config.nodes.username
             ssh_key_file = self.config.nodes.ssh_key
-            _command = self.resolve_variables(command)
+            _command = self.resolve_variables(node, command)
 
             logger.info(f"Connecting to {hostname} as {username}")
             logger.debug(f"Using SSH key {ssh_key_file}")
@@ -115,9 +137,9 @@ class RemoteProvisioner(object):
         output.seek(0)
         return hostname, output, last_exit
 
-    def exec(self):
-        for node_ip in self.config.nodes.list_public_ip():
-            self.tasks.add(self.executor.submit(self.dispatch, node_ip))
+    def exec(self, command_list: List[str]):
+        for node in self.config.nodes.node_list:
+            self.tasks.add(self.executor.submit(self.dispatch, node, command_list))
 
     def join(self):
         cmd_failed = False
@@ -156,10 +178,11 @@ class RemoteProvisioner(object):
                 wait *= (2 ** (retry_number + 1))
                 time.sleep(wait)
 
-    def resolve_variables(self, line: str):
+    def resolve_variables(self, node: NodeEntry, line: str):
         env = jinja2.Environment(undefined=jinja2.DebugUndefined)
         raw_template = env.from_string(line)
         formatted_value = raw_template.render(
             PRIVATE_IP_LIST=self.config.nodes.ip_csv_list(),
+            NODE_ZONE=node.availability_zone,
         )
         return formatted_value

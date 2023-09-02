@@ -202,17 +202,19 @@ class AWSNode(object):
             node_name = key
             node_private_ip = value.get('value', {}).get('private_ip')
             node_public_ip = value.get('value', {}).get('public_ip')
-            node_list.add(node_name, node_private_ip, node_public_ip)
+            availability_zone = value.get('value', {}).get('availability_zone')
+            node_list.add(node_name, node_private_ip, node_public_ip, availability_zone)
         return node_list
 
-    def provision(self, commands: List[str]):
+    def provision(self, pre_commands: List[str], commands: List[str], post_commands: List[str]):
         nodes = self.list()
         ps = ProvisionSet()
-        ps.add_cmds(commands)
+        ps.add_pre_install(pre_commands)
+        ps.add_install(commands)
+        ps.add_post_install(post_commands)
         ps.add_nodes(nodes)
         rp = RemoteProvisioner(ps)
-        rp.exec()
-        rp.join()
+        rp.run()
 
     @staticmethod
     def _calc_iops(value: str):

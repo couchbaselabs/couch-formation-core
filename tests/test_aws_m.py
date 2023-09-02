@@ -19,10 +19,13 @@ from pyformationlib.aws.node import AWSNode
 from pyformationlib.provisioner.remote import RemoteProvisioner, ProvisionSet
 from pyformationlib.config import NodeList
 
-provision_cmds = [
+pre_provision_cmds = [
     'curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | sudo -E bash -s - -s -g https://github.com/mminichino/host-prep-lib',
+]
+
+provision_cmds = [
     'sudo bundlemgr -b CBS',
-    'sudo swmgr cluster create -n testdb -l {{ PRIVATE_IP_LIST }}',
+    'sudo swmgr cluster create -n testdb -g {{ NODE_ZONE }} -l {{ PRIVATE_IP_LIST }}',
 ]
 post_provision_cmds = [
     'sudo swmgr cluster rebalance -l {{ PRIVATE_IP_LIST }}',
@@ -80,7 +83,7 @@ def aws_create_1(config: AWSConfig):
     print("Creating nodes")
     node.create()
     print("Provisioning nodes")
-    node.provision(provision_cmds)
+    node.provision(pre_provision_cmds, provision_cmds, post_provision_cmds)
 
 
 def aws_destroy_1(config: AWSConfig):
@@ -99,16 +102,18 @@ def aws_list_1(config: AWSConfig):
 
 
 def aws_provision_1(username, ssh_key, ip_list):
+    cmd = [
+        'uname -a',
+        'id -a'
+    ]
     ps = ProvisionSet()
-    ps.add_cmd('uname -a')
-    ps.add_cmd('id -a')
+    ps.add_install(cmd)
     nodes = NodeList().create(username, ssh_key)
     for ip in ip_list:
         nodes.add('node-test-cluster-1', ip, ip)
     ps.add_nodes(nodes)
     rp = RemoteProvisioner(ps)
-    rp.exec()
-    rp.join()
+    rp.run()
 
 
 p = Params()
