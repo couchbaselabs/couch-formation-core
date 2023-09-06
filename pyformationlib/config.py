@@ -20,6 +20,15 @@ def get_resource_dir(name: str, tag: str):
     return os.path.join(get_base_dir(), name, tag)
 
 
+def str_to_int(value: Union[str, int]) -> int:
+    return int(value)
+
+
+class AuthMode(Enum):
+    default = 0
+    sso = 1
+
+
 class PathMode(Enum):
     resource = 0
     common = 1
@@ -33,7 +42,14 @@ class ProvisionMode(Enum):
 @attr.s
 class BaseConfig:
     project: Optional[str] = attr.ib(default=None)
+    cloud: Optional[str] = attr.ib(default="aws")
     name: Optional[str] = attr.ib(default=None)
+    region: Optional[str] = attr.ib(default=None)
+    ssh_key: Optional[str] = attr.ib(default=None)
+    os_id: Optional[str] = attr.ib(default=None)
+    os_version: Optional[str] = attr.ib(default=None)
+    auth_mode: Optional[str] = attr.ib(default="default")
+    profile: Optional[str] = attr.ib(default='default')
     base_dir: Optional[str] = attr.ib(default=get_base_dir())
     private_ip: Optional[bool] = attr.ib(default=False)
     path_mode: Optional[PathMode] = attr.ib(default=PathMode.resource)
@@ -83,6 +99,91 @@ class BaseConfig:
                 setattr(self, attribute, options.get(attribute))
 
     @property
+    def auth(self) -> AuthMode:
+        return AuthMode[self.auth_mode]
+
+    @property
+    def as_dict(self):
+        return {k: self.__dict__[k] for k in self.__dict__ if k != 'base_dir' and k != 'path_mode' and k != 'password'}
+
+
+@attr.s
+class NodeConfig:
+    group: Optional[str] = attr.ib(default="1")
+    machine_type: Optional[str] = attr.ib(default=None)
+    quantity: Optional[int] = attr.ib(default=1, converter=str_to_int)
+    services: Optional[str] = attr.ib(default="default")
+    volume_iops: Optional[str] = attr.ib(default="3000")
+    volume_size: Optional[str] = attr.ib(default="256")
+    volume_type: Optional[str] = attr.ib(default="gp3")
+    root_size: Optional[str] = attr.ib(default="256")
+
+    @classmethod
+    def create(cls, data: Union[list, dict]):
+        if type(data) == list:
+            c = cls()
+            c.initialize_args(data)
+        else:
+            c = cls()
+            c.initialize_dict(data)
+        return c
+
+    def initialize_args(self, args):
+        parser = argparse.ArgumentParser(add_help=False)
+        for attribute in self.__annotations__:
+            parser.add_argument(f"--{attribute}", action='store')
+        parameters, undefined = parser.parse_known_args(args)
+        self.from_namespace(parameters)
+
+    def initialize_dict(self, options):
+        self.from_dict(options)
+
+    def from_namespace(self, namespace: argparse.Namespace):
+        args = vars(namespace)
+        for attribute in self.__annotations__:
+            if args.get(attribute):
+                setattr(self, attribute, args.get(attribute))
+
+    def from_dict(self, options: dict):
+        for attribute in self.__annotations__:
+            if options.get(attribute):
+                setattr(self, attribute, options.get(attribute))
+
+    @property
+    def as_dict(self):
+        return self.__dict__
+
+
+@attr.s
+class DeploymentConfig:
+    core: Optional[BaseConfig] = attr.ib(default=BaseConfig())
+    config: Optional[List[NodeConfig]] = attr.ib(default=[])
+
+    def add_config(self, index: Union[str, int], config: NodeConfig):
+        index = int(index)
+        config.group = str(index)
+        if index > len(self.config) + 1:
+            raise ValueError(f"config index {index} out of range")
+        elif index == len(self.config) + 1:
+            self.config.append(config)
+        else:
+            self.config[index - 1] = config
+
+    @classmethod
+    def new(cls, core: BaseConfig):
+        return cls(
+            core,
+            []
+        )
+
+    def reset(self):
+        self.config.clear()
+
+    @property
+    def length(self):
+        return len(self.config)
+
+    @property
     def as_dict(self):
         return self.__dict__
 
@@ -95,6 +196,7 @@ class NodeEntry:
     public_ip: Optional[str] = attr.ib(default=None)
     use_private_ip: Optional[bool] = attr.ib(default=False)
     availability_zone: Optional[str] = attr.ib(default=None)
+    services: Optional[str] = attr.ib(default=None)
 
     @classmethod
     def create(cls,
@@ -103,14 +205,16 @@ class NodeEntry:
                private_ip: str,
                public_ip: str = None,
                use_private_ip: bool = False,
-               zone: str = None):
+               zone: str = None,
+               services: str = "default"):
         return cls(
             name,
             username,
             private_ip,
             public_ip,
             use_private_ip,
-            zone
+            zone,
+            services
         )
 
 
@@ -132,7 +236,7 @@ class NodeList:
             ProvisionMode(use_private_ip)
         )
 
-    def add(self, name: str, private_ip: str, public_ip: str = None, zone: str = None):
+    def add(self, name: str, private_ip: str, public_ip: str = None, zone: str = None, services: str = "default"):
         self.nodes.append(
             NodeEntry.create(
                 name,
@@ -140,7 +244,8 @@ class NodeList:
                 private_ip,
                 public_ip,
                 bool(self.provision_ip.value),
-                zone
+                zone,
+                services
             )
         )
 

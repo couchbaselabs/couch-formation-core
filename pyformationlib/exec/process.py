@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Union
 from pyformationlib.exception import FatalError
 from pyformationlib.util import FileManager
-from pyformationlib.config import BaseConfig
+from pyformationlib.config import BaseConfig, DeploymentConfig
 
 logger = logging.getLogger('pyformationlib.exec.process')
 logger.addHandler(logging.NullHandler())
@@ -41,6 +41,7 @@ class CustomLogFormatter(logging.Formatter):
 
 
 class TFRun(object):
+    DEPLOYMENT_CONFIG = "deployment.cfg"
 
     def __init__(self, config: BaseConfig):
         self.working_dir = config.working_dir
@@ -144,8 +145,21 @@ class TFRun(object):
 
         return result
 
+    def store_deployment_cfg(self, deployment: DeploymentConfig):
+        deployment_data = {
+            'core': deployment.core.as_dict,
+            'config': []
+        }
+        for node_config in deployment.config:
+            deployment_data['config'].append(node_config.as_dict)
+        self.write_file(deployment_data, TFRun.DEPLOYMENT_CONFIG)
+
+    def get_deployment_cfg(self):
+        config_data = self.read_file(TFRun.DEPLOYMENT_CONFIG)
+        return config_data
+
     def deploy(self, config_data: dict):
-        self.write_file(config_data)
+        self.write_file(config_data, "main.tf.json")
         self._init()
         if not self._validate():
             raise ExecError("Configuration validation failed, please check the log and try again.")
@@ -159,11 +173,22 @@ class TFRun(object):
     def output(self):
         return self._output()
 
-    def write_file(self, config_data: dict):
-        cfg_file = os.path.join(self.working_dir, "main.tf.json")
+    def read_file(self, name: str):
+        cfg_file = os.path.join(self.working_dir, name)
+        try:
+            with open(cfg_file, 'r') as cfg_file_h:
+                data = json.load(cfg_file_h)
+                return data
+        except FileNotFoundError:
+            return None
+        except Exception as err:
+            raise ExecError(f"can not read from config file {cfg_file}: {err}")
+
+    def write_file(self, data: dict, name: str):
+        cfg_file = os.path.join(self.working_dir, name)
         try:
             with open(cfg_file, 'w') as cfg_file_h:
-                json.dump(config_data, cfg_file_h, indent=2)
+                json.dump(data, cfg_file_h, indent=2)
                 cfg_file_h.write('\n')
         except Exception as err:
             raise ExecError(f"can not write to config file {cfg_file}: {err}")

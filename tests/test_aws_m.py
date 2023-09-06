@@ -13,9 +13,7 @@ parent = os.path.dirname(current)
 sys.path.append(parent)
 sys.path.append(current)
 
-from pyformationlib.aws.common import AWSConfig
-from pyformationlib.aws.network import AWSNetwork
-from pyformationlib.aws.node import AWSNode
+from pyformationlib.project import Project
 from pyformationlib.provisioner.remote import RemoteProvisioner, ProvisionSet
 from pyformationlib.config import NodeList
 
@@ -25,7 +23,7 @@ pre_provision_cmds = [
 
 provision_cmds = [
     'sudo bundlemgr -b CBS',
-    'sudo swmgr cluster create -n testdb -g {{ NODE_ZONE }} -l {{ PRIVATE_IP_LIST }}',
+    'sudo swmgr cluster create -n testdb -s {{ SERVICES }} -g {{ NODE_ZONE }} -l {{ PRIVATE_IP_LIST }}',
 ]
 post_provision_cmds = [
     'sudo swmgr cluster rebalance -l {{ PRIVATE_IP_LIST }}',
@@ -64,7 +62,9 @@ class Params(object):
 
     def __init__(self):
         parser = argparse.ArgumentParser()
+        parser.add_argument("--add", action="store_true")
         parser.add_argument("--create", action="store_true")
+        parser.add_argument("--deploy", action="store_true")
         parser.add_argument("--destroy", action="store_true")
         parser.add_argument("--list", action="store_true")
         parser.add_argument("--provision", action="store_true")
@@ -75,27 +75,32 @@ class Params(object):
         return self.options, self.remainder
 
 
-def aws_create_1(config: AWSConfig):
-    net = AWSNetwork(config)
-    node = AWSNode(config)
-    print("Creating network")
-    net.create()
-    print("Creating nodes")
-    node.create()
-    print("Provisioning nodes")
-    node.provision(pre_provision_cmds, provision_cmds, post_provision_cmds)
+def aws_create_1(args):
+    project = Project(args)
+    project.create()
+    project.save()
 
 
-def aws_destroy_1(config: AWSConfig):
-    net = AWSNetwork(config)
-    node = AWSNode(config)
-    node.destroy()
-    net.destroy()
+def aws_add_1(args):
+    project = Project(args)
+    project.add()
+    project.save()
 
 
-def aws_list_1(config: AWSConfig):
-    node = AWSNode(config)
-    nodes = node.list()
+def aws_deploy_1(args):
+    project = Project(args)
+    project.deploy()
+    project.provision(pre_provision_cmds, provision_cmds, post_provision_cmds)
+
+
+def aws_destroy_1(args):
+    project = Project(args)
+    project.destroy()
+
+
+def aws_list_1(args):
+    project = Project(args)
+    nodes = project.list()
     for ip in nodes.provision_list():
         print(ip)
     print(nodes.ip_csv_list())
@@ -119,8 +124,6 @@ def aws_provision_1(username, ssh_key, ip_list):
 p = Params()
 options, remainder = p.parameters
 
-aws_config = AWSConfig.create(remainder)
-
 try:
     debug_level = int(os.environ['DEBUG_LEVEL'])
 except (ValueError, KeyError):
@@ -140,13 +143,19 @@ screen_handler.setFormatter(CustomFormatter())
 logger.addHandler(screen_handler)
 
 if options.create:
-    aws_create_1(aws_config)
+    aws_create_1(remainder)
+
+if options.add:
+    aws_add_1(remainder)
+
+if options.deploy:
+    aws_deploy_1(remainder)
 
 if options.destroy:
-    aws_destroy_1(aws_config)
+    aws_destroy_1(remainder)
 
 if options.list:
-    aws_list_1(aws_config)
+    aws_list_1(remainder)
 
 if options.provision:
     _username = os.environ['TEST_USERNAME']

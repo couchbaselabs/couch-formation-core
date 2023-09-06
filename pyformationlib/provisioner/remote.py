@@ -184,5 +184,6 @@ class RemoteProvisioner(object):
         formatted_value = raw_template.render(
             PRIVATE_IP_LIST=self.config.nodes.ip_csv_list(),
             NODE_ZONE=node.availability_zone,
+            SERVICES=node.services
         )
         return formatted_value

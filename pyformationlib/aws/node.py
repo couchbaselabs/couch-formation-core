@@ -11,8 +11,7 @@ from pyformationlib.aws.driver.image import Image
 from pyformationlib.aws.driver.machine import MachineType
 from pyformationlib.aws.driver.base import CloudBase
 from pyformationlib.aws.network import AWSNetwork
-from pyformationlib.aws.common import AWSConfig
-from pyformationlib.config import NodeList
+from pyformationlib.config import NodeList, DeploymentConfig, NodeConfig
 from pyformationlib.aws.config.network import AWSProvider
 from pyformationlib.common.config.resources import NodeBuild, ResourceBlock, NodeMain, Output, OutputValue
 from pyformationlib.ssh import SSHUtil
@@ -29,69 +28,101 @@ class AWSNodeError(FatalError):
     pass
 
 
-class AWSNode(object):
+class AWSDeployment(object):
 
-    def __init__(self, config: AWSConfig):
-        self.config = config
-        self.project = config.core.project
-        self.region = config.region
-        self.auth_mode = config.auth_mode
-        self.profile = config.profile
-        self.name = config.core.name
-        self.quantity = config.quantity
-        self.os_id = config.os_id
-        self.os_version = config.os_version
-        self.ssh_key = config.ssh_key
-        self.machine_type = config.machine_type
-        self.volume_iops = config.volume_iops
-        self.volume_size = config.volume_size
-        self.volume_type = config.volume_type
-        self.root_size = config.root_size
-        config.core.resource_mode()
+    def __init__(self, deployment: DeploymentConfig):
+        self.deployment = deployment
+        self.core = self.deployment.core
+        self.project = self.core.project
+        self.region = self.core.region
+        self.auth_mode = self.core.auth_mode
+        self.profile = self.core.profile
+        self.name = self.core.name
+        self.ssh_key = self.core.ssh_key
+        self.os_id = self.core.os_id
+        self.os_version = self.core.os_version
+        self.core.resource_mode()
 
-        try:
-            self.validate()
-        except ValueError as err:
-            raise AWSNodeError(err)
+        # try:
+        #     self.validate()
+        # except ValueError as err:
+        #     raise AWSNodeError(err)
 
         self._name_check(self.name)
-        CloudBase(config).test_session()
-        self.runner = TFRun(config.core)
+        CloudBase(self.core).test_session()
+        self.runner = TFRun(self.core)
 
-    def config_gen(self):
-        instance_blocks = []
-        subnet_list = []
+        self.aws_network = AWSNetwork(self.core)
+        self.vpc_data = self.aws_network.output()
 
-        aws_network = AWSNetwork(self.config)
-        vpc_data = aws_network.output()
-
-        if not vpc_data:
-            raise AWSNodeError(f"project {self.project} is not configured")
+    def deployment_config(self):
+        ssh_key_name = f"{self.name}-key"
 
         try:
             ssh_pub_key_text = SSHUtil().get_ssh_public_key(self.ssh_key)
         except Exception as err:
             raise AWSNodeError(f"can not get SSH public key: {err}")
 
-        image_list = Image(self.config).list_standard(os_id=self.os_id, os_version=self.os_version)
+        header_block = TerraformElement.construct(RequiredProvider.construct(AWSTerraformProvider.construct("hashicorp/aws").as_dict).as_dict)
+        provider_block = AWSProvider.for_region(self.region)
+        ssh_block = SSHResource.construct(ssh_key_name, ssh_pub_key_text)
+
+        resource_block = ResourceBlock.build()
+        resource_block.add(ssh_block.as_dict)
+
+        output_block = Output.build()
+        instance_block = AWSInstance.build()
+
+        for n, node_config in enumerate(self.deployment.config):
+            instance_values, output_values = self.node_config(n, ssh_key_name, node_config)
+            for instance in instance_values:
+                instance_block.add(instance)
+            for block in output_values:
+                output_block.add(block)
+
+        resource_block.add(instance_block.as_dict)
+
+        main_config = NodeMain.build() \
+            .add(header_block.as_dict) \
+            .add(provider_block.as_dict)\
+            .add(resource_block.as_dict)\
+            .add(output_block.as_dict).as_dict
+
+        return main_config
+
+    def node_config(self, group: int, ssh_key_name: str, config: NodeConfig):
+        subnet_list = []
+        output_values = []
+        instance_values = []
+        quantity = config.quantity
+        machine_type = config.machine_type
+        volume_iops = config.volume_iops
+        volume_size = config.volume_size
+        volume_type = config.volume_type
+        root_size = config.root_size
+        services = config.services
+
+        if not self.vpc_data:
+            raise AWSNodeError(f"project {self.project} is not configured")
+
+        image_list = Image(self.core).list_standard(os_id=self.os_id, os_version=self.os_version)
 
         if len(image_list) == 0:
             raise AWSNodeError(f"can not find image for os {self.os_id} version {self.os_version}")
 
         image = image_list[-1]
-        machine = MachineType(self.config).get_machine(self.machine_type)
+        machine = MachineType(self.core).get_machine(machine_type)
         machine_name = machine['name']
         machine_ram = str(int(machine['memory'] / 1024))
 
         if not machine:
-            raise AWSNodeError(f"can not find machine for type {self.machine_type}")
+            raise AWSNodeError(f"can not find machine for type {machine_type}")
 
         root_disk_device = image['root_disk']
         match = re.search(r"/dev/(.+?)a[0-9]*", root_disk_device)
         root_disk_prefix = f"/dev/{match.group(1)}"
 
-        ssh_key_name = f"{self.name}-key"
-        for key, value in vpc_data.items():
+        for key, value in self.vpc_data.items():
             if value.get('value', {}).get('map_public_ip_on_launch') is not None:
                 subnet_list.append(dict(
                     subnet_id=value.get('value', {}).get('id'),
@@ -104,16 +135,10 @@ class AWSNode(object):
 
         subnet_cycle = cycle(subnet_list)
 
-        security_group_id = vpc_data.get('aws_security_group', {}).get('value', {}).get('id')
+        security_group_id = self.vpc_data.get('aws_security_group', {}).get('value', {}).get('id')
 
         if not security_group_id:
             raise AWSNodeError(f"can not get security group, check project settings")
-
-        header_block = TerraformElement.construct(RequiredProvider.construct(AWSTerraformProvider.construct("hashicorp/aws").as_dict).as_dict)
-
-        provider_block = AWSProvider.for_region(self.region)
-
-        ssh_block = SSHResource.construct(ssh_key_name, ssh_pub_key_text)
 
         disk_block = BlockDevice.build()
         disk_block.add(
@@ -128,17 +153,16 @@ class AWSNode(object):
         disk_block.add(
             EbsElements.construct(
                 f"{root_disk_prefix}c",
-                self.volume_iops,
-                self.volume_size,
-                self.volume_type
+                volume_iops,
+                volume_size,
+                volume_type
             ).as_dict
         )
 
-        instance_block = AWSInstance.build()
-        for n in range(int(self.quantity)):
+        for n in range(int(quantity)):
             subnet = next(subnet_cycle)
-            node_name = f"node-{self.name}-{n + 1}"
-            instance_block.add(
+            node_name = f"node-{self.name}-{group + 1}-{n + 1}"
+            instance_values.append(
                 NodeBuild.construct(
                     NodeConfiguration.construct(
                         node_name,
@@ -147,47 +171,42 @@ class AWSNode(object):
                         machine_name,
                         ssh_key_name,
                         RootElements.construct(
-                            self._calc_iops(self.root_size),
-                            self.root_size,
+                            self._calc_iops(root_size),
+                            root_size,
                             "gp3"
                         ).as_dict,
                         subnet['subnet_id'],
                         security_group_id,
+                        services,
                         disk_block.as_dict
                     ).as_dict
                 ).as_name(node_name)
             )
-            instance_blocks.append(instance_block.as_dict)
 
-        resource_block = ResourceBlock.build()
-        resource_block.add(instance_block.as_dict)
-        resource_block.add(ssh_block.as_dict)
-
-        output_block = Output.build()
-        for n in range(int(self.quantity)):
-            output_key = f"aws_instance.node-{self.name}-{n + 1}"
-            output_block.add(
+        for n in range(int(quantity)):
+            output_key = f"aws_instance.node-{self.name}-{group + 1}-{n + 1}"
+            output_values.append(
                 OutputValue.build()
                 .add(f"${{{output_key}}}")
                 .as_name(output_key.split('.')[1])
             )
 
-        main_config = NodeMain.build() \
-            .add(header_block.as_dict) \
-            .add(provider_block.as_dict)\
-            .add(resource_block.as_dict)\
-            .add(output_block.as_dict).as_dict
+        return instance_values, output_values
 
-        return main_config
-
-    def create(self):
-        nodes = self.config_gen()
+    def deploy(self):
+        if not self.vpc_data:
+            self.aws_network.create()
+            self.vpc_data = self.aws_network.output()
+        nodes = self.deployment_config()
         logger.info(f"Creating cloud infrastructure for {self.project} in {C.CLOUD_KEY.upper()}")
         self.runner.deploy(nodes)
 
     def destroy(self):
         logger.info(f"Removing cloud infrastructure for {self.project} in {C.CLOUD_KEY.upper()}")
         self.runner.destroy()
+        if self.vpc_data:
+            self.aws_network.destroy()
+            self.vpc_data = self.aws_network.output()
 
     def output(self):
         return self.runner.output()
@@ -196,14 +215,15 @@ class AWSNode(object):
         username = Image.image_user(self.os_id)
         if not username:
             raise AWSNodeError(f"can not get username for os type {self.os_id}")
-        node_list = NodeList().create(username, self.ssh_key, self.config.core.working_dir, self.config.core.private_ip)
+        node_list = NodeList().create(username, self.ssh_key, self.core.working_dir, self.core.private_ip)
         node_data = self.output()
         for key, value in node_data.items():
             node_name = key
             node_private_ip = value.get('value', {}).get('private_ip')
             node_public_ip = value.get('value', {}).get('public_ip')
             availability_zone = value.get('value', {}).get('availability_zone')
-            node_list.add(node_name, node_private_ip, node_public_ip, availability_zone)
+            services = value.get('value', {}).get('tags', {}).get('Services')
+            node_list.add(node_name, node_private_ip, node_public_ip, availability_zone, services)
         return node_list
 
     def provision(self, pre_commands: List[str], commands: List[str], post_commands: List[str]):

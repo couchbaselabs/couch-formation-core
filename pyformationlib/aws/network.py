@@ -7,7 +7,7 @@ from pyformationlib.aws.driver.network import Network
 from pyformationlib.exec.process import TFRun
 import pyformationlib.aws.driver.constants as C
 from pyformationlib.common.config.resources import Output, OutputValue
-from pyformationlib.aws.common import AWSConfig
+from pyformationlib.config import BaseConfig
 from pyformationlib.exception import FatalError
 from pyformationlib.aws.config.network import (AWSProvider, VPCResource, InternetGatewayResource, RouteEntry, RouteResource, SubnetResource, RTAssociationResource,
                                                SecurityGroupEntry, SGResource, Resources, VPCConfig)
@@ -22,20 +22,20 @@ class AWSNetworkError(FatalError):
 
 class AWSNetwork(object):
 
-    def __init__(self, config: AWSConfig):
-        self.project = config.core.project
-        self.region = config.region
-        self.auth_mode = config.auth
-        self.profile = config.profile
-        config.core.common_mode()
+    def __init__(self, core: BaseConfig):
+        self.project = core.project
+        self.region = core.region
+        self.auth_mode = core.auth
+        self.profile = core.profile
+        core.common_mode()
 
         try:
             self.validate()
         except ValueError as err:
             raise AWSNetworkError(err)
 
-        self.aws_network = Network(config)
-        self.runner = TFRun(config.core)
+        self.aws_network = Network(core)
+        self.runner = TFRun(core)
 
     def config_gen(self):
         cidr_util = NetworkDriver()
@@ -120,11 +120,11 @@ class AWSNetwork(object):
         if vpc_data:
             return
         network = self.config_gen()
-        logger.info(f"Creating cloud infrastructure for {self.project} in {C.CLOUD_KEY.upper()}")
+        logger.info(f"Creating cloud network for {self.project} in {C.CLOUD_KEY.upper()}")
         self.runner.deploy(network)
 
     def destroy(self):
-        logger.info(f"Removing cloud infrastructure for {self.project} in {C.CLOUD_KEY.upper()}")
+        logger.info(f"Removing cloud network for {self.project} in {C.CLOUD_KEY.upper()}")
         self.runner.destroy()
 
     def output(self):

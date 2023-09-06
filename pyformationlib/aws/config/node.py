@@ -155,6 +155,7 @@ class NodeConfiguration(object):
                   root: dict,
                   subnet: str,
                   sec_group: str,
+                  services,
                   disks: list):
         return cls(
             ami_id,
@@ -165,7 +166,8 @@ class NodeConfiguration(object):
             subnet,
             [sec_group],
             {
-                "Name": name
+                "Name": name,
+                "Services": services
             },
             disks
         )

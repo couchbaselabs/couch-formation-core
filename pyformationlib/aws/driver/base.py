@@ -12,7 +12,7 @@ import time
 import configparser
 from datetime import datetime
 from pyformationlib.exception import FatalError, NonFatalError
-from pyformationlib.aws.common import AWSConfig, AuthMode
+from pyformationlib.config import BaseConfig, AuthMode
 
 logger = logging.getLogger('pyformationlib.aws.driver.base')
 logger.addHandler(logging.NullHandler())
@@ -30,7 +30,7 @@ class EmptyResultSet(NonFatalError):
 
 class CloudBase(object):
 
-    def __init__(self, config: AWSConfig):
+    def __init__(self, config: BaseConfig):
         self.config = config
         self.config_directory = os.path.join(os.environ['HOME'], '.aws')
         self.config_file = os.path.join(self.config_directory, 'config')
