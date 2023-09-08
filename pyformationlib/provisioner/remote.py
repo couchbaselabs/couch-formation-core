@@ -93,19 +93,21 @@ class RemoteProvisioner(object):
     def run(self):
         if self.config.pre_install_cmd:
             logger.info(f"Begin pre-install process")
-            self.exec(self.config.pre_install_cmd)
-            self.join()
+            for command in self.config.pre_install_cmd:
+                self.exec(command)
+                self.join()
         logger.info(f"Begin installation process")
-        self.exec(self.config.install_cmd)
-        self.join()
+        for command in self.config.install_cmd:
+            self.exec(command)
+            self.join()
         if self.config.post_install_cmd:
             logger.info(f"Begin post-installation process")
-            self.exec(self.config.post_install_cmd)
-            self.join()
+            for command in self.config.post_install_cmd:
+                self.exec(command)
+                self.join()
 
-    def dispatch(self, node: NodeEntry, command_list: List[str]):
+    def dispatch(self, node: NodeEntry, command: str):
         output = BytesIO()
-        last_exit = 0
         username = self.config.nodes.username
         ssh_key_file = self.config.nodes.ssh_key
 
@@ -122,52 +124,46 @@ class RemoteProvisioner(object):
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        for command in command_list:
-            _command = self.resolve_variables(node, command)
+        _command = self.resolve_variables(node, command)
 
-            logger.info(f"Connecting to {hostname} as {username}")
-            logger.debug(f"Using SSH key {ssh_key_file}")
-            logger.debug(f"Running command: {_command}")
+        logger.info(f"Connecting to {hostname} as {username}")
+        logger.debug(f"Using SSH key {ssh_key_file}")
+        logger.debug(f"Running command: {_command}")
 
-            ssh.connect(hostname, username=username, key_filename=ssh_key_file)
-            stdin, stdout, stderr = ssh.exec_command(_command)
-            channel = stdout.channel
+        ssh.connect(hostname, username=username, key_filename=ssh_key_file)
+        stdin, stdout, stderr = ssh.exec_command(_command)
+        channel = stdout.channel
 
-            stdin.close()
-            channel.shutdown_write()
+        stdin.close()
+        channel.shutdown_write()
 
-            while not channel.closed:
-                readq, _, _ = select.select([channel], [], [], 10)
-                for c in readq:
-                    if c.recv_ready():
-                        output.write(channel.recv(len(c.in_buffer)))
-                    if c.recv_stderr_ready():
-                        output.write(channel.recv(len(c.in_buffer)))
-                if channel.exit_status_ready() and not channel.recv_stderr_ready() and not channel.recv_ready():
-                    channel.shutdown_read()
-                    channel.close()
-                    break
-
-            stdout.close()
-            stderr.close()
-
-            last_exit = channel.recv_exit_status()
-
-            ssh.close()
-            time.sleep(1)
-
-            if last_exit != 0:
-                logger.error(f"Command failed for host {hostname} session aborting")
+        while not channel.closed:
+            readq, _, _ = select.select([channel], [], [], 10)
+            for c in readq:
+                if c.recv_ready():
+                    output.write(channel.recv(len(c.in_buffer)))
+                if c.recv_stderr_ready():
+                    output.write(channel.recv(len(c.in_buffer)))
+            if channel.exit_status_ready() and not channel.recv_stderr_ready() and not channel.recv_ready():
+                channel.shutdown_read()
+                channel.close()
                 break
 
-            logger.info(f"Command complete for host {hostname}")
+        stdout.close()
+        stderr.close()
+
+        last_exit = channel.recv_exit_status()
+
+        ssh.close()
+
+        logger.info(f"Command complete for host {hostname}")
 
         output.seek(0)
         return hostname, output, last_exit
 
-    def exec(self, command_list: List[str]):
+    def exec(self, command: str):
         for node in self.config.nodes.node_list:
-            self.tasks.add(self.executor.submit(self.dispatch, node, command_list))
+            self.tasks.add(self.executor.submit(self.dispatch, node, command))
 
     def join(self):
         cmd_failed = False
