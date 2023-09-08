@@ -1,8 +1,11 @@
 ##
 ##
+
 import os
 
-STATE_DIRECTORY = os.path.join(os.environ.get('HOME'), '.config', 'couch-formation', 'state')
+ROOT_DIRECTORY = os.path.join(os.environ.get('HOME'), '.config', 'couch-formation')
+STATE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'state')
+LOG_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'log')
 
 GREY_COLOR = "\x1b[38;20m"
 YELLOW_COLOR = "\x1b[33;20m"
@@ -183,3 +186,15 @@ MACHINE_TYPES = [
             "memory": 81920
         }
     ]
+
+CBS_PRE_PROVISION = [
+    'curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | sudo -E bash -s - -s -g https://github.com/mminichino/host-prep-lib',
+]
+
+CBS_PROVISION = [
+    'sudo bundlemgr -b CBS',
+    'sudo swmgr cluster create -n testdb -s {{ SERVICES }} -g {{ NODE_ZONE }} -D /cbdata -l {{ PRIVATE_IP_LIST }}',
+]
+CBS_POST_PROVISION = [
+    'sudo swmgr cluster rebalance -n testdb -D /cbdata -l {{ PRIVATE_IP_LIST }}',
+]

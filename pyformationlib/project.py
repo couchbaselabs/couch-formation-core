@@ -1,11 +1,15 @@
 ##
 ##
 
+import logging
 from typing import Union
 from pyformationlib.exception import FatalError
 from pyformationlib.aws.node import AWSDeployment
 from pyformationlib.config import BaseConfig, DeploymentConfig, NodeConfig
 from pyformationlib.exec.process import TFRun
+
+logger = logging.getLogger('pyformationlib.exec.process')
+logger.addHandler(logging.NullHandler())
 
 
 class ProjectError(FatalError):
@@ -40,17 +44,21 @@ class Project(object):
         self.add()
 
     def add(self):
+        logger.info(f"Adding node group to deployment {self._deployment.core.name}")
         config = NodeConfig().create(self.args)
         self._deployment.add_config(self._deployment.length + 1, config)
 
     def save(self):
+        logger.info(f"Saving project {self._deployment.core.project} deployment {self._deployment.core.name}")
         self.runner.store_deployment_cfg(self._deployment)
 
     def deploy(self):
+        logger.info(f"Deploying project {self._deployment.core.project} deployment {self._deployment.core.name}")
         env = self.deployer(self.deployment)
         env.deploy()
 
     def destroy(self):
+        logger.info(f"Removing project {self._deployment.core.project} deployment {self._deployment.core.name}")
         env = self.deployer(self.deployment)
         env.destroy()
 

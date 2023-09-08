@@ -1,6 +1,7 @@
 ##
 ##
 
+import select
 import attr
 import concurrent.futures
 import logging
@@ -9,7 +10,7 @@ import socket
 import time
 import os
 import jinja2
-from io import StringIO
+from io import BytesIO
 from typing import Optional, List
 from pyformationlib.exception import NonFatalError
 from pyformationlib.config import NodeList, NodeEntry
@@ -91,17 +92,22 @@ class RemoteProvisioner(object):
 
     def run(self):
         if self.config.pre_install_cmd:
+            logger.info(f"Begin pre-install process")
             self.exec(self.config.pre_install_cmd)
             self.join()
+        logger.info(f"Begin installation process")
         self.exec(self.config.install_cmd)
         self.join()
         if self.config.post_install_cmd:
+            logger.info(f"Begin post-installation process")
             self.exec(self.config.post_install_cmd)
             self.join()
 
     def dispatch(self, node: NodeEntry, command_list: List[str]):
-        output = StringIO()
+        output = BytesIO()
         last_exit = 0
+        username = self.config.nodes.username
+        ssh_key_file = self.config.nodes.ssh_key
 
         if node.use_private_ip:
             hostname = node.private_ip
@@ -113,27 +119,49 @@ class RemoteProvisioner(object):
 
         logger.info(f"Connection to {hostname} successful")
 
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
         for command in command_list:
-            username = self.config.nodes.username
-            ssh_key_file = self.config.nodes.ssh_key
             _command = self.resolve_variables(node, command)
 
             logger.info(f"Connecting to {hostname} as {username}")
             logger.debug(f"Using SSH key {ssh_key_file}")
             logger.debug(f"Running command: {_command}")
 
-            ssh = paramiko.SSHClient()
-            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(hostname, username=username, key_filename=ssh_key_file)
             stdin, stdout, stderr = ssh.exec_command(_command)
+            channel = stdout.channel
 
-            last_exit = stdout.channel.recv_exit_status()
-            for line in stdout.readlines():
-                output.write(line)
-            for line in stderr.readlines():
-                output.write(line)
+            stdin.close()
+            channel.shutdown_write()
+
+            while not channel.closed:
+                readq, _, _ = select.select([channel], [], [], 10)
+                for c in readq:
+                    if c.recv_ready():
+                        output.write(channel.recv(len(c.in_buffer)))
+                    if c.recv_stderr_ready():
+                        output.write(channel.recv(len(c.in_buffer)))
+                if channel.exit_status_ready() and not channel.recv_stderr_ready() and not channel.recv_ready():
+                    channel.shutdown_read()
+                    channel.close()
+                    break
+
+            stdout.close()
+            stderr.close()
+
+            last_exit = channel.recv_exit_status()
+
+            ssh.close()
+            time.sleep(1)
+
             if last_exit != 0:
+                logger.error(f"Command failed for host {hostname} session aborting")
                 break
+
+            logger.info(f"Command complete for host {hostname}")
+
         output.seek(0)
         return hostname, output, last_exit
 
@@ -149,7 +177,7 @@ class RemoteProvisioner(object):
                 try:
                     hostname, output, last_exit = task.result()
                     for line in output.readlines():
-                        line_out = line.strip()
+                        line_out = line.decode("utf-8").strip()
                         log_out = f"{hostname}: {line_out}"
                         logger.info(log_out)
                         self.file_output.info(log_out)

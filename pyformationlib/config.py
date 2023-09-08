@@ -16,6 +16,13 @@ def get_base_dir():
         return C.STATE_DIRECTORY
 
 
+def get_log_dir():
+    if 'COUCH_FORMATION_LOG_DIR' in os.environ:
+        return os.environ['COUCH_FORMATION_LOG_DIR']
+    else:
+        return C.LOG_DIRECTORY
+
+
 def get_resource_dir(name: str, tag: str):
     return os.path.join(get_base_dir(), name, tag)
 
