@@ -10,6 +10,7 @@ google-auth-httplib2>=0.1.0
 googleapis-common-protos>=1.54.0
 google-cloud>=0.34.0
 google-cloud-compute>=1.6.1
+google-cloud-storage>=2.10.0
 google-cloud-network-management>=1.5.4
 Jinja2>=3.0.3
 passlib>=1.7.4

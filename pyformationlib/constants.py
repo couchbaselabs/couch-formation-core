@@ -196,5 +196,5 @@ CBS_PROVISION = [
     'sudo swmgr cluster create -n testdb -s {{ SERVICES }} -g {{ NODE_ZONE }} -D /cbdata -l {{ PRIVATE_IP_LIST }}',
 ]
 CBS_POST_PROVISION = [
-    'sudo swmgr cluster rebalance -n testdb -D /cbdata -l {{ PRIVATE_IP_LIST }}',
+    'sudo swmgr cluster rebalance -l {{ PRIVATE_IP_LIST }}',
 ]

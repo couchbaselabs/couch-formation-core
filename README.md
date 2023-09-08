@@ -1,1 +1,1 @@
-# couch-formation-lib
+# couch-formation-core
