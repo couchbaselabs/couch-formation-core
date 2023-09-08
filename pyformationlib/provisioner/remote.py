@@ -107,6 +107,7 @@ class RemoteProvisioner(object):
                 self.join()
 
     def dispatch(self, node: NodeEntry, command: str):
+        retry_count = 30
         output = BytesIO()
         username = self.config.nodes.username
         ssh_key_file = self.config.nodes.ssh_key
@@ -131,14 +132,14 @@ class RemoteProvisioner(object):
         logger.debug(f"Running command: {_command}")
 
         ssh.connect(hostname, username=username, key_filename=ssh_key_file)
+        time.sleep(1)
         stdin, stdout, stderr = ssh.exec_command(_command)
         channel = stdout.channel
-
         stdin.close()
         channel.shutdown_write()
 
         while not channel.closed:
-            readq, _, _ = select.select([channel], [], [], 10)
+            readq, _, _ = select.select([channel], [], [], 0)
             for c in readq:
                 if c.recv_ready():
                     output.write(channel.recv(len(c.in_buffer)))
