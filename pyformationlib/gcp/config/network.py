@@ -192,7 +192,7 @@ class FirewallEntry(object):
     @classmethod
     def construct(cls, name: str, description: str, ports: list, protocol: str, cidr: list):
         return cls(
-            {name: [
+            {f"{name}-fw-{description}": [
                FireElements.construct(name, description, ports, protocol, cidr).as_dict
             ]}
         )
@@ -209,7 +209,7 @@ class DefaultFirewallEntry(object):
     @classmethod
     def construct(cls, name: str, cidr: str):
         return cls(
-            {"cf-fw-vpc": [
+            {f"{name}-fw-default": [
                 {
                     "allow": [{"protocol": "all"}],
                     "name": f"{name}-fw-default",

@@ -6,7 +6,7 @@ import logging
 from itertools import cycle
 from typing import List
 from pyformationlib.exec.process import TFRun
-import pyformationlib.aws.driver.constants as C
+import pyformationlib.gcp.driver.constants as C
 from pyformationlib.gcp.driver.image import Image
 from pyformationlib.gcp.driver.machine import MachineType
 from pyformationlib.gcp.driver.base import CloudBase
