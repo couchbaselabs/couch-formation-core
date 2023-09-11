@@ -77,15 +77,12 @@ class Params(object):
 
 def aws_create_1(args):
     import pyformationlib.constants as C
-    from pyformationlib.gcp.driver.image import Image
+    from pyformationlib.gcp.driver.machine import MachineType
     from pyformationlib.config import BaseConfig
     config = BaseConfig().create(args)
-    for os_id in C.OS_VERSION_LIST:
-        if len(C.OS_VERSION_LIST[os_id]) == 0:
-            continue
-        version = C.OS_VERSION_LIST[os_id][-1]
-        image = Image(config).list_standard(os_id=os_id, os_version=version)
-        print(f"{os_id} := {image}")
+    for m_type in C.MACHINE_TYPES:
+        machine = MachineType(config).get_machine(m_type['name'], f"{config.region}-a")
+        print(f"{m_type} := {machine}")
     # project = Project(args)
     # project.create()
     # project.save()

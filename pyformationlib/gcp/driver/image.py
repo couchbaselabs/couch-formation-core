@@ -97,7 +97,7 @@ class Image(CloudBase):
                     continue
                 filtered_images = []
                 for image in image_list:
-                    # print(f"Checking -> {image['name']}")
+                    logger.debug(f"Found image -> {image['name']}")
                     match = re.search(image_type['pattern'], image['name'])
                     if match and (match.group(1) == version or match.group(1) == ''.join([letter for letter in '22.04' if letter.isalnum()])):
                         filtered_images.append(image)
@@ -111,4 +111,5 @@ class Image(CloudBase):
                         image_project=image_type['project']
                     ))
                     result_list.append(result_image)
+                logger.debug(f"Selected image -> {result_list[-1]['name']}")
                 return result_list

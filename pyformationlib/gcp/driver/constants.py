@@ -100,3 +100,16 @@ class GCPImageProjects(object):
             "pattern": r"ubuntu-pro-(.+?)-*-v*"
         }
     ]
+
+
+@attr.s
+class ComputeTypes(object):
+    general_purpose = ['n2', 't2a', 'n2d']
+    compute_optimized = ['c2', 'c2d']
+    memory_optimized = ['m2', 'm3']
+
+    def as_list(self) -> list:
+        flat_list = []
+        for element in [self.general_purpose, self.compute_optimized, self.memory_optimized]:
+            flat_list.extend(element)
+        return flat_list
