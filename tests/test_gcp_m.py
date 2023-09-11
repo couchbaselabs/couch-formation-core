@@ -76,16 +76,9 @@ class Params(object):
 
 
 def aws_create_1(args):
-    import pyformationlib.constants as C
-    from pyformationlib.gcp.driver.machine import MachineType
-    from pyformationlib.config import BaseConfig
-    config = BaseConfig().create(args)
-    for m_type in C.MACHINE_TYPES:
-        machine = MachineType(config).get_machine(m_type['name'], f"{config.region}-a")
-        print(f"{m_type} := {machine}")
-    # project = Project(args)
-    # project.create()
-    # project.save()
+    project = Project(args)
+    project.create()
+    project.save()
 
 
 def aws_add_1(args):

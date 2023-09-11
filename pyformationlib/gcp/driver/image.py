@@ -113,3 +113,7 @@ class Image(CloudBase):
                     result_list.append(result_image)
                 logger.debug(f"Selected image -> {result_list[-1]['name']}")
                 return result_list
+
+    @staticmethod
+    def image_user(os_id: str):
+        return next((image_type['user'] for image_type in GCPImageProjects.projects if image_type['os_id'] == os_id), None)

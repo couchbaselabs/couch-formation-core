@@ -519,7 +519,10 @@ class OutputValue(object):
         )
 
     def add(self, element: str):
-        self.value.update({"value": element})
+        self.value.update({
+            "value": element,
+            "sensitive": True
+        })
         return self
 
     def as_name(self, name: str):

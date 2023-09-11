@@ -5,6 +5,7 @@ import logging
 from typing import Union
 from pyformationlib.exception import FatalError
 from pyformationlib.aws.node import AWSDeployment
+from pyformationlib.gcp.node import GCPDeployment
 from pyformationlib.config import BaseConfig, DeploymentConfig, NodeConfig
 from pyformationlib.exec.process import TFRun
 
@@ -29,13 +30,15 @@ class Project(object):
                 self._deployment.core.from_dict(self.saved_deployment.get('core'))
             if self.saved_deployment and self.saved_deployment.get('config'):
                 for saved_config in self.saved_deployment.get('config'):
-                    config = NodeConfig().create(saved_config)
+                    config = NodeConfig().create(self._core.cloud, saved_config)
                     self._deployment.add_config(self._deployment.length + 1, config)
         except Exception as err:
             raise ProjectError(f"{err}")
 
         if self._core.cloud == 'aws':
             self.deployer = AWSDeployment
+        elif self._core.cloud == 'gcp':
+            self.deployer = GCPDeployment
         else:
             raise ValueError(f"cloud {self._core.cloud} is not supported")
 
@@ -45,7 +48,7 @@ class Project(object):
 
     def add(self):
         logger.info(f"Adding node group to deployment {self._deployment.core.name}")
-        config = NodeConfig().create(self.args)
+        config = NodeConfig().create(self._core.cloud, self.args)
         self._deployment.add_config(self._deployment.length + 1, config)
 
     def save(self):

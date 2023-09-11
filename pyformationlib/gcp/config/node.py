@@ -114,11 +114,11 @@ class InitParams(object):
     initialize_params = attr.ib(validator=io(list))
 
     @classmethod
-    def construct(cls, size: str, vol_type: str):
+    def construct(cls, image_project: str, image_name: str, size: str, vol_type: str):
         return cls(
            [
                {
-                   "image": f"${{data.google_compute_image.cb_image.self_link}}",
+                   "image": f"{image_project}/{image_name}",
                    "size": size,
                    "type": vol_type
                }
@@ -157,15 +157,9 @@ class NetworkInterface(object):
         return cls(
             [
                 {
-                    "dynamic": {
-                        "access_config": [
-                            {
-                                "content": [
-                                    {}
-                                ],
-                            }
-                        ]
-                    },
+                    "access_config": [
+                        {}
+                    ],
                     "subnetwork": subnet,
                     "subnetwork_project": project
                 }
@@ -241,22 +235,58 @@ class GCPProviderBlock(object):
 
 
 @attr.s
-class GCPDisk(object):
-    google_compute_disk = attr.ib(validator=io(dict))
+class GCPDiskBuild(object):
+    disk_block = attr.ib(validator=io(list))
+
+    @classmethod
+    def construct(cls, entry: dict):
+        return cls(
+            [
+                entry
+            ]
+        )
+
+    def as_name(self, name: str):
+        response = {name: self.__dict__['disk_block']}
+        return response
+
+
+@attr.s
+class GCPDiskConfiguration(object):
+    name = attr.ib(validator=io(str))
+    project = attr.ib(validator=io(str))
+    size = attr.ib(validator=io(str))
+    type = attr.ib(validator=io(str))
+    zone = attr.ib(validator=io(str))
 
     @classmethod
     def construct(cls, name: str, description: str, project: str, size: str, vol_type: str, zone: str):
         return cls(
-            {name: [
-                {
-                    "name": f"{name}-{description}",
-                    "project": project,
-                    "size": size,
-                    "type": vol_type,
-                    "zone": zone
-                }
-            ]}
+            f"{name}-{description}",
+            project,
+            size,
+            vol_type,
+            zone
         )
+
+    @property
+    def as_dict(self):
+        return self.__dict__
+
+
+@attr.s
+class GCPDisk(object):
+    google_compute_disk = attr.ib(validator=io(dict))
+
+    @classmethod
+    def build(cls):
+        return cls(
+            {}
+        )
+
+    def add(self, resource: dict):
+        self.google_compute_disk.update(resource)
+        return self
 
     @property
     def as_dict(self):
@@ -273,11 +303,13 @@ class NodeConfiguration(object):
     project = attr.ib(validator=io(str))
     service_account = attr.ib(validator=io(list))
     zone = attr.ib(validator=io(str))
-    attached_disk = attr.ib(validator=attr.validators.optional(io(dict)), default=None)
+    attached_disk = attr.ib(validator=io(list))
 
     @classmethod
     def construct(cls,
                   name: str,
+                  image_project: str,
+                  image_name: str,
                   root_size: str,
                   root_type: str,
                   machine_type: str,
@@ -290,7 +322,7 @@ class NodeConfiguration(object):
                   services: str,
                   attached_disk: list):
         return cls(
-            BootDisk.construct(InitParams.construct(root_size, root_type).as_dict).as_dict,
+            BootDisk.construct(InitParams.construct(image_project, image_name, root_size, root_type).as_dict).as_dict,
             machine_type,
             Metadata.construct(user, ssh_key, services).as_dict,
             name,

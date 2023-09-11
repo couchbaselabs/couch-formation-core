@@ -116,23 +116,25 @@ class BaseConfig:
 
 @attr.s
 class NodeConfig:
+    cloud: Optional[str] = attr.ib(default="aws")
     group: Optional[str] = attr.ib(default="1")
     machine_type: Optional[str] = attr.ib(default=None)
     quantity: Optional[int] = attr.ib(default=1, converter=str_to_int)
     services: Optional[str] = attr.ib(default="default")
     volume_iops: Optional[str] = attr.ib(default="3000")
     volume_size: Optional[str] = attr.ib(default="256")
-    volume_type: Optional[str] = attr.ib(default="gp3")
+    volume_type: Optional[str] = attr.ib(default=None)
     root_size: Optional[str] = attr.ib(default="256")
 
     @classmethod
-    def create(cls, data: Union[list, dict]):
+    def create(cls, cloud: str, data: Union[list, dict]):
         if type(data) == list:
             c = cls()
             c.initialize_args(data)
         else:
             c = cls()
             c.initialize_dict(data)
+        c.set_cloud(cloud)
         return c
 
     def initialize_args(self, args):
@@ -144,6 +146,14 @@ class NodeConfig:
 
     def initialize_dict(self, options):
         self.from_dict(options)
+
+    def set_cloud(self, cloud: str):
+        self.cloud = cloud
+        if not self.volume_type:
+            if self.cloud == "aws":
+                self.volume_type = "gp3"
+            elif self.cloud == "gcp":
+                self.volume_type = "pd-ssd"
 
     def from_namespace(self, namespace: argparse.Namespace):
         args = vars(namespace)

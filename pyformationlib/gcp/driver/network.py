@@ -15,7 +15,6 @@ class Network(CloudBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.logger = logging.getLogger(self.__class__.__name__)
 
     def list(self) -> List[dict]:
         network_list = []
@@ -32,7 +31,7 @@ class Network(CloudBase):
                         region_name = subnet.rsplit('/', 4)[-3]
                         if region_name != self.region:
                             continue
-                        result = Subnet().details(self.region, subnet_name)
+                        result = Subnet(self.config).details(self.region, subnet_name)
                         subnet_list.append(result)
                     network_block = {'cidr': network.get('IPv4Range', None),
                                      'name': network['name'],
@@ -53,7 +52,7 @@ class Network(CloudBase):
     def cidr_list(self):
         try:
             for network in self.list():
-                for item in Subnet().list(network['name']):
+                for item in Subnet(self.config).list(network['name']):
                     yield item['cidr']
         except EmptyResultSet:
             return iter(())
@@ -97,7 +96,6 @@ class Subnet(CloudBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.logger = logging.getLogger(self.__class__.__name__)
 
     def list(self, network: str, region: Union[str, None] = None) -> List[dict]:
         subnet_list = []

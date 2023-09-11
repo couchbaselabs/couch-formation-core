@@ -60,6 +60,8 @@ class CloudBase(object):
         if not self.gcp_region:
             raise GCPDriverError("region not specified")
 
+        self.zones()
+
     def test_session(self):
         try:
             credentials = service_account.Credentials.from_service_account_file(self.auth_file)
