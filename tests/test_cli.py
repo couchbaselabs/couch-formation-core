@@ -9,7 +9,7 @@ parent = os.path.dirname(current)
 sys.path.append(parent)
 sys.path.append(current)
 
-from pyformationlib.cli.cloudmgr import main
+from couchformation.cli.cloudmgr import main
 
 if __name__ == '__main__':
     sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])

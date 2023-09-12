@@ -1,18 +1,23 @@
 from setuptools import setup
-import pyformationlib
+import couchformation
 
 from pathlib import Path
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
 setup(
-    name='pyformationlib',
-    version=pyformationlib.__version__,
-    packages=['pyformationlib'],
+    name='couchformation',
+    version=couchformation.__version__,
+    packages=['couchformation'],
     url='https://github.com/mminichino/couch-formation-core',
     license='Apache License 2.0',
     author='Michael Minichino',
     python_requires='>=3.8',
+    entry_points={
+        'console_scripts': [
+            'cloudmgr = couchformation.cli.cloudmgr:main',
+        ]
+    },
     install_requires=[
         "attrs==23.1.0",
         "boto3==1.28.11",

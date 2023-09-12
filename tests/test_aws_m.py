@@ -13,9 +13,9 @@ parent = os.path.dirname(current)
 sys.path.append(parent)
 sys.path.append(current)
 
-from pyformationlib.project import Project
-from pyformationlib.provisioner.remote import RemoteProvisioner, ProvisionSet
-from pyformationlib.config import NodeList
+from couchformation.project import Project
+from couchformation.provisioner.remote import RemoteProvisioner, ProvisionSet
+from couchformation.config import NodeList
 
 pre_provision_cmds = [
     'curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | sudo -E bash -s - -s -g https://github.com/mminichino/host-prep-lib',
