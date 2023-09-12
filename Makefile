@@ -1,8 +1,8 @@
 .PHONY:	version setup push pypi test
 export PYTHONPATH := $(shell pwd)/test:$(shell pwd):$(PYTHONPATH)
 
-version:
-		bumpversion patch
+build_version:
+		bumpversion build
 		git push
 setup:
 		python setup.py sdist
