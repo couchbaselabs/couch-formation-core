@@ -3,7 +3,7 @@
 
 import re
 import logging
-from typing import Union
+from typing import Union, List
 from couchformation.azure.driver.base import CloudBase, AzureDriverError
 from couchformation.azure.driver.constants import ComputeTypes
 import couchformation.constants as C
@@ -51,6 +51,11 @@ class MachineType(CloudBase):
 
         return machine_type_list
 
+    def get_resources(self, location: str):
+        result_list = self.compute_client.resource_skus.list()
+        resource_list = [r for r in result_list if location in r.locations]
+        return resource_list
+
     def get_machine_types(self, location: str):
         result_list = []
         machine_list = self.list(location)
@@ -68,6 +73,18 @@ class MachineType(CloudBase):
     def get_machine(self, name: str, location: str):
         machine_list = self.get_machine_types(location)
         return next((m for m in machine_list if m['machine_type'] == name), None)
+
+    def check_capacity(self, resource_list: List, machine_size: str, location: str):
+        for resource in resource_list:
+            if machine_size != resource.name:
+                continue
+            zone_list = next((i.zones for i in resource.location_info if i.location == location), [])
+            if set(zone_list) != set(self.azure_availability_zones):
+                return False
+            restriction = next((r.reason_code for r in resource.restrictions if location in r.values), None)
+            if restriction and restriction == "NotAvailableForSubscription":
+                return False
+            return True
 
     def details(self, machine_type: str) -> Union[dict, None]:
         try:
