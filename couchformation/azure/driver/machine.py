@@ -1,6 +1,7 @@
 ##
 ##
 
+import re
 import logging
 from typing import Union
 from couchformation.azure.driver.base import CloudBase, AzureDriverError
@@ -22,31 +23,27 @@ class MachineType(CloudBase):
         machine_type_list = []
 
         try:
-            resource_list = self.compute_client.resource_skus.list()
+            machine_list = self.compute_client.virtual_machine_sizes.list(location=location)
         except Exception as err:
             raise AzureDriverError(f"error listing machine types: {err}")
 
-        for group in list(resource_list):
-            if location not in group.locations:
+        for machine in list(machine_list):
+            match = re.search(r"Standard_([A-Z])([0-9]*)([a-z]*)_v([0-9])", machine.name)
+            if not match:
                 continue
-            if not group.name.endswith(tuple(ComputeTypes().as_list())):
+            if len(match.groups()) != 4:
                 continue
-            if group.restrictions:
-                if len(list(group.restrictions)) != 0:
-                    continue
-            if not group.capabilities:
+            if not set(match.group(1)).issubset(ComputeTypes.size_family):
                 continue
-            if group.tier != 'Standard':
+            if not set(match.group(3)).issubset(ComputeTypes.size_features):
                 continue
-            if not next((c for c in group.capabilities if c.name == 'PremiumIO' and bool(c.value) is True), None):
+            if not set(match.group(3)).issuperset(ComputeTypes.size_storage):
                 continue
-            vm_cpu = next((float(c.value) for c in group.capabilities if c.name == 'vCPUs'), 0)
-            vm_mem = next((float(c.value) * 1024 for c in group.capabilities if c.name == 'MemoryGB'), 0)
-            if vm_cpu == 0 or vm_mem == 0:
+            if not set(match.group(4)).issubset(ComputeTypes.size_versions):
                 continue
-            config_block = {'name': group.name,
-                            'cpu': int(vm_cpu),
-                            'memory': int(vm_mem)}
+            config_block = {'name': machine.name,
+                            'cpu': machine.number_of_cores,
+                            'memory': machine.memory_in_mb}
             machine_type_list.append(config_block)
 
         if len(machine_type_list) == 0:
@@ -57,7 +54,7 @@ class MachineType(CloudBase):
     def get_machine_types(self, location: str):
         result_list = []
         machine_list = self.list(location)
-        machine_list = sorted(machine_list, key=lambda m: m['name'])
+        machine_list = sorted(machine_list, key=lambda m: m['name'][-1], reverse=True)
 
         for machine_type in C.MACHINE_TYPES:
             machine = next((m for m in machine_list if m['cpu'] == machine_type['cpu'] and m['memory'] == machine_type['memory']), None)
