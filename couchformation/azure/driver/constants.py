@@ -134,3 +134,11 @@ class AzureImagePublishers(object):
             "sku_match": "^(.+?)-gen2$"
         },
     ]
+
+
+@attr.s
+class ComputeTypes(object):
+    general_purpose = ['v5', 'v4']
+
+    def as_list(self) -> list:
+        return self.general_purpose

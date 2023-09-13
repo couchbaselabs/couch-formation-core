@@ -43,7 +43,7 @@ class Image(CloudBase):
 
         return image_list
 
-    def public(self, location: str, publisher: str):
+    def public(self, location: str, publisher: str, architecture: str = 'x86_64'):
         offer_list = []
         image_list = []
 
@@ -59,6 +59,11 @@ class Image(CloudBase):
             skus = self.compute_client.virtual_machine_images.list_skus(location, publisher, offer_name)
             for sku in list(skus):
                 sku_name = sku.name
+                _image_is_arm = re.search('arm64', offer_name) or re.search('arm64', sku_name)
+                if architecture == 'arm64' and not _image_is_arm:
+                    continue
+                elif _image_is_arm:
+                    continue
                 versions = self.compute_client.virtual_machine_images.list(location, publisher, offer_name, sku_name)
                 for version in versions:
                     image_block = {
@@ -96,12 +101,12 @@ class Image(CloudBase):
         except Exception as err:
             raise AzureDriverError(f"can not delete image: {err}")
 
-    def list_standard(self, os_id: str = None, os_version: str = None):
+    def list_standard(self, os_id: str = None, os_version: str = None, architecture: str = 'x86_64'):
         result_list = []
         for image_type in AzureImagePublishers.publishers:
             if os_id and image_type['os_id'] != os_id:
                 continue
-            image_list = self.public(location=self.region, publisher=image_type['name'])
+            image_list = self.public(location=self.region, publisher=image_type['name'], architecture=architecture)
             for version in C.OS_VERSION_LIST[image_type['os_id']]:
                 if os_version and version != os_version:
                     continue
@@ -130,7 +135,7 @@ class Image(CloudBase):
                     result_list.append(result_image)
                 if len(result_list) > 0:
                     logger.debug(f"Selected image -> {result_list[-1]}")
-                return result_list
+                return result_list[-1]
 
     @staticmethod
     def image_user(os_id: str):
