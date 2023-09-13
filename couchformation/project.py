@@ -6,6 +6,7 @@ from typing import Union
 from couchformation.exception import FatalError
 from couchformation.aws.node import AWSDeployment
 from couchformation.gcp.node import GCPDeployment
+from couchformation.azure.node import AzureDeployment
 from couchformation.config import BaseConfig, DeploymentConfig, NodeConfig
 from couchformation.exec.process import TFRun
 
@@ -39,11 +40,13 @@ class Project(object):
             self.deployer = AWSDeployment
         elif self._core.cloud == 'gcp':
             self.deployer = GCPDeployment
+        elif self._core.cloud == 'azure':
+            self.deployer = AzureDeployment
         else:
             raise ValueError(f"cloud {self._core.cloud} is not supported")
 
     def create(self):
-        self._deployment.reset()
+        self._deployment.reset(self.args)
         self.add()
 
     def add(self):

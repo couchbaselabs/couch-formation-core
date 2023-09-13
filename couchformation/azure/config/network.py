@@ -139,9 +139,9 @@ class RGResource(object):
     azurerm_resource_group = attr.ib(validator=io(dict))
 
     @classmethod
-    def construct(cls, region_var: str, name: str):
+    def construct(cls, region: str, name: str):
         return cls(
-            ResourceGroup.construct(RGElements.construct(region_var, name).as_dict).as_dict
+            ResourceGroup.construct(RGElements.construct(region, name).as_dict).as_dict
         )
 
     @property

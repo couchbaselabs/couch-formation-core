@@ -13,6 +13,7 @@ from azure.mgmt.resource.subscriptions import SubscriptionClient
 from couchformation.config import BaseConfig, AuthMode
 from couchformation.exception import FatalError, NonFatalError
 from couchformation.azure.driver.constants import get_auth_directory, get_config_default, get_config_main
+from couchformation.azure.driver.constants import AzureDiskTiers
 
 logger = logging.getLogger('couchformation.azure.driver.base')
 logger.addHandler(logging.NullHandler())
@@ -31,6 +32,7 @@ class EmptyResultSet(NonFatalError):
 class CloudBase(object):
 
     def __init__(self, config: BaseConfig):
+        self.config = config
         self.auth_directory = get_auth_directory()
         self.config_default = get_config_default()
         self.config_main = get_config_main()
@@ -70,6 +72,25 @@ class CloudBase(object):
             return credential, azure_subscription_id
         except Exception as err:
             raise AzureDriverError(f"Azure: unauthorized (use az login): {err}")
+
+    def test_session(self):
+        if len(self.azure_availability_zones) == 0:
+            raise AzureDriverError(f"Unable to determine availability zones for location {self.azure_location}")
+
+    @staticmethod
+    def disk_size_to_tier(value: Union[int, str]):
+        size = int(value)
+        size_list = [int(i['disk_size']) for i in AzureDiskTiers.disk_tier_list]
+        value = min([s for s in size_list if s >= size])
+        return next(t for t in AzureDiskTiers.disk_tier_list if t['disk_size'] == str(value))
+
+    @staticmethod
+    def disk_caching(value: Union[int, str]):
+        size = int(value)
+        if size > 4095:
+            return "None"
+        else:
+            return "ReadWrite"
 
     def read_config(self):
         if os.path.exists(self.config_main):

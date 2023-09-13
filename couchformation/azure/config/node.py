@@ -263,6 +263,7 @@ class NodeConfiguration(object):
     size = attr.ib(validator=io(str))
     zone = attr.ib(validator=io(str))
     source_image_reference = attr.ib(validator=io(list))
+    tags = attr.ib(validator=io(dict))
 
     @classmethod
     def construct(cls,
@@ -276,6 +277,7 @@ class NodeConfiguration(object):
                   resource_group: str,
                   nic_name: str,
                   zone: str,
+                  services,
                   publisher: str,
                   offer: str,
                   sku: str):
@@ -289,7 +291,8 @@ class NodeConfiguration(object):
             resource_group,
             machine_type,
             zone,
-            SourceImageReference.construct(publisher, offer, sku).as_dict
+            SourceImageReference.construct(publisher, offer, sku).as_dict,
+            {"name": name, "services": services}
         )
 
     @property

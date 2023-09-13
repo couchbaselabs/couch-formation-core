@@ -35,28 +35,48 @@ class AzureDiskTypes(object):
 class AzureDiskTiers(object):
     disk_tier_list = [
         {
+            "disk_size": "4",
+            "disk_tier": "P2",
+            "disk_iops": "16000"
+        },
+        {
+            "disk_size": "8",
+            "disk_tier": "P3",
+            "disk_iops": "16000"
+        },
+        {
+            "disk_size": "16",
+            "disk_tier": "P4",
+            "disk_iops": "16000"
+        },
+        {
+            "disk_size": "32",
+            "disk_tier": "P6",
+            "disk_iops": "16000"
+        },
+        {
             "disk_size": "64",
-            "disk_tier": "P50",
+            "disk_tier": "P10",
             "disk_iops": "16000"
         },
         {
             "disk_size": "128",
-            "disk_tier": "P50",
+            "disk_tier": "P15",
             "disk_iops": "16000"
         },
         {
             "disk_size": "256",
-            "disk_tier": "P50",
+            "disk_tier": "P20",
             "disk_iops": "16000"
         },
         {
             "disk_size": "512",
-            "disk_tier": "P50",
+            "disk_tier": "P30",
             "disk_iops": "16000"
         },
         {
             "disk_size": "1024",
-            "disk_tier": "P50",
+            "disk_tier": "P40",
             "disk_iops": "16000"
         },
         {
@@ -142,3 +162,23 @@ class ComputeTypes(object):
     size_features = set('tlmsa')
     size_storage = set('s')
     size_versions = set('2345')
+
+
+@attr.s
+class StorageTierMap(object):
+    size_in_gb = {
+        "4": ["P2", "P3", "P4", "P6", "P10", "P15", "P20", "P30", "P40", "P50"],
+        "8": ["P3", "P4", "P6", "P10", "P15", "P20", "P30", "P40", "P50"],
+        "16": ["P4", "P6", "P10", "P15", "P20", "P30", "P40", "P50"],
+        "32": ["P6", "P10", "P15", "P20", "P30", "P40", "P50"],
+        "64": ["P10", "P15", "P20", "P30", "P40", "P50"],
+        "128": ["P15", "P20", "P30", "P40", "P50"],
+        "256": ["P20", "P30", "P40", "P50"],
+        "512": ["P30", "P40", "P50"],
+        "1024": ["P40", "P50"],
+        "2048": ["P50"],
+        "4096": ["P50"],
+        "8192": ["P70", "P80"],
+        "16384": ["P80"],
+        "32768": ["P80"],
+    }

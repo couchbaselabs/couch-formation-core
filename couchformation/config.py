@@ -154,6 +154,8 @@ class NodeConfig:
                 self.volume_type = "gp3"
             elif self.cloud == "gcp":
                 self.volume_type = "pd-ssd"
+            elif self.cloud == "azure":
+                self.volume_type = "Premium_LRS"
 
     def from_namespace(self, namespace: argparse.Namespace):
         args = vars(namespace)
@@ -193,8 +195,9 @@ class DeploymentConfig:
             []
         )
 
-    def reset(self):
+    def reset(self, args):
         self.config.clear()
+        self.core = BaseConfig().create(args)
 
     @property
     def length(self):
