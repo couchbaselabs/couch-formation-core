@@ -138,7 +138,7 @@ class AzureImagePublishers(object):
 
 @attr.s
 class ComputeTypes(object):
-    general_purpose = ['v5', 'v4', 'v3']
+    general_purpose = ['v5', 'v4']
 
     def as_list(self) -> list:
         return self.general_purpose
