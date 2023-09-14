@@ -111,7 +111,9 @@ class Image(CloudBase):
                         os_user=image_type['user']
                     ))
                     result_list.append(result_image)
-        return result_list
+        if len(result_list) > 0:
+            logger.debug(f"Selected image -> {result_list[-1]}")
+        return result_list[-1]
 
     @staticmethod
     def image_user(os_id: str):

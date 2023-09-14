@@ -14,8 +14,19 @@ sys.path.append(parent)
 sys.path.append(current)
 
 from couchformation.project import Project
-from couchformation.provisioner.remote import RemoteProvisioner, ProvisionSet
-from couchformation.config import NodeList
+from couchformation.network import NetworkDriver
+from couchformation.aws.driver.base import CloudBase
+from couchformation.aws.driver.network import Network, Subnet
+from couchformation.aws.driver.gateway import InternetGateway
+from couchformation.aws.driver.instance import Instance
+from couchformation.aws.driver.machine import MachineType
+from couchformation.aws.driver.nsg import SecurityGroup
+from couchformation.aws.driver.route import RouteTable
+from couchformation.aws.driver.sshkey import SSHKey
+from couchformation.aws.driver.image import Image
+from couchformation.ssh import SSHUtil
+from couchformation.config import BaseConfig, NodeConfig
+
 
 pre_provision_cmds = [
     'curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | sudo -E bash -s - -s -g https://github.com/mminichino/host-prep-lib',
@@ -67,7 +78,7 @@ class Params(object):
         parser.add_argument("--deploy", action="store_true")
         parser.add_argument("--destroy", action="store_true")
         parser.add_argument("--list", action="store_true")
-        parser.add_argument("--provision", action="store_true")
+        parser.add_argument("--driver", action="store_true")
         self.options, self.remainder = parser.parse_known_args()
 
     @property
@@ -106,19 +117,57 @@ def aws_list_1(args):
     print(nodes.ip_csv_list())
 
 
-def aws_provision_1(username, ssh_key, ip_list):
-    cmd = [
-        'uname -a',
-        'id -a'
-    ]
-    ps = ProvisionSet()
-    ps.add_install(cmd)
-    nodes = NodeList().create(username, ssh_key)
-    for ip in ip_list:
-        nodes.add('node-test-cluster-1', ip, ip)
-    ps.add_nodes(nodes)
-    rp = RemoteProvisioner(ps)
-    rp.run()
+def aws_driver_1(args):
+    warnings.filterwarnings("ignore")
+    cidr_util = NetworkDriver()
+    core = BaseConfig().create(args)
+    base = CloudBase(core)
+    config = NodeConfig().create(core.cloud, args)
+
+    for net in Network(core).cidr_list:
+        cidr_util.add_network(net)
+
+    vpc_cidr = cidr_util.get_next_network()
+    subnet_list = list(cidr_util.get_next_subnet())
+    zone_list = base.zones()
+
+    print(f"Network: {vpc_cidr}")
+    print(f"Subnet : {subnet_list[1]}")
+    print(f"Zone   : {zone_list[0]}")
+
+    ssh_pub_key_text = SSHUtil().get_ssh_public_key(core.ssh_key)
+    vpc_id = Network(core).create("pytest-vpc", vpc_cidr)
+    sg_id = SecurityGroup(core).create("pytest-sg", "TestSG", vpc_id)
+    ssh_key_data = SSHKey(core).create("pytest-key", ssh_pub_key_text, {"Environment": "pytest"})
+    ssh_key_name = ssh_key_data['name']
+    subnet_id = Subnet(core).create("pytest-subnet-01", vpc_id, zone_list[0], subnet_list[1])
+
+    ig_id = InternetGateway(core).create("pytest-vpc-ig", vpc_id)
+    rt_id = RouteTable(core).create("pytest-vpc-rt", vpc_id)
+    RouteTable(core).add_route("0.0.0.0/0", ig_id, rt_id)
+
+    image = Image(core).list_standard(os_id=core.os_id, os_version=core.os_version)
+    assert image is not None
+    machine = MachineType(core).get_machine(config.machine_type)
+    assert machine is not None
+
+    print("Creating instance")
+    instance_id = Instance(core).run("pytest-instance", image['name'], ssh_key_name, sg_id, subnet_id, instance_type=machine['name'])
+
+    sg_list = SecurityGroup(core).list(vpc_id)
+    new_vpc_list = Network(core).list()
+
+    assert any(i['id'] == vpc_id for i in new_vpc_list) is True
+    assert any(i['id'] == sg_id for i in sg_list) is True
+
+    print("Removing instance")
+    Instance(core).terminate(instance_id)
+    RouteTable(core).delete(rt_id)
+    InternetGateway(core).delete(ig_id)
+    SecurityGroup(core).delete(sg_id)
+    Subnet(core).delete(subnet_id)
+    Network(core).delete(vpc_id)
+    SSHKey(core).delete(ssh_key_name)
 
 
 p = Params()
@@ -157,8 +206,5 @@ if options.destroy:
 if options.list:
     aws_list_1(remainder)
 
-if options.provision:
-    _username = os.environ['TEST_USERNAME']
-    _ssh_key = os.environ['TEST_SSH_KEY']
-    _ip_list = os.environ['TEST_IP_LIST'].split(',')
-    aws_provision_1(_username, _ssh_key, _ip_list)
+if options.driver:
+    aws_driver_1(remainder)

@@ -78,3 +78,76 @@ class Network(CloudBase):
             return None
         except Exception as err:
             raise AWSDriverError(f"error getting VPC details: {err}")
+
+
+class Subnet(CloudBase):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    def list(self, vpc_id: str, zone: Union[str, None] = None, filter_keys_exist: Union[List[str], None] = None) -> List[dict]:
+        subnet_list = []
+        subnets = []
+        extra_args = {}
+        subnet_filter = [
+            {
+                'Name': 'vpc-id',
+                'Values': [
+                    vpc_id,
+                ]
+            }
+        ]
+
+        if zone:
+            subnet_filter.append(
+                {
+                    'Name': 'availability-zone',
+                    'Values': [
+                        zone,
+                    ]
+                }
+            )
+
+        try:
+            while True:
+                result = self.ec2_client.describe_subnets(**extra_args, Filters=subnet_filter)
+                subnets.extend(result['Subnets'])
+                if 'NextToken' not in result:
+                    break
+                extra_args['NextToken'] = result['NextToken']
+        except Exception as err:
+            raise AWSDriverError(f"error getting subnets: {err}")
+
+        for subnet in subnets:
+            net_block = {'cidr': subnet['CidrBlock'],
+                         'name': subnet['SubnetId'],
+                         'vpc': subnet['VpcId'],
+                         'zone': subnet['AvailabilityZone'],
+                         'default': subnet['DefaultForAz'],
+                         'public': subnet['MapPublicIpOnLaunch']}
+            if filter_keys_exist:
+                if not all(key in net_block for key in filter_keys_exist):
+                    continue
+            subnet_list.append(net_block)
+
+        if len(subnet_list) == 0:
+            raise EmptyResultSet(f"no subnets found")
+
+        return subnet_list
+
+    def create(self, name: str, vpc_id: str, zone: str, cidr: str) -> str:
+        result = None
+        subnet_tag = [AWSTagStruct.build("subnet").add(AWSTag("Name", name)).as_dict]
+        try:
+            result = self.ec2_client.create_subnet(VpcId=vpc_id, AvailabilityZone=zone, CidrBlock=cidr, TagSpecifications=subnet_tag)
+        except Exception as err:
+            AWSDriverError(f"error creating subnet: {err}")
+
+        return result['Subnet']['SubnetId']
+
+    def delete(self, subnet_id: str) -> None:
+        try:
+            self.ec2_client.delete_subnet(SubnetId=subnet_id)
+        except Exception as err:
+            raise AWSDriverError(f"error deleting subnet: {err}")

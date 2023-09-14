@@ -37,6 +37,9 @@ class AWSNetwork(object):
         self.aws_network = Network(core)
         self.runner = TFRun(core)
 
+    def create_vpc(self):
+        pass
+
     def config_gen(self):
         cidr_util = NetworkDriver()
         vpc_name = f"{self.project}-vpc"
