@@ -41,7 +41,7 @@ class SSHKey(CloudBase):
 
         return key_list
 
-    def create(self, name: str, ssh_key: str, tags: Union[dict, None] = None) -> dict:
+    def create(self, name: str, ssh_key: str, tags: Union[dict, None] = None) -> str:
         key_block = {}
         tag_build = AWSTagStruct.build("key-pair")
         tag_build.add(AWSTag("Name", name))
@@ -62,7 +62,7 @@ class SSHKey(CloudBase):
         except Exception as err:
             AWSDriverError(f"error importing key pair: {err}")
 
-        return key_block
+        return key_block['name']
 
     def create_native(self, name: str) -> dict:
         key_block = {}

@@ -2,6 +2,7 @@
 ##
 
 import logging
+import re
 from couchformation.aws.driver.base import CloudBase, AWSDriverError
 from couchformation.aws.driver.constants import AWSEbsDisk, AWSTagStruct, EbsVolume, AWSTag
 
@@ -16,7 +17,20 @@ class Instance(CloudBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def run(self, name: str, ami: str, ssh_key: str, sg_id: str, subnet: str, root_type="gp3", root_size=100, instance_type="t2.micro"):
+    def run(self,
+            name: str,
+            ami: str,
+            ssh_key: str,
+            sg_id: str,
+            subnet: str,
+            zone: str,
+            root_size=256,
+            swap_size=16,
+            swap_iops=3000,
+            data_size=256,
+            data_iops=3000,
+            instance_type="t2.micro"):
+        volume_type = "gp3"
         try:
             ami_details = self.image_details(ami)
         except Exception as err:
@@ -25,11 +39,19 @@ class Instance(CloudBase):
             raise AWSDriverError(f"can not get details for AMI {ami}")
 
         root_dev = ami_details['BlockDeviceMappings'][0]['DeviceName']
-        root_disk = [AWSEbsDisk.build(root_dev, EbsVolume(root_type, root_size)).as_dict]
+        match = re.search(r"/dev/(.+?)a[0-9]*", root_dev)
+        root_disk_prefix = f"/dev/{match.group(1)}"
+        disk_list = [
+            AWSEbsDisk.build(root_dev, EbsVolume(volume_type, root_size, 3000)).as_dict,
+            AWSEbsDisk.build(f"{root_disk_prefix}b", EbsVolume(volume_type, swap_size, swap_iops)).as_dict,
+            AWSEbsDisk.build(f"{root_disk_prefix}c", EbsVolume(volume_type, data_size, data_iops)).as_dict,
+        ]
         instance_tag = [AWSTagStruct.build("instance").add(AWSTag("Name", name)).as_dict]
 
+        placement = {"AvailabilityZone": zone}
+
         try:
-            result = self.ec2_client.run_instances(BlockDeviceMappings=root_disk,
+            result = self.ec2_client.run_instances(BlockDeviceMappings=disk_list,
                                                    ImageId=ami,
                                                    InstanceType=instance_type,
                                                    KeyName=ssh_key,
@@ -37,6 +59,7 @@ class Instance(CloudBase):
                                                    MinCount=1,
                                                    SecurityGroupIds=[sg_id],
                                                    SubnetId=subnet,
+                                                   Placement=placement,
                                                    TagSpecifications=instance_tag)
         except Exception as err:
             raise AWSDriverError(f"error running instance: {err}")

@@ -63,6 +63,42 @@ class SecurityGroup(CloudBase):
 
         return result['GroupId']
 
+    def add_egress(self, sg_id: str, protocol: str, from_port: int, to_port: int, cidr: str):
+        try:
+            result = self.ec2_client.authorize_security_group_egress(
+                GroupId=sg_id,
+                IpPermissions=[{
+                    'IpProtocol': protocol,
+                    'FromPort': from_port,
+                    'ToPort': to_port,
+                    'IpRanges': [{
+                        'CidrIp': cidr
+                    }],
+                }]
+            )
+        except Exception as err:
+            raise AWSDriverError(f"error adding egress to security group: {err}")
+
+        return result['Return']
+
+    def add_ingress(self, sg_id: str, protocol: str, from_port: int, to_port: int, cidr: str):
+        try:
+            result = self.ec2_client.authorize_security_group_ingress(
+                GroupId=sg_id,
+                IpPermissions=[{
+                    'IpProtocol': protocol,
+                    'FromPort': from_port,
+                    'ToPort': to_port,
+                    'IpRanges': [{
+                        'CidrIp': cidr
+                    }],
+                }]
+            )
+        except Exception as err:
+            raise AWSDriverError(f"error adding egress to security group: {err}")
+
+        return result['Return']
+
     def delete(self, sg_id: str) -> None:
         try:
             self.ec2_client.delete_security_group(GroupId=sg_id)

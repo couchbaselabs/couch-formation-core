@@ -9,6 +9,7 @@ from couchformation.gcp.node import GCPDeployment
 from couchformation.azure.node import AzureDeployment
 from couchformation.config import BaseConfig, DeploymentConfig, NodeConfig
 from couchformation.exec.process import TFRun
+import couchformation.state as state
 
 logger = logging.getLogger('couchformation.exec.process')
 logger.addHandler(logging.NullHandler())

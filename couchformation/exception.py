@@ -5,6 +5,7 @@ import sys
 import os
 import inspect
 import logging
+import couchformation.state as state
 
 logger = logging.getLogger('couchformation.error')
 logger.addHandler(logging.NullHandler())
@@ -20,6 +21,7 @@ class FatalError(Exception):
         filename = os.path.basename(filename)
         logging.debug("Error: {} in {} {} at line {}: {}".format(type(self).__name__, filename, function, line, message))
         logging.error(f"{message} [{filename}:{line}]")
+        state.save()
         sys.exit(1)
 
 

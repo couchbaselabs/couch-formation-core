@@ -42,12 +42,14 @@ class AWSTagStruct(object):
 class EbsVolume(object):
     VolumeType = attr.ib(validator=io(str))
     VolumeSize = attr.ib(validator=io(int))
+    Iops = attr.ib(validator=io(int))
 
     @classmethod
-    def build(cls, vol_type: str, vol_size: int):
+    def build(cls, vol_type: str, vol_size: int, vol_iops: int):
         return cls(
             vol_type,
-            vol_size
+            vol_size,
+            vol_iops
         )
 
     @property

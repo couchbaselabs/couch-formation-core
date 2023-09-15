@@ -15,6 +15,9 @@ class NetworkDriver(object):
         self.active_network: IPv4Network = ipaddress.ip_network("10.1.0.0/16")
         self.super_net: IPv4Network = ipaddress.ip_network("10.0.0.0/8")
 
+    def set_active_network(self, cidr: str):
+        self.active_network: IPv4Network = ipaddress.ip_network(cidr)
+
     def add_network(self, cidr: str) -> None:
         cidr_net = ipaddress.ip_network(cidr)
         self.ip_space.append(cidr_net)

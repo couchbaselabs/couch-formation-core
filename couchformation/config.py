@@ -82,11 +82,19 @@ class BaseConfig:
         self.from_dict(options)
 
     @property
+    def common_dir(self):
+        return get_resource_dir(self.project, 'common')
+
+    @property
+    def resource_dir(self):
+        return get_resource_dir(self.project, self.name)
+
+    @property
     def working_dir(self):
         if self.path_mode == PathMode.resource:
-            return get_resource_dir(self.project, self.name)
+            return self.resource_dir
         else:
-            return get_resource_dir(self.project, 'common')
+            return self.common_dir
 
     def common_mode(self):
         self.path_mode = PathMode.common

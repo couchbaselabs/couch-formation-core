@@ -17,7 +17,7 @@ class Network(CloudBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def list(self) -> List[dict]:
+    def list(self, name: str = None) -> Union[List[dict], None]:
         vpc_list = []
         vpcs = []
         extra_args = {}
@@ -33,13 +33,17 @@ class Network(CloudBase):
             raise AWSDriverError(f"error getting VPC list: {err}")
 
         for vpc_entry in vpcs:
+            if name:
+                vpc_name = self.get_tag("Name", vpc_entry['Tags'])
+                if vpc_name != name:
+                    continue
             vpc_block = {'cidr': vpc_entry['CidrBlock'],
                          'default': vpc_entry['IsDefault'],
                          'id': vpc_entry['VpcId']}
             vpc_list.append(vpc_block)
 
         if len(vpc_list) == 0:
-            raise EmptyResultSet(f"no VPCs found")
+            return None
         else:
             return vpc_list
 
@@ -137,14 +141,14 @@ class Subnet(CloudBase):
         return subnet_list
 
     def create(self, name: str, vpc_id: str, zone: str, cidr: str) -> str:
-        result = None
         subnet_tag = [AWSTagStruct.build("subnet").add(AWSTag("Name", name)).as_dict]
         try:
             result = self.ec2_client.create_subnet(VpcId=vpc_id, AvailabilityZone=zone, CidrBlock=cidr, TagSpecifications=subnet_tag)
+            subnet_id = result['Subnet']['SubnetId']
+            self.ec2_client.modify_subnet_attribute(SubnetId=subnet_id, MapPublicIpOnLaunch={'Value': True})
+            return subnet_id
         except Exception as err:
             AWSDriverError(f"error creating subnet: {err}")
-
-        return result['Subnet']['SubnetId']
 
     def delete(self, subnet_id: str) -> None:
         try:

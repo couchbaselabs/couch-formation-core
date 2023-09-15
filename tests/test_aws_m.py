@@ -138,8 +138,7 @@ def aws_driver_1(args):
     ssh_pub_key_text = SSHUtil().get_ssh_public_key(core.ssh_key)
     vpc_id = Network(core).create("pytest-vpc", vpc_cidr)
     sg_id = SecurityGroup(core).create("pytest-sg", "TestSG", vpc_id)
-    ssh_key_data = SSHKey(core).create("pytest-key", ssh_pub_key_text, {"Environment": "pytest"})
-    ssh_key_name = ssh_key_data['name']
+    ssh_key_name = SSHKey(core).create("pytest-key", ssh_pub_key_text, {"Environment": "pytest"})
     subnet_id = Subnet(core).create("pytest-subnet-01", vpc_id, zone_list[0], subnet_list[1])
 
     ig_id = InternetGateway(core).create("pytest-vpc-ig", vpc_id)
