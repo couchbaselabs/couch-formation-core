@@ -253,3 +253,11 @@ def save():
         make_dir(core.resource_dir)
         # noinspection PyTypeChecker
         write_file(attr.asdict(instance_set), os.path.join(core.resource_dir, 'state.json'))
+
+
+def infrastructure_display():
+    json.dumps(infrastructure, indent=2)
+
+
+def instances_display():
+    json.dumps(instance_set, indent=2)
