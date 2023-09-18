@@ -6,7 +6,7 @@ from typing import List, Union
 import googleapiclient.errors
 from couchformation.gcp.driver.base import CloudBase, GCPDriverError, EmptyResultSet
 
-logger = logging.getLogger('couchformation.gcp.driver.instance')
+logger = logging.getLogger('couchformation.gcp.driver.network')
 logger.addHandler(logging.NullHandler())
 logging.getLogger("googleapiclient").setLevel(logging.ERROR)
 
@@ -58,6 +58,7 @@ class Network(CloudBase):
             return iter(())
 
     def create(self, name: str) -> str:
+        operation = {}
         network_body = {
             "name": name,
             "autoCreateSubnetworks": False
@@ -73,7 +74,7 @@ class Network(CloudBase):
         except Exception as err:
             raise GCPDriverError(f"error creating network: {err}")
 
-        return name
+        return operation.get('targetLink')
 
     def delete(self, network: str) -> None:
         try:
@@ -130,7 +131,8 @@ class Subnet(CloudBase):
             return subnet_list
 
     def create(self, name: str, network: str, cidr: str) -> str:
-        network_info = Network().details(network)
+        operation = {}
+        network_info = Network(self.config).details(network)
         subnetwork_body = {
             "name": name,
             "network": network_info['selfLink'],
@@ -148,7 +150,7 @@ class Subnet(CloudBase):
         except Exception as err:
             raise GCPDriverError(f"error creating subnet: {err}")
 
-        return name
+        return operation.get('targetLink')
 
     def delete(self, subnet: str) -> None:
         try:
