@@ -8,14 +8,13 @@ from couchformation.network import NetworkDriver
 from couchformation.gcp.driver.network import Network, Subnet
 from couchformation.gcp.driver.firewall import Firewall
 from couchformation.gcp.driver.base import CloudBase
-from couchformation.exec.process import TFRun
 import couchformation.gcp.driver.constants as C
 from couchformation.config import BaseConfig
 from couchformation.exception import FatalError
 import couchformation.state as state
 from couchformation.state import INFRASTRUCTURE, GCPZone
 
-logger = logging.getLogger('couchformation.aws.network')
+logger = logging.getLogger('couchformation.gcp.network')
 logger.addHandler(logging.NullHandler())
 
 
@@ -33,6 +32,9 @@ class GCPNetwork(object):
         self.profile = core.profile
         core.common_mode()
 
+        state.core = self.core
+        state.switch_cloud()
+
         try:
             self.validate()
         except ValueError as err:
@@ -40,7 +42,6 @@ class GCPNetwork(object):
 
         self.gcp_network = Network(core)
         self.gcp_base = CloudBase(core)
-        self.runner = TFRun(core)
 
     def create_vpc(self):
         core = self.core

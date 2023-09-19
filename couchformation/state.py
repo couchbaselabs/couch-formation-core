@@ -82,7 +82,7 @@ class GCPInstance:
     private_ip: Optional[str] = attr.ib(default=None)
     services: Optional[str] = attr.ib(default=None)
     zone: Optional[str] = attr.ib(default=None)
-    disk_list: Optional[List[GCPDisk]] = attr.ib(default=[])
+    disk_list: Optional[List[dict]] = attr.ib(default=[])
 
 
 @attr.s
@@ -90,7 +90,7 @@ class GCPInstanceSet:
     cloud: Optional[str] = attr.ib(default="gcp")
     name: Optional[str] = attr.ib(default=None)
     username: Optional[str] = attr.ib(default=None)
-    instance_list: Optional[List[AWSInstance]] = attr.ib(default=[])
+    instance_list: Optional[List[dict]] = attr.ib(default=[])
 
 
 @attr.s

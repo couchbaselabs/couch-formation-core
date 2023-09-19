@@ -39,7 +39,13 @@ class Instance(CloudBase):
                 {
                     "network": f"projects/{self.gcp_project}/global/networks/{vpc}",
                     "subnetwork": f"regions/{self.gcp_region}/subnetworks/{subnet}",
-                    "accessConfigs": []
+                    "accessConfigs": [
+                        {
+                            "name": "external-nat",
+                            "type": "ONE_TO_ONE_NAT",
+                            "networkTier": "PREMIUM"
+                        }
+                    ]
                 }
             ],
             "serviceAccounts": [
@@ -95,10 +101,9 @@ class Instance(CloudBase):
         try:
             request = self.gcp_client.instances().get(project=self.gcp_project, zone=zone, instance=instance)
             response = request.execute()
+            return response
         except Exception as err:
             raise GCPDriverError(f"error getting instance details: {err}")
-
-        return response
 
     def terminate(self, instance: str, zone: str) -> None:
         try:
