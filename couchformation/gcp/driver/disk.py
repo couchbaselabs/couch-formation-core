@@ -60,6 +60,10 @@ class Disk(CloudBase):
             request = self.gcp_client.disks().delete(project=self.gcp_project, zone=zone, disk=disk)
             operation = request.execute()
             self.wait_for_zone_operation(operation['name'], zone)
+        except googleapiclient.errors.HttpError as err:
+            error_details = err.error_details[0].get('reason')
+            if error_details != "notFound":
+                raise GCPDriverError(f"can not terminate instance: {err}")
         except Exception as err:
             raise GCPDriverError(f"error deleting disk: {err}")
 

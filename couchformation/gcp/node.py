@@ -7,7 +7,6 @@ import time
 import attr
 from itertools import cycle
 from typing import List
-from couchformation.exec.process import TFRun
 import couchformation.gcp.driver.constants as C
 from couchformation.gcp.driver.base import CloudBase
 from couchformation.gcp.driver.instance import Instance
@@ -116,6 +115,7 @@ class GCPDeployment(object):
                 machine_ram = str(machine['memory'] / 1024)
                 logger.info(f"Selecting machine type {machine_name}")
 
+                instance_state.disk_list.clear()
                 logger.info(f"Creating disk {swap_disk}")
                 Disk(core).create(swap_disk, subnet['zone'], machine_ram)
                 # noinspection PyTypeChecker
@@ -167,7 +167,7 @@ class GCPDeployment(object):
             instance_name = instance['name']
             zone = instance['zone']
             Instance(core).terminate(instance_name, zone)
-            logger.info(f"Removed instance {instance}")
+            logger.info(f"Removed instance {instance_name}")
             for d, disk in reversed(list(enumerate(instance['disk_list']))):
                 Disk(core).delete(disk['name'], disk['zone'])
                 logger.info(f"Removed disk {disk['name']}")
