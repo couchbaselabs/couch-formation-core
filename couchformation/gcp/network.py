@@ -1,16 +1,19 @@
 ##
 ##
 
+import attr
 import logging
+from itertools import cycle
 from couchformation.network import NetworkDriver
-from couchformation.gcp.driver.network import Network
+from couchformation.gcp.driver.network import Network, Subnet
+from couchformation.gcp.driver.firewall import Firewall
 from couchformation.gcp.driver.base import CloudBase
 from couchformation.exec.process import TFRun
 import couchformation.gcp.driver.constants as C
-from couchformation.common.config.resources import Output, OutputValue
 from couchformation.config import BaseConfig
 from couchformation.exception import FatalError
-from couchformation.gcp.config.network import (GCPProvider, SubnetResource, NetworkResource, Resources, VPCConfig, FirewallResource)
+import couchformation.state as state
+from couchformation.state import INFRASTRUCTURE, GCPZone
 
 logger = logging.getLogger('couchformation.aws.network')
 logger.addHandler(logging.NullHandler())
@@ -23,6 +26,7 @@ class GCPNetworkError(FatalError):
 class GCPNetwork(object):
 
     def __init__(self, core: BaseConfig):
+        self.core = core
         self.project = core.project
         self.region = core.region
         self.auth_mode = core.auth
@@ -38,73 +42,150 @@ class GCPNetwork(object):
         self.gcp_base = CloudBase(core)
         self.runner = TFRun(core)
 
-    def config_gen(self):
+    def create_vpc(self):
+        core = self.core
         cidr_util = NetworkDriver()
-        vpc_name = f"{self.project}-vpc"
-        subnet_name = f"{self.project}-subnet-1"
+        vpc_name = f"{core.project}-vpc"
+        subnet_name = f"{core.project}-subnet-01"
+        firewall_default = f"{vpc_name}-fw-default"
+        firewall_cbs = f"{vpc_name}-fw-cbs"
+        firewall_ssh = f"{vpc_name}-fw-ssh"
 
         for net in self.gcp_network.cidr_list:
             cidr_util.add_network(net)
 
-        vpc_cidr = cidr_util.get_next_network()
-        subnet_list = list(cidr_util.get_next_subnet())
-        gcp_project = self.gcp_base.project
-        account_file = self.gcp_base.account_file
+        zone_list = self.gcp_network.zones()
 
-        provider_block = GCPProvider.for_region(account_file, gcp_project, self.region)
+        state.update(INFRASTRUCTURE)
 
-        network_block = NetworkResource.construct(vpc_name)
+        try:
 
-        subnet_block = SubnetResource.construct(subnet_list[1], subnet_name, self.region)
+            if not state.infrastructure.network:
+                vpc_cidr = cidr_util.get_next_network()
+                Network(core).create(vpc_name)
+                state.infrastructure.network = vpc_name
+                state.infrastructure.network_cidr = vpc_cidr
+                logger.info(f"Created network {vpc_name}")
+            else:
+                vpc_name = state.infrastructure.network
+                vpc_cidr = state.infrastructure.network_cidr
+                cidr_util.set_active_network(vpc_cidr)
 
-        firewall_block = FirewallResource.build(self.project, vpc_cidr)
-        firewall_block.add(self.project, "cbs",
-                           ["8091-8097", "9123", "9140", "11210", "11280", "11207", "18091-18097", "4984-4986"],
-                           "tcp",
-                           ["0.0.0.0/0"])
-        firewall_block.add(self.project, "ssh", ["22"], "tcp", ["0.0.0.0/0"])
+            subnet_list = list(cidr_util.get_next_subnet())
+            subnet_cycle = cycle(subnet_list[1:])
 
-        resource_block = Resources.build()
-        resource_block.add(network_block.as_dict)
-        resource_block.add(subnet_block.as_dict)
-        resource_block.add(firewall_block.as_dict)
+            if not state.infrastructure.subnet_cidr:
+                subnet_cidr = next(subnet_cycle)
+            else:
+                subnet_cidr = state.infrastructure.subnet_cidr
 
-        output_block = Output.build()
-        output_block.add(
-            OutputValue.build()
-            .add("${google_compute_network.cf_vpc}")
-            .as_name("google_compute_network")
-        )
-        output_block.add(
-            OutputValue.build()
-            .add("${google_compute_subnetwork.cf_subnet_1}")
-            .as_name("google_compute_subnetwork")
-        )
+            if not state.infrastructure.subnet:
+                Subnet(core).create(subnet_name, vpc_name, subnet_cidr)
+                state.infrastructure.subnet = subnet_name
+                logger.info(f"Created subnet {subnet_name}")
 
-        vpc_config = VPCConfig.build()\
-            .add(provider_block.as_dict)\
-            .add(resource_block.as_dict)\
-            .add(output_block.as_dict).as_dict
+            if not state.infrastructure.firewall_default:
+                Firewall(core).create_ingress(firewall_default, vpc_name, vpc_cidr, "all")
+                state.infrastructure.firewall_default = firewall_default
+                logger.info(f"Created firewall rule {firewall_default}")
 
-        return vpc_config
+            if not state.infrastructure.firewall_cbs:
+                Firewall(core).create_ingress(firewall_cbs, vpc_name, "0.0.0.0/0", "tcp", [
+                    "8091-8097",
+                    "9123",
+                    "9140",
+                    "11210",
+                    "11280",
+                    "11207",
+                    "18091-18097",
+                    "4984-4986"
+                ])
+                state.infrastructure.firewall_cbs = firewall_cbs
+                logger.info(f"Created firewall rule {firewall_cbs}")
+
+            if not state.infrastructure.firewall_ssh:
+                Firewall(core).create_ingress(firewall_ssh, vpc_name, "0.0.0.0/0", "tcp", ["22"])
+                state.infrastructure.firewall_ssh = firewall_ssh
+                logger.info(f"Created firewall rule {firewall_ssh}")
+
+            for n, zone in enumerate(zone_list):
+                if next((z for z in state.infrastructure.zone_list if z['zone'] == zone), None):
+                    continue
+                zone_state = GCPZone()
+                zone_state.zone = zone
+                zone_state.subnet = subnet_name
+                # noinspection PyTypeChecker
+                state.infrastructure.zone_list.append(attr.asdict(zone_state))
+                logger.info(f"Added zone {zone}")
+
+        except Exception as err:
+            raise GCPNetworkError(f"Error creating network: {err}")
+
+        state.save()
+
+    def destroy_vpc(self):
+        core = self.core
+
+        state.update(INFRASTRUCTURE)
+
+        try:
+
+            if state.infrastructure.firewall_ssh:
+                firewall_ssh = state.infrastructure.firewall_ssh
+                Firewall(core).delete(firewall_ssh)
+                state.infrastructure.firewall_ssh = None
+                logger.info(f"Removed firewall rule {firewall_ssh}")
+
+            if state.infrastructure.firewall_cbs:
+                firewall_cbs = state.infrastructure.firewall_cbs
+                Firewall(core).delete(firewall_cbs)
+                state.infrastructure.firewall_cbs = None
+                logger.info(f"Removed firewall rule {firewall_cbs}")
+
+            if state.infrastructure.firewall_default:
+                firewall_default = state.infrastructure.firewall_default
+                Firewall(core).delete(firewall_default)
+                state.infrastructure.firewall_default = None
+                logger.info(f"Removed firewall rule {firewall_default}")
+
+            if state.infrastructure.subnet:
+                subnet_name = state.infrastructure.subnet
+                Subnet(core).delete(subnet_name)
+                state.infrastructure.subnet = None
+                logger.info(f"Removed subnet {subnet_name}")
+
+            if state.infrastructure.subnet_cidr:
+                state.infrastructure.subnet_cidr = None
+
+            for n, zone_state in reversed(list(enumerate(state.infrastructure.zone_list))):
+                del state.infrastructure.zone_list[n]
+
+            if state.infrastructure.network:
+                vpc_name = state.infrastructure.network
+                Network(core).delete(vpc_name)
+                state.infrastructure.network = None
+                state.infrastructure.network_cidr = None
+                logger.info(f"Removed network {vpc_name}")
+
+        except Exception as err:
+            raise GCPNetworkError(f"Error removing network: {err}")
+
+        state.save()
 
     def create(self):
-        vpc_data = self.output()
-        if vpc_data:
-            return
-        network = self.config_gen()
         logger.info(f"Creating cloud network for {self.project} in {C.CLOUD_KEY.upper()}")
-        self.runner.deploy(network)
+        self.create_vpc()
 
     def destroy(self):
         logger.info(f"Removing cloud network for {self.project} in {C.CLOUD_KEY.upper()}")
-        self.runner.destroy()
+        self.destroy_vpc()
 
-    def output(self):
-        return self.runner.output()
+    @staticmethod
+    def output():
+        state.infrastructure_display()
 
     def validate(self):
-        variables = [attr for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__")]
+        variables = [a for a in dir(self) if not callable(getattr(self, a)) and not a.startswith("__")]
         for variable in variables:
             if getattr(self, variable) is None:
                 raise ValueError(f"setting \"{variable}\" is null")

@@ -96,6 +96,7 @@ class GCPInstanceSet:
 @attr.s
 class GCPZone:
     zone: Optional[str] = attr.ib(default=None)
+    subnet: Optional[str] = attr.ib(default=None)
 
 
 @attr.s
@@ -105,11 +106,14 @@ class GCPState:
     network: Optional[str] = attr.ib(default=None)
     network_cidr: Optional[str] = attr.ib(default=None)
     subnet: Optional[str] = attr.ib(default=None)
+    subnet_cidr: Optional[str] = attr.ib(default=None)
     ssh_key: Optional[str] = attr.ib(default=None)
-    firewall: Optional[str] = attr.ib(default=None)
+    firewall_default: Optional[str] = attr.ib(default=None)
+    firewall_cbs: Optional[str] = attr.ib(default=None)
+    firewall_ssh: Optional[str] = attr.ib(default=None)
     gcp_project: Optional[str] = attr.ib(default=None)
     credentials: Optional[str] = attr.ib(default=None)
-    zone_list: Optional[List[AWSZone]] = attr.ib(default=[])
+    zone_list: Optional[List[dict]] = attr.ib(default=[])
 
 
 @attr.s
