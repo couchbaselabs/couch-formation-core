@@ -77,6 +77,7 @@ class GCPNetwork(object):
 
             if not state.infrastructure.subnet_cidr:
                 subnet_cidr = next(subnet_cycle)
+                state.infrastructure.subnet_cidr = subnet_cidr
             else:
                 subnet_cidr = state.infrastructure.subnet_cidr
 

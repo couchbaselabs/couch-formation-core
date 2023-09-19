@@ -1,6 +1,7 @@
 ##
 ##
 
+import attr
 import re
 import logging
 import time
@@ -134,7 +135,8 @@ class AWSDeployment(object):
                     except KeyError:
                         time.sleep(1)
 
-                state.instance_set.instance_list.append(instance_state)
+                # noinspection PyTypeChecker
+                state.instance_set.instance_list.append(attr.asdict(instance_state))
                 logger.info(f"Created instance {instance_id}")
 
         state.save()

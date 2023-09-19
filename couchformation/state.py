@@ -7,7 +7,7 @@ import attr
 import json
 from pwd import getpwnam
 from grp import getgrnam
-from typing import Optional, List
+from typing import Optional, List, Union
 from couchformation.config import BaseConfig
 
 INFRASTRUCTURE = 0x01
@@ -41,7 +41,7 @@ class AWSInstanceSet:
     cloud: Optional[str] = attr.ib(default="aws")
     name: Optional[str] = attr.ib(default=None)
     username: Optional[str] = attr.ib(default=None)
-    instance_list: Optional[List[AWSInstance]] = attr.ib(default=[])
+    instance_list: Optional[List[dict]] = attr.ib(default=[])
 
 
 @attr.s
@@ -126,6 +126,9 @@ class AzureDisk:
 @attr.s
 class AzureInstance:
     name: Optional[str] = attr.ib(default=None)
+    node_nic: Optional[str] = attr.ib(default=None)
+    node_pub_ip: Optional[str] = attr.ib(default=None)
+    resource_group: Optional[str] = attr.ib(default=None)
     machine_type: Optional[str] = attr.ib(default=None)
     volume_tier: Optional[str] = attr.ib(default="P20")
     volume_size: Optional[str] = attr.ib(default="256")
@@ -140,7 +143,7 @@ class AzureInstance:
     vm_public_ip: Optional[str] = attr.ib(default=None)
     vm_nic: Optional[str] = attr.ib(default=None)
     vm_nsg_association: Optional[str] = attr.ib(default=None)
-    disk_list: Optional[List[AzureDisk]] = attr.ib(default=[])
+    disk_list: Optional[List[dict]] = attr.ib(default=[])
 
 
 @attr.s
@@ -148,31 +151,38 @@ class AzureInstanceSet:
     cloud: Optional[str] = attr.ib(default="azure")
     name: Optional[str] = attr.ib(default=None)
     username: Optional[str] = attr.ib(default=None)
-    instance_list: Optional[List[AWSInstance]] = attr.ib(default=[])
+    instance_list: Optional[List[dict]] = attr.ib(default=[])
 
 
 @attr.s
 class AzureZone:
     zone: Optional[str] = attr.ib(default=None)
+    subnet: Optional[str] = attr.ib(default=None)
+    subnet_id: Optional[str] = attr.ib(default=None)
 
 
 @attr.s
 class AzureState:
     cloud: Optional[str] = attr.ib(default="azure")
     location: Optional[str] = attr.ib(default=None)
+    resource_group: Optional[str] = attr.ib(default=None)
     network: Optional[str] = attr.ib(default=None)
+    network_id: Optional[str] = attr.ib(default=None)
     network_cidr: Optional[str] = attr.ib(default=None)
     subnet: Optional[str] = attr.ib(default=None)
+    subnet_id: Optional[str] = attr.ib(default=None)
+    subnet_cidr: Optional[str] = attr.ib(default=None)
     ssh_key: Optional[str] = attr.ib(default=None)
     network_security_group: Optional[str] = attr.ib(default=None)
-    zone_list: Optional[List[AWSZone]] = attr.ib(default=[])
+    network_security_group_id: Optional[str] = attr.ib(default=None)
+    zone_list: Optional[List[dict]] = attr.ib(default=[])
 
 
 core = BaseConfig()
 
-infrastructure = AWSState()
+infrastructure: Union[AWSState, GCPState, AzureState] = AWSState()
 _infrastructure_update = False
-instance_set = AWSInstanceSet()
+instance_set: Union[AWSInstanceSet, GCPInstanceSet, AzureInstanceSet] = AWSInstanceSet()
 _instance_update = False
 
 

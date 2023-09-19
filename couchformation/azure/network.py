@@ -2,15 +2,16 @@
 ##
 
 import logging
+import attr
+from itertools import cycle
 from couchformation.network import NetworkDriver
-from couchformation.azure.driver.network import Network
+from couchformation.azure.driver.network import Network, Subnet, SecurityGroup
 from couchformation.azure.driver.base import CloudBase
-from couchformation.exec.process import TFRun
 import couchformation.azure.driver.constants as C
-from couchformation.common.config.resources import Output, OutputValue
 from couchformation.config import BaseConfig
 from couchformation.exception import FatalError
-from couchformation.azure.config.network import (AzureProvider, RGResource, VNetResource, Resources, VPCConfig, NSGResource, NSGEntry, NSGElements)
+import couchformation.state as state
+from couchformation.state import INFRASTRUCTURE, AzureZone
 
 logger = logging.getLogger('couchformation.azure.network')
 logger.addHandler(logging.NullHandler())
@@ -20,14 +21,18 @@ class AzureNetworkError(FatalError):
     pass
 
 
-class GCPNetwork(object):
+class AzureNetwork(object):
 
     def __init__(self, core: BaseConfig):
+        self.core = core
         self.project = core.project
         self.region = core.region
         self.auth_mode = core.auth
         self.profile = core.profile
         core.common_mode()
+
+        state.core = self.core
+        state.switch_cloud()
 
         try:
             self.validate()
@@ -36,77 +41,170 @@ class GCPNetwork(object):
 
         self.az_network = Network(core)
         self.az_base = CloudBase(core)
-        self.runner = TFRun(core)
 
-    def config_gen(self):
+    def create_vpc(self):
+        core = self.core
         cidr_util = NetworkDriver()
-        rg_name = f"{self.project}-rg"
-        vpc_name = f"{self.project}-vpc"
-        nsg_name = f"{self.project}-nsg"
+        rg_name = f"{core.project}-rg"
+        vpc_name = f"{core.project}-vpc"
+        nsg_name = f"{core.project}-nsg"
+        subnet_name = f"{core.project}-subnet-01"
 
-        vpc_cidr = cidr_util.get_next_network()
-        subnet_list = list(cidr_util.get_next_subnet())
-        subnet_cidr = subnet_list[1]
-        region = self.region
+        for net in self.az_network.cidr_list:
+            cidr_util.add_network(net)
 
-        if self.az_base.get_rg(rg_name, region):
-            raise AzureNetworkError(f"Resource Group {rg_name} already exists")
+        zone_list = self.az_network.zones()
+        azure_location = self.az_base.region
 
-        provider_block = AzureProvider.for_region()
+        state.update(INFRASTRUCTURE)
 
-        rg_block = RGResource.construct(region, rg_name)
+        try:
 
-        vnet_block = VNetResource.construct(vpc_cidr, vpc_name, subnet_cidr)
+            if not state.infrastructure.resource_group:
+                self.az_base.create_rg(rg_name, azure_location)
+                state.infrastructure.resource_group = rg_name
+                logger.info(f"Created resource group {rg_name}")
+            else:
+                rg_name = state.infrastructure.resource_group
 
-        nsg_block = NSGResource.construct(
-            NSGEntry.construct(
-                NSGElements.construct(nsg_name)
-                .add("AllowSSH", ["22"], 100)
-                .add("AllowCB", ["8091-8097", "9123", "9140", "11210", "11280", "11207", "18091-18097", "4984-4986"], 101)
-                .as_dict)
-            .as_dict)
+            if not state.infrastructure.network:
+                vpc_cidr = cidr_util.get_next_network()
+                net_resource = Network(core).create(vpc_name, vpc_cidr, rg_name)
+                net_resource_id = net_resource.id
+                state.infrastructure.network = vpc_name
+                state.infrastructure.network_cidr = vpc_cidr
+                state.infrastructure.network_id = net_resource_id
+                logger.info(f"Created network {vpc_name}")
+            else:
+                vpc_name = state.infrastructure.network
+                vpc_cidr = state.infrastructure.network_cidr
+                cidr_util.set_active_network(vpc_cidr)
 
-        resource_block = Resources.build()
-        resource_block.add(rg_block.as_dict)
-        resource_block.add(vnet_block.as_dict)
-        resource_block.add(nsg_block.as_dict)
+            if not state.infrastructure.network_security_group:
+                nsg_resource = SecurityGroup(core).create(nsg_name, rg_name)
+                nsg_resource_id = nsg_resource.id
+                SecurityGroup(core).add_rule("AllowSSH", nsg_name, ["22"], 100, rg_name)
+                SecurityGroup(core).add_rule("AllowCB", nsg_name, [
+                    "8091-8097",
+                    "9123",
+                    "9140",
+                    "11210",
+                    "11280",
+                    "11207",
+                    "18091-18097",
+                    "4984-4986"
+                ], 101, rg_name)
+                state.infrastructure.network_security_group = nsg_name
+                state.infrastructure.network_security_group_id = nsg_resource_id
+            else:
+                nsg_resource_id = state.infrastructure.network_security_group_id
 
-        output_block = Output.build()
-        output_block.add(
-            OutputValue.build()
-            .add("${azurerm_virtual_network.cf_vpc}")
-            .as_name("azurerm_virtual_network")
-        )
-        output_block.add(
-            OutputValue.build()
-            .add("${azurerm_resource_group.cf_rg}")
-            .as_name("azurerm_resource_group")
-        )
+            subnet_list = list(cidr_util.get_next_subnet())
+            subnet_cycle = cycle(subnet_list[1:])
 
-        vpc_config = VPCConfig.build() \
-            .add(provider_block.as_dict) \
-            .add(resource_block.as_dict) \
-            .add(output_block.as_dict).as_dict
+            if not state.infrastructure.subnet_cidr:
+                subnet_cidr = next(subnet_cycle)
+                state.infrastructure.subnet_cidr = subnet_cidr
+            else:
+                subnet_cidr = state.infrastructure.subnet_cidr
 
-        return vpc_config
+            if not state.infrastructure.subnet:
+                subnet_resource = Subnet(core).create(subnet_name, vpc_name, subnet_cidr, nsg_resource_id, rg_name)
+                subnet_id = subnet_resource.id
+                state.infrastructure.subnet = subnet_name
+                state.infrastructure.subnet_id = subnet_id
+            else:
+                subnet_id = state.infrastructure.subnet_id
+                subnet_name = state.infrastructure.subnet
+
+            for n, zone in enumerate(zone_list):
+                if next((z for z in state.infrastructure.zone_list if z['zone'] == zone), None):
+                    continue
+                zone_state = AzureZone()
+                zone_state.zone = zone
+                zone_state.subnet = subnet_name
+                zone_state.subnet_id = subnet_id
+                # noinspection PyTypeChecker
+                state.infrastructure.zone_list.append(attr.asdict(zone_state))
+                logger.info(f"Added zone {zone}")
+
+        except Exception as err:
+            raise AzureNetworkError(f"Error creating network: {err}")
+
+        state.save()
+
+    def destroy_vpc(self):
+        core = self.core
+
+        state.update(INFRASTRUCTURE)
+
+        try:
+
+            if state.infrastructure.resource_group:
+                rg_name = state.infrastructure.resource_group
+            else:
+                logger.warning("No saved resource group")
+                return
+
+            if state.infrastructure.network:
+                vpc_name = state.infrastructure.network
+            else:
+                logger.warning("No saved network")
+                return
+
+            if state.infrastructure.subnet:
+                subnet_name = state.infrastructure.subnet
+                Subnet(core).delete(vpc_name, subnet_name, rg_name)
+                state.infrastructure.subnet = None
+                state.infrastructure.subnet_id = None
+                logger.info(f"Removed subnet {subnet_name}")
+
+            if state.infrastructure.subnet_cidr:
+                state.infrastructure.subnet_cidr = None
+
+            if state.infrastructure.network_security_group:
+                nsg_name = state.infrastructure.network_security_group
+                SecurityGroup(core).delete(nsg_name, rg_name)
+                state.infrastructure.network_security_group = None
+                state.infrastructure.network_security_group_id = None
+                logger.info(f"Removed network security group {nsg_name}")
+
+            for n, zone_state in reversed(list(enumerate(state.infrastructure.zone_list))):
+                del state.infrastructure.zone_list[n]
+
+            if state.infrastructure.network:
+                vpc_name = state.infrastructure.network
+                Network(core).delete(vpc_name, rg_name)
+                state.infrastructure.network = None
+                state.infrastructure.network_cidr = None
+                state.infrastructure.network_id = None
+                logger.info(f"Removed network {vpc_name}")
+
+            if state.infrastructure.resource_group:
+                rg_name = state.infrastructure.resource_group
+                self.az_base.delete_rg(rg_name)
+                state.infrastructure.resource_group = None
+                logger.info(f"Removed resource group {rg_name}")
+
+        except Exception as err:
+            raise AzureNetworkError(f"Error removing network: {err}")
+
+        state.save()
 
     def create(self):
-        vpc_data = self.output()
-        if vpc_data:
-            return
-        network = self.config_gen()
         logger.info(f"Creating cloud network for {self.project} in {C.CLOUD_KEY.upper()}")
-        self.runner.deploy(network)
+        self.create_vpc()
 
     def destroy(self):
         logger.info(f"Removing cloud network for {self.project} in {C.CLOUD_KEY.upper()}")
-        self.runner.destroy()
+        self.destroy_vpc()
 
-    def output(self):
-        return self.runner.output()
+    @staticmethod
+    def output():
+        state.infrastructure_display()
 
     def validate(self):
-        variables = [attr for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__")]
+        variables = [a for a in dir(self) if not callable(getattr(self, a)) and not a.startswith("__")]
         for variable in variables:
             if getattr(self, variable) is None:
                 raise ValueError(f"setting \"{variable}\" is null")

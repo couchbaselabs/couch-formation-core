@@ -134,6 +134,20 @@ class Network(CloudBase):
         except Exception as err:
             raise AzureDriverError(f"error creating nic: {err}")
 
+    def describe_nic(self, name: str, resource_group: str):
+        try:
+            nic = self.network_client.network_interfaces.get(resource_group, name)
+            return nic
+        except Exception as err:
+            raise AzureDriverError(f"error getting nic details: {err}")
+
+    def describe_pub_ip(self, name: str, resource_group: str):
+        try:
+            ip = self.network_client.public_ip_addresses.get(resource_group, name)
+            return ip
+        except Exception as err:
+            raise AzureDriverError(f"error getting public IP: {err}")
+
     def delete_pub_ip(self, name: str, resource_group: str):
         try:
             request = self.network_client.public_ip_addresses.begin_delete(resource_group, name)

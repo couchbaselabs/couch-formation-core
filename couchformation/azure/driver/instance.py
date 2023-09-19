@@ -41,7 +41,7 @@ class Instance(CloudBase):
 
         try:
             instance_info = self.details(name, resource_group)
-            return instance_info['name']
+            return instance_info
         except ResourceNotFoundError:
             pass
 
@@ -116,22 +116,14 @@ class Instance(CloudBase):
 
         return name
 
-    def details(self, instance: str, resource_group: str) -> dict:
+    def details(self, instance: str, resource_group: str):
         try:
             machine = self.compute_client.virtual_machines.get(resource_group, instance)
+            return machine
         except ResourceNotFoundError:
             raise
         except Exception as err:
             raise AzureDriverError(f"error getting instance {instance}: {err}")
-
-        instance_info = {'name': machine.name,
-                         'id': machine.id,
-                         'zones': machine.zones,
-                         'storage': machine.storage_profile.__dict__,
-                         'os': machine.os_profile.__dict__,
-                         'disk': machine.network_profile.__dict__}
-
-        return instance_info
 
     def terminate(self, instance: str, resource_group: str) -> None:
         try:
