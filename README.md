@@ -1,4 +1,4 @@
-# Couch Formation 4.0.0a7
+# Couch Formation 4.0.0a8
 
 ![Logo](https://raw.githubusercontent.com/mminichino/couch-formation-core/main/doc/couch-formation-1.png)
 
