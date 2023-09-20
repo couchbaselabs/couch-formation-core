@@ -144,11 +144,12 @@ class AzureDeployment(object):
                                    ssh_pub_key_text,
                                    rg_name,
                                    boot_disk,
-                                   self.az_base.disk_caching(swap_tier['disk_size']),
-                                   swap_resource.id,
-                                   self.az_base.disk_caching(disk_tier['disk_size']),
-                                   data_resource.id,
                                    machine_type=machine_name)
+
+                logger.info(f"Attaching disk {swap_disk}")
+                Instance(core).attach_disk(node_name, self.az_base.disk_caching(swap_tier['disk_size']), "1", swap_resource.id, rg_name)
+                logger.info(f"Attaching disk {data_disk}")
+                Instance(core).attach_disk(node_name, self.az_base.disk_caching(disk_tier['disk_size']), "2", data_resource.id, rg_name)
 
                 # noinspection PyTypeChecker
                 instance_state.disk_list.append(attr.asdict(AzureDisk(boot_disk, subnet['zone'])))

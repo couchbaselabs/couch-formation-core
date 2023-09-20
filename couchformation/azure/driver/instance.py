@@ -2,7 +2,6 @@
 ##
 
 import logging
-from typing import Union
 from azure.core.exceptions import ResourceNotFoundError
 from couchformation.azure.driver.base import CloudBase, AzureDriverError
 
@@ -29,10 +28,6 @@ class Instance(CloudBase):
             public_key: str,
             resource_group: str,
             root_disk_name: str,
-            swap_caching: str,
-            swap_disk_id: str,
-            data_caching: str,
-            data_disk_id: str,
             root_type="Premium_LRS",
             root_size=256,
             machine_type="Standard_D4_v3"):
@@ -81,25 +76,7 @@ class Instance(CloudBase):
                     'managed_disk': {
                         'storage_account_type': root_type
                     }
-                },
-                'data_disks': [
-                    {
-                        'caching': swap_caching,
-                        'lun': '0',
-                        'create_option': 'Attach',
-                        'managed_disk': {
-                            'id': swap_disk_id
-                        }
-                    },
-                    {
-                        'caching': data_caching,
-                        'lun': '1',
-                        'create_option': 'Attach',
-                        'managed_disk': {
-                            'id': data_disk_id
-                        }
-                    }
-                ]
+                }
             },
             'network_profile': {
                 'network_interfaces': [{
@@ -111,10 +88,28 @@ class Instance(CloudBase):
         try:
             request = self.compute_client.virtual_machines.begin_create_or_update(resource_group, name, parameters)
             request.wait()
+            return request.result()
         except Exception as err:
             raise AzureDriverError(f"error creating instance: {err}")
 
-        return name
+    def attach_disk(self, instance: str, caching: str, lun: str, disk_id: str, resource_group: str):
+        parameters = {
+            'caching': caching,
+            'lun': lun,
+            'create_option': 'Attach',
+            'managed_disk': {
+                'id': disk_id
+            }
+        }
+
+        try:
+            vm = self.compute_client.virtual_machines.get(resource_group, instance)
+            vm.storage_profile.data_disks.append(parameters)
+            request = self.compute_client.virtual_machines.begin_create_or_update(resource_group, instance, vm)
+            request.wait()
+            return request.result()
+        except Exception as err:
+            raise AzureDriverError(f"error creating instance: {err}")
 
     def details(self, instance: str, resource_group: str):
         try:
