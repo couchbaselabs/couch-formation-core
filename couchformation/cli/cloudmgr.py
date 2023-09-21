@@ -44,10 +44,15 @@ class CloudMgrCLI(CLI):
         elif self.options.command == "destroy":
             project.destroy()
         elif self.options.command == "list":
-            nodes = project.list()
-            for ip in nodes.provision_list():
-                print(ip)
-            print(nodes.ip_csv_list())
+            services = project.list()
+            for name, node_list in services.items():
+                print(f"Service: {name}")
+                print("Private IPs")
+                for ip in node_list.list_private_ip():
+                    print(f" - {ip}")
+                print("Public IPs")
+                for ip in node_list.list_public_ip():
+                    print(f" - {ip}")
 
 
 def main(args=None):
