@@ -73,6 +73,8 @@ class Parameters:
     volume_type: Optional[str] = attr.ib(default=None)
     volume_tier: Optional[str] = attr.ib(default=None)
     root_size: Optional[str] = attr.ib(default=None)
+    connect_svc: Optional[str] = attr.ib(default=None)
+    connect_ip: Optional[str] = attr.ib(default=None)
 
     @classmethod
     def create(cls, args):
@@ -244,6 +246,8 @@ class NodeEntry:
     use_private_ip: Optional[bool] = attr.ib(default=False)
     availability_zone: Optional[str] = attr.ib(default=None)
     services: Optional[str] = attr.ib(default=None)
+    connect_svc: Optional[str] = attr.ib(default=None)
+    connect_ip: Optional[str] = attr.ib(default=None)
 
     @classmethod
     def create(cls,
@@ -253,7 +257,10 @@ class NodeEntry:
                public_ip: str = None,
                use_private_ip: bool = False,
                zone: str = None,
-               services: str = "default"):
+               services: str = "default",
+               connect_svc: str = None,
+               connect_ip: str = None
+               ):
         return cls(
             name,
             username,
@@ -261,7 +268,9 @@ class NodeEntry:
             public_ip,
             use_private_ip,
             zone,
-            services
+            services,
+            connect_svc,
+            connect_ip
         )
 
 
@@ -283,7 +292,7 @@ class NodeList:
             ProvisionMode(use_private_ip)
         )
 
-    def add(self, name: str, private_ip: str, public_ip: str = None, zone: str = None, services: str = "default"):
+    def add(self, name: str, private_ip: str, public_ip: str = None, zone: str = None, services: str = "default", connect_svc: str = None, connect_ip: str = None):
         self.nodes.append(
             NodeEntry.create(
                 name,
@@ -292,7 +301,9 @@ class NodeList:
                 public_ip,
                 bool(self.provision_ip.value),
                 zone,
-                services
+                services,
+                connect_svc,
+                connect_ip
             )
         )
 

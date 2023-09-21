@@ -9,6 +9,7 @@ from couchformation.azure.node import AzureDeployment
 from couchformation.config import Parameters
 from couchformation.deployment import Deployment
 import couchformation.constants as C
+import couchformation.state as state
 
 logger = logging.getLogger('couchformation.exec.process')
 logger.addHandler(logging.NullHandler())
@@ -52,6 +53,8 @@ class Project(object):
 
     def deploy(self):
         for name, core, service in self.dpmt.services:
+            if self.parameters.name and self.parameters.name != name:
+                continue
             logger.info(f"Deploying service {name}")
             deployer = self.deployer(service.cloud)
             env = deployer(name, core, service)
@@ -59,6 +62,8 @@ class Project(object):
 
     def destroy(self):
         for name, core, service in self.dpmt.services:
+            if self.parameters.name and self.parameters.name != name:
+                continue
             logger.info(f"Removing service {name}")
             deployer = self.deployer(service.cloud)
             env = deployer(name, core, service)
@@ -73,7 +78,10 @@ class Project(object):
         return ip_list
 
     def provision(self):
+        state.services.import_list(self.list())
         for name, core, service in self.dpmt.services:
+            if self.parameters.name and self.parameters.name != name:
+                continue
             deployer = self.deployer(service.cloud)
             env = deployer(name, core, service)
             provision_cmds = C.provisioners.get(service.model)

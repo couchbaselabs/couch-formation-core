@@ -13,6 +13,7 @@ from couchformation.exception import NonFatalError
 from couchformation.config import NodeList, NodeEntry
 from couchformation.provisioner.ssh import RunSSHCommand
 import couchformation.constants as C
+import couchformation.state as state
 
 logger = logging.getLogger('couchformation.provisioner.remote')
 logger.addHandler(logging.NullHandler())
@@ -172,11 +173,18 @@ class RemoteProvisioner(object):
                 time.sleep(wait)
 
     def resolve_variables(self, node: NodeEntry, line: str):
+        connect_list = None
+        if state.services.services.get(node.connect_svc):
+            service_net = state.services.services.get(node.connect_svc)
+            connect_list = ','.join(service_net.get('private', []))
         env = jinja2.Environment(undefined=jinja2.DebugUndefined)
         raw_template = env.from_string(line)
         formatted_value = raw_template.render(
             PRIVATE_IP_LIST=self.config.nodes.ip_csv_list(),
             NODE_ZONE=node.availability_zone,
-            SERVICES=node.services
+            SERVICES=node.services,
+            CONNECT_SERVICE=node.connect_svc,
+            CONNECT_IP=node.connect_ip,
+            CONNECT_LIST=connect_list if connect_list else node.connect_ip if node.connect_ip else '127.0.0.1'
         )
         return formatted_value

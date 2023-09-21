@@ -107,6 +107,9 @@ class AWSDeployment(object):
                 node_num = i + offset
                 node_name = f"{self.name}-node-{node_num:02d}"
 
+                if next((instance for instance in state.instance_set.instance_list if instance['name'] == node_name), None):
+                    continue
+
                 logger.info(f"Creating node {node_name}")
                 instance_id = Instance(service).run(node_name,
                                                     image['name'],
@@ -174,7 +177,7 @@ class AWSDeployment(object):
             node_public_ip = instance_state['public_ip']
             availability_zone = instance_state['zone']
             services = instance_state['services']
-            node_list.add(node_name, node_private_ip, node_public_ip, availability_zone, services)
+            node_list.add(node_name, node_private_ip, node_public_ip, availability_zone, services, self.service.connect_svc, self.service.connect_ip)
         return node_list
 
     def provision(self, pre_commands: List[str], commands: List[str], post_commands: List[str]):

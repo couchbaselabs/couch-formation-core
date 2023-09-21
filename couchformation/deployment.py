@@ -32,6 +32,8 @@ class Service:
     os_version: Optional[str] = attr.ib(default=None)
     auth_mode: Optional[str] = attr.ib(default="default")
     profile: Optional[str] = attr.ib(default='default')
+    connect_svc: Optional[str] = attr.ib(default=None)
+    connect_ip: Optional[str] = attr.ib(default=None)
     config: Optional[List[NodeConfig]] = attr.ib(default=[])
 
     def from_dict(self, options: dict):

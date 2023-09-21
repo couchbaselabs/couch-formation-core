@@ -178,6 +178,22 @@ class AzureState:
 
 
 @attr.s
+class ServiceSet:
+    services: Optional[dict] = attr.ib(default={})
+
+    def import_list(self, services: dict):
+        for name, node_list in services.items():
+            private_ip_list = [ip for ip in node_list.list_private_ip()]
+            public_ip_list = [ip for ip in node_list.list_public_ip()]
+            self.services.update({
+                name: {
+                    'private': private_ip_list,
+                    'public': public_ip_list
+                }
+            })
+
+
+@attr.s
 class StateConfig:
     name: Optional[str] = attr.ib(default=None)
     cloud: Optional[str] = attr.ib(default=None)
@@ -190,6 +206,7 @@ class StateConfig:
 
 
 config = StateConfig()
+services = ServiceSet()
 
 infrastructure: Union[AWSState, GCPState, AzureState] = AWSState()
 _infrastructure_update = False
@@ -282,6 +299,27 @@ def save():
         make_dir(service_dir())
         # noinspection PyTypeChecker
         write_file(attr.asdict(instance_set), os.path.join(service_dir(), 'state.json'))
+
+
+def instance_count():
+    return len(instance_set.instance_list)
+
+
+def services_active():
+    deployment_file = os.path.join(config.project_dir, "deployment.cfg")
+    if os.path.exists(deployment_file):
+        with open(deployment_file, 'r') as cfg_file:
+            deployment_data = json.load(cfg_file)
+            for name, service in deployment_data.items():
+                if name == 'core':
+                    continue
+                state_path = os.path.join(config.project_dir, name, 'state.json')
+                if os.path.exists(state_path):
+                    with open(state_path, 'r') as state_file:
+                        state_data = json.load(state_file)
+                        if state_data.get('instance_list') and len(state_data.get('instance_list')) > 0:
+                            return True
+    return False
 
 
 def infrastructure_display():

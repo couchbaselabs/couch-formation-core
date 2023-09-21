@@ -199,5 +199,16 @@ provisioners = {
         "post_provision": [
             'sudo swmgr cluster rebalance -l {{ PRIVATE_IP_LIST }}',
         ]
+    },
+    "sgw": {
+        "pre_provision": [
+            'curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | sudo -E bash -s - -s -g https://github.com/mminichino/host-prep-lib',
+        ],
+        "provision": [
+            'sudo bundlemgr -b InstallSGW',
+            'sudo swmgr gateway configure -l {{ CONNECT_LIST }}',
+            'sudo bundlemgr -b EnableSGW'
+        ],
+        "post_provision": []
     }
 }
