@@ -139,6 +139,10 @@ class AzureNetwork(object):
     def destroy_vpc(self):
         service = self.service
 
+        if state.services_active():
+            logger.info(f"Active services, leaving project network in place")
+            return
+
         state.update(INFRASTRUCTURE)
 
         try:

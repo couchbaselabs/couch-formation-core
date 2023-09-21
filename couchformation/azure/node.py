@@ -116,6 +116,9 @@ class AzureDeployment(object):
                 node_pub_ip = f"{self.name}-node-{node_num:02d}-pub-ip"
                 node_nic = f"{self.name}-node-{node_num:02d}-nic"
 
+                if next((instance for instance in state.instance_set.instance_list if instance['name'] == node_name), None):
+                    continue
+
                 swap_tier = self.az_base.disk_size_to_tier(machine_ram)
                 disk_tier = self.az_base.disk_size_to_tier(volume_size)
 
@@ -217,7 +220,7 @@ class AzureDeployment(object):
             node_public_ip = instance_state['public_ip']
             availability_zone = instance_state['zone']
             services = instance_state['services']
-            node_list.add(node_name, node_private_ip, node_public_ip, availability_zone, services)
+            node_list.add(node_name, node_private_ip, node_public_ip, availability_zone, services, self.service.connect_svc, self.service.connect_ip)
         return node_list
 
     def provision(self, pre_commands: List[str], commands: List[str], post_commands: List[str]):

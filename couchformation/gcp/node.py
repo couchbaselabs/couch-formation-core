@@ -109,6 +109,9 @@ class GCPDeployment(object):
                 swap_disk = f"{self.name}-swap-{node_num:02d}"
                 data_disk = f"{self.name}-data-{node_num:02d}"
 
+                if next((instance for instance in state.instance_set.instance_list if instance['name'] == node_name), None):
+                    continue
+
                 machine = MachineType(service).get_machine(config.machine_type, subnet['zone'])
                 if not machine:
                     raise GCPNodeError(f"can not find machine for type {machine_type}")
@@ -198,7 +201,7 @@ class GCPDeployment(object):
             node_public_ip = instance_state['public_ip']
             availability_zone = instance_state['zone']
             services = instance_state['services']
-            node_list.add(node_name, node_private_ip, node_public_ip, availability_zone, services)
+            node_list.add(node_name, node_private_ip, node_public_ip, availability_zone, services, self.service.connect_svc, self.service.connect_ip)
         return node_list
 
     def provision(self, pre_commands: List[str], commands: List[str], post_commands: List[str]):
