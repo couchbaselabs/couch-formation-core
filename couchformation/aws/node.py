@@ -7,17 +7,17 @@ import logging
 import time
 from itertools import cycle
 from typing import List
-from couchformation.exec.process import TFRun
 import couchformation.aws.driver.constants as C
 from couchformation.aws.driver.image import Image
 from couchformation.aws.driver.machine import MachineType
 from couchformation.aws.driver.instance import Instance
 from couchformation.aws.driver.base import CloudBase
 from couchformation.aws.network import AWSNetwork
-from couchformation.config import NodeList, DeploymentConfig
+from couchformation.config import NodeList, BaseConfig
 import couchformation.state as state
 from couchformation.state import INSTANCES, AWSInstance
 from couchformation.exception import FatalError
+from couchformation.deployment import Service
 from couchformation.provisioner.remote import RemoteProvisioner, ProvisionSet
 
 logger = logging.getLogger('couchformation.aws.node')
@@ -30,31 +30,29 @@ class AWSNodeError(FatalError):
 
 class AWSDeployment(object):
 
-    def __init__(self, deployment: DeploymentConfig):
-        self.deployment = deployment
-        self.core = self.deployment.core
+    def __init__(self, name: str, core: BaseConfig, service: Service):
+        self.name = name
+        self.service = service
+        self.core = core
         self.project = self.core.project
-        self.region = self.core.region
-        self.auth_mode = self.core.auth_mode
-        self.profile = self.core.profile
-        self.name = self.core.name
+        self.region = self.service.region
+        self.auth_mode = self.service.auth_mode
+        self.profile = self.service.profile
         self.ssh_key = self.core.ssh_key
-        self.os_id = self.core.os_id
-        self.os_version = self.core.os_version
-        self.core.resource_mode()
+        self.os_id = self.service.os_id
+        self.os_version = self.service.os_version
 
-        state.core = self.core
+        state.config.set(name, service.cloud, core.project_dir)
         state.switch_cloud()
 
         self._name_check(self.name)
-        CloudBase(self.core).test_session()
-        self.runner = TFRun(self.core)
+        CloudBase(service).test_session()
 
-        self.aws_network = AWSNetwork(self.core)
+        self.aws_network = AWSNetwork(name, core, service)
 
     def create_nodes(self):
         subnet_list = []
-        core = self.core
+        service = self.service
         offset = 1
         node_count = 0
 
@@ -75,9 +73,9 @@ class AWSDeployment(object):
 
         subnet_cycle = cycle(subnet_list)
 
-        image = Image(core).list_standard(os_id=core.os_id, os_version=core.os_version)
+        image = Image(service).list_standard(os_id=service.os_id, os_version=service.os_version)
         if not image:
-            raise AWSNodeError(f"can not find image for type {core.os_id} {core.os_version}")
+            raise AWSNodeError(f"can not find image for type {service.os_id} {service.os_version}")
 
         logger.info(f"Using image {image['name']} type {image['os_id']} version {image['os_version']}")
 
@@ -86,7 +84,7 @@ class AWSDeployment(object):
 
         offset += node_count
 
-        for n, config in enumerate(self.deployment.config):
+        for n, config in enumerate(self.service.config):
             quantity = config.quantity
             machine_type = config.machine_type
             volume_iops = int(config.volume_iops)
@@ -95,7 +93,7 @@ class AWSDeployment(object):
 
             logger.info(f"Deploying node group {n+1} with {quantity} nodes")
 
-            machine = MachineType(core).get_machine(config.machine_type)
+            machine = MachineType(service).get_machine(config.machine_type)
             if not machine:
                 raise AWSNodeError(f"can not find machine for type {machine_type}")
             machine_name = machine['name']
@@ -110,16 +108,16 @@ class AWSDeployment(object):
                 node_name = f"{self.name}-node-{node_num:02d}"
 
                 logger.info(f"Creating node {node_name}")
-                instance_id = Instance(core).run(node_name,
-                                                 image['name'],
-                                                 ssh_key_name,
-                                                 sg_id,
-                                                 subnet['subnet_id'],
-                                                 subnet['zone'],
-                                                 swap_size=machine_ram,
-                                                 data_size=volume_size,
-                                                 data_iops=volume_iops,
-                                                 instance_type=machine_name)
+                instance_id = Instance(service).run(node_name,
+                                                    image['name'],
+                                                    ssh_key_name,
+                                                    sg_id,
+                                                    subnet['subnet_id'],
+                                                    subnet['zone'],
+                                                    swap_size=machine_ram,
+                                                    data_size=volume_size,
+                                                    data_iops=volume_iops,
+                                                    instance_type=machine_name)
 
                 instance_state.instance_id = instance_id
                 instance_state.name = node_name
@@ -128,7 +126,7 @@ class AWSDeployment(object):
 
                 while True:
                     try:
-                        instance_details = Instance(core).details(instance_id)
+                        instance_details = Instance(service).details(instance_id)
                         instance_state.public_ip = instance_details['PublicIpAddress']
                         instance_state.private_ip = instance_details['PrivateIpAddress']
                         break
@@ -142,13 +140,13 @@ class AWSDeployment(object):
         state.save()
 
     def destroy_nodes(self):
-        core = self.core
+        service = self.service
 
         state.update(INSTANCES)
 
         for n, instance in reversed(list(enumerate(state.instance_set.instance_list))):
             instance_id = instance['instance_id']
-            Instance(core).terminate(instance_id)
+            Instance(service).terminate(instance_id)
             del state.instance_set.instance_list[n]
             logger.info(f"Removed instance {instance_id}")
 
@@ -169,7 +167,7 @@ class AWSDeployment(object):
         state.instances_display()
 
     def list(self) -> NodeList:
-        node_list = NodeList().create(state.instance_set.username, self.ssh_key, self.core.working_dir, self.core.private_ip)
+        node_list = NodeList().create(state.instance_set.username, self.ssh_key, state.service_dir(), self.core.private_ip)
         for n, instance_state in enumerate(state.instance_set.instance_list):
             node_name = instance_state['name']
             node_private_ip = instance_state['private_ip']
@@ -204,7 +202,7 @@ class AWSDeployment(object):
             raise AWSNodeError("names must only contain letters, numbers, dashes and underscores")
 
     def validate(self):
-        variables = [attr for attr in dir(self) if not callable(getattr(self, attr)) and not attr.startswith("__")]
+        variables = [a for a in dir(self) if not callable(getattr(self, a)) and not a.startswith("__")]
         for variable in variables:
             if getattr(self, variable) is None:
                 raise ValueError(f"setting \"{variable}\" is null")

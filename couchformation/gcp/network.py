@@ -13,6 +13,7 @@ from couchformation.config import BaseConfig
 from couchformation.exception import FatalError
 import couchformation.state as state
 from couchformation.state import INFRASTRUCTURE, GCPZone
+from couchformation.deployment import Service
 
 logger = logging.getLogger('couchformation.gcp.network')
 logger.addHandler(logging.NullHandler())
@@ -24,15 +25,16 @@ class GCPNetworkError(FatalError):
 
 class GCPNetwork(object):
 
-    def __init__(self, core: BaseConfig):
+    def __init__(self, name: str, core: BaseConfig, service: Service):
+        self.name = name
+        self.service = service
         self.core = core
         self.project = core.project
-        self.region = core.region
-        self.auth_mode = core.auth
-        self.profile = core.profile
-        core.common_mode()
+        self.region = service.region
+        self.auth_mode = service.auth
+        self.profile = service.profile
 
-        state.core = self.core
+        state.config.set(name, service.cloud, core.project_dir)
         state.switch_cloud()
 
         try:
@@ -40,10 +42,11 @@ class GCPNetwork(object):
         except ValueError as err:
             raise GCPNetworkError(err)
 
-        self.gcp_network = Network(core)
-        self.gcp_base = CloudBase(core)
+        self.gcp_network = Network(service)
+        self.gcp_base = CloudBase(service)
 
     def create_vpc(self):
+        service = self.service
         core = self.core
         cidr_util = NetworkDriver()
         vpc_name = f"{core.project}-vpc"
@@ -63,7 +66,7 @@ class GCPNetwork(object):
 
             if not state.infrastructure.network:
                 vpc_cidr = cidr_util.get_next_network()
-                Network(core).create(vpc_name)
+                Network(service).create(vpc_name)
                 state.infrastructure.network = vpc_name
                 state.infrastructure.network_cidr = vpc_cidr
                 logger.info(f"Created network {vpc_name}")
@@ -82,17 +85,17 @@ class GCPNetwork(object):
                 subnet_cidr = state.infrastructure.subnet_cidr
 
             if not state.infrastructure.subnet:
-                Subnet(core).create(subnet_name, vpc_name, subnet_cidr)
+                Subnet(service).create(subnet_name, vpc_name, subnet_cidr)
                 state.infrastructure.subnet = subnet_name
                 logger.info(f"Created subnet {subnet_name}")
 
             if not state.infrastructure.firewall_default:
-                Firewall(core).create_ingress(firewall_default, vpc_name, vpc_cidr, "all")
+                Firewall(service).create_ingress(firewall_default, vpc_name, vpc_cidr, "all")
                 state.infrastructure.firewall_default = firewall_default
                 logger.info(f"Created firewall rule {firewall_default}")
 
             if not state.infrastructure.firewall_cbs:
-                Firewall(core).create_ingress(firewall_cbs, vpc_name, "0.0.0.0/0", "tcp", [
+                Firewall(service).create_ingress(firewall_cbs, vpc_name, "0.0.0.0/0", "tcp", [
                     "8091-8097",
                     "9123",
                     "9140",
@@ -106,7 +109,7 @@ class GCPNetwork(object):
                 logger.info(f"Created firewall rule {firewall_cbs}")
 
             if not state.infrastructure.firewall_ssh:
-                Firewall(core).create_ingress(firewall_ssh, vpc_name, "0.0.0.0/0", "tcp", ["22"])
+                Firewall(service).create_ingress(firewall_ssh, vpc_name, "0.0.0.0/0", "tcp", ["22"])
                 state.infrastructure.firewall_ssh = firewall_ssh
                 logger.info(f"Created firewall rule {firewall_ssh}")
 
@@ -126,7 +129,7 @@ class GCPNetwork(object):
         state.save()
 
     def destroy_vpc(self):
-        core = self.core
+        service = self.service
 
         state.update(INFRASTRUCTURE)
 
@@ -134,25 +137,25 @@ class GCPNetwork(object):
 
             if state.infrastructure.firewall_ssh:
                 firewall_ssh = state.infrastructure.firewall_ssh
-                Firewall(core).delete(firewall_ssh)
+                Firewall(service).delete(firewall_ssh)
                 state.infrastructure.firewall_ssh = None
                 logger.info(f"Removed firewall rule {firewall_ssh}")
 
             if state.infrastructure.firewall_cbs:
                 firewall_cbs = state.infrastructure.firewall_cbs
-                Firewall(core).delete(firewall_cbs)
+                Firewall(service).delete(firewall_cbs)
                 state.infrastructure.firewall_cbs = None
                 logger.info(f"Removed firewall rule {firewall_cbs}")
 
             if state.infrastructure.firewall_default:
                 firewall_default = state.infrastructure.firewall_default
-                Firewall(core).delete(firewall_default)
+                Firewall(service).delete(firewall_default)
                 state.infrastructure.firewall_default = None
                 logger.info(f"Removed firewall rule {firewall_default}")
 
             if state.infrastructure.subnet:
                 subnet_name = state.infrastructure.subnet
-                Subnet(core).delete(subnet_name)
+                Subnet(service).delete(subnet_name)
                 state.infrastructure.subnet = None
                 logger.info(f"Removed subnet {subnet_name}")
 
@@ -164,7 +167,7 @@ class GCPNetwork(object):
 
             if state.infrastructure.network:
                 vpc_name = state.infrastructure.network
-                Network(core).delete(vpc_name)
+                Network(service).delete(vpc_name)
                 state.infrastructure.network = None
                 state.infrastructure.network_cidr = None
                 logger.info(f"Removed network {vpc_name}")

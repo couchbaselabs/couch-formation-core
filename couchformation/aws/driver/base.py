@@ -12,7 +12,8 @@ import time
 import configparser
 from datetime import datetime
 from couchformation.exception import FatalError, NonFatalError
-from couchformation.config import BaseConfig, AuthMode
+from couchformation.config import AuthMode
+from couchformation.deployment import Service
 
 logger = logging.getLogger('couchformation.aws.driver.base')
 logger.addHandler(logging.NullHandler())
@@ -30,14 +31,14 @@ class EmptyResultSet(NonFatalError):
 
 class CloudBase(object):
 
-    def __init__(self, config: BaseConfig):
-        self.config = config
+    def __init__(self, service: Service):
+        self.config = service
         self.config_directory = os.path.join(os.environ['HOME'], '.aws')
         self.config_file = os.path.join(self.config_directory, 'config')
         self.credential_file = os.path.join(self.config_directory, 'credentials')
         self.config_data = configparser.ConfigParser()
         self.credential_data = configparser.ConfigParser()
-        self.profile = config.profile
+        self.profile = self.config.profile
         self.sso_session = None
         self.sso_account_id = None
         self.sso_role_name = None
@@ -59,13 +60,13 @@ class CloudBase(object):
 
         self.read_config()
 
-        if config.auth == AuthMode.default:
+        if self.config.auth == AuthMode.default:
             self.default_auth()
         else:
             self.sso_auth()
 
-        if config.region:
-            os.environ['AWS_DEFAULT_REGION'] = config.region
+        if self.config.region:
+            os.environ['AWS_DEFAULT_REGION'] = self.config.region
         elif self.profile_region:
             os.environ['AWS_DEFAULT_REGION'] = self.profile_region
 

@@ -9,8 +9,9 @@ import googleapiclient.discovery
 import googleapiclient.errors
 from google.cloud import storage
 from google.oauth2 import service_account
-from couchformation.config import BaseConfig, AuthMode
+from couchformation.config import AuthMode
 from couchformation.exception import FatalError, NonFatalError
+from couchformation.deployment import Service
 from couchformation.gcp.driver.constants import get_auth_directory, get_default_credentials
 
 logger = logging.getLogger('couchformation.gcp.driver.base')
@@ -28,8 +29,8 @@ class EmptyResultSet(NonFatalError):
 
 class CloudBase(object):
 
-    def __init__(self, config: BaseConfig):
-        self.config = config
+    def __init__(self, service: Service):
+        self.config = service
         self.auth_directory = get_auth_directory()
         self.gcp_account = None
         self.gcp_project = None
@@ -42,10 +43,10 @@ class CloudBase(object):
 
         socket.setdefaulttimeout(120)
 
-        if config.auth == AuthMode.default:
+        if self.config.auth == AuthMode.default:
             self.gcp_client = self.default_auth()
         else:
-            raise GCPDriverError(f"Unsupported auth mode {config.auth.name}")
+            raise GCPDriverError(f"Unsupported auth mode {self.config.auth.name}")
 
         self.auth_data = self.read_auth_file()
 
@@ -58,7 +59,7 @@ class CloudBase(object):
         if not self.gcp_project:
             raise GCPDriverError(f"can not get GCP project from auth file {self.gcp_account_file}")
 
-        self.gcp_region = config.region
+        self.gcp_region = self.config.region
 
         if not self.gcp_region:
             raise GCPDriverError("region not specified")

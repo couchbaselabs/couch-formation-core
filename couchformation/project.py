@@ -2,14 +2,13 @@
 ##
 
 import logging
-from typing import Union
 from couchformation.exception import FatalError
 from couchformation.aws.node import AWSDeployment
 from couchformation.gcp.node import GCPDeployment
 from couchformation.azure.node import AzureDeployment
-from couchformation.config import BaseConfig, DeploymentConfig, NodeConfig
-from couchformation.exec.process import TFRun
-import couchformation.state as state
+from couchformation.config import Parameters
+from couchformation.deployment import Deployment
+import couchformation.constants as C
 
 logger = logging.getLogger('couchformation.exec.process')
 logger.addHandler(logging.NullHandler())
@@ -21,62 +20,66 @@ class ProjectError(FatalError):
 
 class Project(object):
 
-    def __init__(self, args: Union[list, dict]):
-        self.args = args
+    def __init__(self, args):
+        self.parameters = Parameters().create(args)
         try:
-            self._core = BaseConfig().create(args)
-            self._deployment = DeploymentConfig.new(self._core)
-            self.runner = TFRun(self._core)
-            self.saved_deployment = self.runner.get_deployment_cfg()
-            if self.saved_deployment and self.saved_deployment.get('core'):
-                self._deployment.core.from_dict(self.saved_deployment.get('core'))
-            if self.saved_deployment and self.saved_deployment.get('config'):
-                for saved_config in self.saved_deployment.get('config'):
-                    config = NodeConfig().create(self._core.cloud, saved_config)
-                    self._deployment.add_config(self._deployment.length + 1, config)
+            self.dpmt = Deployment(self.parameters)
         except Exception as err:
             raise ProjectError(f"{err}")
 
-        if self._core.cloud == 'aws':
-            self.deployer = AWSDeployment
-        elif self._core.cloud == 'gcp':
-            self.deployer = GCPDeployment
-        elif self._core.cloud == 'azure':
-            self.deployer = AzureDeployment
+    @staticmethod
+    def deployer(cloud: str):
+        if cloud == 'aws':
+            return AWSDeployment
+        elif cloud == 'gcp':
+            return GCPDeployment
+        elif cloud == 'azure':
+            return AzureDeployment
         else:
-            raise ValueError(f"cloud {self._core.cloud} is not supported")
+            raise ValueError(f"cloud {cloud} is not supported")
 
     def create(self):
-        self._deployment.reset(self.args)
-        self.add()
+        logger.info(f"Creating new service")
+        self.dpmt.store_config(overwrite=True)
 
     def add(self):
-        logger.info(f"Adding node group to deployment {self._deployment.core.name}")
-        config = NodeConfig().create(self._core.cloud, self.args)
-        self._deployment.add_config(self._deployment.length + 1, config)
+        logger.info(f"Adding node group to service")
+        self.dpmt.store_config()
 
     def save(self):
-        logger.info(f"Saving project {self._deployment.core.project} deployment {self._deployment.core.name}")
-        self.runner.store_deployment_cfg(self._deployment)
+        logger.info(f"Saving deployment")
+        self.dpmt.to_file()
 
     def deploy(self):
-        logger.info(f"Deploying project {self._deployment.core.project} deployment {self._deployment.core.name}")
-        env = self.deployer(self.deployment)
-        env.deploy()
+        for name, core, service in self.dpmt.services:
+            logger.info(f"Deploying service {name}")
+            deployer = self.deployer(service.cloud)
+            env = deployer(name, core, service)
+            env.deploy()
 
     def destroy(self):
-        logger.info(f"Removing project {self._deployment.core.project} deployment {self._deployment.core.name}")
-        env = self.deployer(self.deployment)
-        env.destroy()
+        for name, core, service in self.dpmt.services:
+            logger.info(f"Removing service {name}")
+            deployer = self.deployer(service.cloud)
+            env = deployer(name, core, service)
+            env.destroy()
 
     def list(self):
-        env = self.deployer(self.deployment)
-        return env.list()
+        ip_list = {}
+        for name, core, service in self.dpmt.services:
+            deployer = self.deployer(service.cloud)
+            env = deployer(name, core, service)
+            ip_list.update({name: env.list()})
+        return ip_list
 
-    def provision(self, pre_provision_cmds, provision_cmds, post_provision_cmds):
-        env = self.deployer(self.deployment)
-        env.provision(pre_provision_cmds, provision_cmds, post_provision_cmds)
+    def provision(self):
+        for name, core, service in self.dpmt.services:
+            deployer = self.deployer(service.cloud)
+            env = deployer(name, core, service)
+            provision_cmds = C.provisioners.get(service.model)
+            if provision_cmds:
+                env.provision(provision_cmds.get('pre_provision', []), provision_cmds.get('provision', []), provision_cmds.get('post_provision', []))
 
     @property
-    def deployment(self) -> DeploymentConfig:
-        return self._deployment
+    def deployment(self) -> Deployment:
+        return self.dpmt

@@ -119,7 +119,7 @@ def gcp_driver_1(args):
     cidr_util = NetworkDriver()
     core = BaseConfig().create(args)
     base = CloudBase(core)
-    config = NodeConfig().create(core.cloud, args)
+    config = NodeConfig().create(args)
     vpc_name = f"{core.project}-vpc"
     subnet_name = f"{core.project}-subnet-01"
     firewall_default = f"{vpc_name}-fw-default"

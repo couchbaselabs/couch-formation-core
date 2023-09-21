@@ -14,12 +14,13 @@ from couchformation.gcp.driver.machine import MachineType
 from couchformation.gcp.driver.disk import Disk
 from couchformation.gcp.driver.image import Image
 from couchformation.gcp.network import GCPNetwork
-from couchformation.config import NodeList, DeploymentConfig
+from couchformation.config import NodeList, BaseConfig
 from couchformation.ssh import SSHUtil
 from couchformation.exception import FatalError
 import couchformation.state as state
 from couchformation.state import INSTANCES, GCPInstance, GCPDisk
 from couchformation.provisioner.remote import RemoteProvisioner, ProvisionSet
+from couchformation.deployment import Service
 
 logger = logging.getLogger('couchformation.gcp.node')
 logger.addHandler(logging.NullHandler())
@@ -31,27 +32,27 @@ class GCPNodeError(FatalError):
 
 class GCPDeployment(object):
 
-    def __init__(self, deployment: DeploymentConfig):
-        self.deployment = deployment
-        self.core = self.deployment.core
+    def __init__(self, name: str, core: BaseConfig, service: Service):
+        self.name = name
+        self.service = service
+        self.core = core
         self.project = self.core.project
-        self.region = self.core.region
-        self.auth_mode = self.core.auth_mode
-        self.profile = self.core.profile
-        self.name = self.core.name
+        self.region = self.service.region
+        self.auth_mode = self.service.auth_mode
+        self.profile = self.service.profile
+        self.name = self.service.name
         self.ssh_key = self.core.ssh_key
-        self.os_id = self.core.os_id
-        self.os_version = self.core.os_version
-        self.core.resource_mode()
+        self.os_id = self.service.os_id
+        self.os_version = self.service.os_version
 
         self._name_check(self.name)
-        CloudBase(self.core).test_session()
+        CloudBase(service).test_session()
 
-        state.core = self.core
+        state.config.set(name, service.cloud, core.project_dir)
         state.switch_cloud()
 
-        self.gcp_network = GCPNetwork(self.core)
-        self.gcp_base = CloudBase(self.core)
+        self.gcp_network = GCPNetwork(name, core, service)
+        self.gcp_base = CloudBase(service)
 
         self.gcp_project = self.gcp_base.gcp_project
         self.gcp_account_email = self.gcp_base.gcp_account_email
@@ -59,13 +60,13 @@ class GCPDeployment(object):
 
     def create_nodes(self):
         subnet_list = []
-        core = self.core
+        service = self.service
         offset = 1
         node_count = 0
 
         state.update(INSTANCES)
 
-        ssh_pub_key_text = SSHUtil().get_ssh_public_key(core.ssh_key)
+        ssh_pub_key_text = SSHUtil().get_ssh_public_key(self.core.ssh_key)
         vpc_name = state.infrastructure.network
         subnet_name = state.infrastructure.subnet
 
@@ -80,9 +81,9 @@ class GCPDeployment(object):
 
         subnet_cycle = cycle(subnet_list)
 
-        image = Image(core).list_standard(os_id=core.os_id, os_version=core.os_version)
+        image = Image(service).list_standard(os_id=service.os_id, os_version=service.os_version)
         if not image:
-            raise GCPNodeError(f"can not find image for type {core.os_id} {core.os_version}")
+            raise GCPNodeError(f"can not find image for type {service.os_id} {service.os_version}")
 
         logger.info(f"Using image {image['name']} type {image['os_id']} version {image['os_version']}")
 
@@ -91,7 +92,7 @@ class GCPDeployment(object):
 
         offset += node_count
 
-        for n, config in enumerate(self.deployment.config):
+        for n, config in enumerate(self.service.config):
             quantity = config.quantity
             machine_type = config.machine_type
             volume_size = config.volume_size
@@ -108,7 +109,7 @@ class GCPDeployment(object):
                 swap_disk = f"{self.name}-swap-{node_num:02d}"
                 data_disk = f"{self.name}-data-{node_num:02d}"
 
-                machine = MachineType(core).get_machine(config.machine_type, subnet['zone'])
+                machine = MachineType(service).get_machine(config.machine_type, subnet['zone'])
                 if not machine:
                     raise GCPNodeError(f"can not find machine for type {machine_type}")
                 machine_name = machine['name']
@@ -117,27 +118,27 @@ class GCPDeployment(object):
 
                 instance_state.disk_list.clear()
                 logger.info(f"Creating disk {swap_disk}")
-                Disk(core).create(swap_disk, subnet['zone'], machine_ram)
+                Disk(service).create(swap_disk, subnet['zone'], machine_ram)
                 # noinspection PyTypeChecker
                 instance_state.disk_list.append(attr.asdict(GCPDisk(swap_disk, subnet['zone'])))
                 logger.info(f"Creating disk {data_disk}")
-                Disk(core).create(data_disk, subnet['zone'], volume_size)
+                Disk(service).create(data_disk, subnet['zone'], volume_size)
                 # noinspection PyTypeChecker
                 instance_state.disk_list.append(attr.asdict(GCPDisk(data_disk, subnet['zone'])))
 
                 logger.info(f"Creating node {node_name}")
-                Instance(core).run(node_name,
-                                   image['image_project'],
-                                   image['name'],
-                                   self.gcp_base.gcp_account_email,
-                                   subnet['zone'],
-                                   vpc_name,
-                                   subnet_name,
-                                   image['os_user'],
-                                   ssh_pub_key_text,
-                                   swap_disk,
-                                   data_disk,
-                                   machine_type=machine_name)
+                Instance(service).run(node_name,
+                                      image['image_project'],
+                                      image['name'],
+                                      self.gcp_base.gcp_account_email,
+                                      subnet['zone'],
+                                      vpc_name,
+                                      subnet_name,
+                                      image['os_user'],
+                                      ssh_pub_key_text,
+                                      swap_disk,
+                                      data_disk,
+                                      machine_type=machine_name)
 
                 instance_state.name = node_name
                 instance_state.services = services
@@ -145,7 +146,7 @@ class GCPDeployment(object):
 
                 while True:
                     try:
-                        instance_details = Instance(core).details(node_name, subnet['zone'])
+                        instance_details = Instance(service).details(node_name, subnet['zone'])
                         instance_state.public_ip = instance_details['networkInterfaces'][0]['accessConfigs'][0]['natIP']
                         instance_state.private_ip = instance_details['networkInterfaces'][0]['networkIP']
                         break
@@ -159,17 +160,17 @@ class GCPDeployment(object):
         state.save()
 
     def destroy_nodes(self):
-        core = self.core
+        service = self.service
 
         state.update(INSTANCES)
 
         for n, instance in reversed(list(enumerate(state.instance_set.instance_list))):
             instance_name = instance['name']
             zone = instance['zone']
-            Instance(core).terminate(instance_name, zone)
+            Instance(service).terminate(instance_name, zone)
             logger.info(f"Removed instance {instance_name}")
             for d, disk in reversed(list(enumerate(instance['disk_list']))):
-                Disk(core).delete(disk['name'], disk['zone'])
+                Disk(service).delete(disk['name'], disk['zone'])
                 logger.info(f"Removed disk {disk['name']}")
             del state.instance_set.instance_list[n]
 
@@ -190,7 +191,7 @@ class GCPDeployment(object):
         state.instances_display()
 
     def list(self) -> NodeList:
-        node_list = NodeList().create(state.instance_set.username, self.ssh_key, self.core.working_dir, self.core.private_ip)
+        node_list = NodeList().create(state.instance_set.username, self.ssh_key, state.service_dir(), self.core.private_ip)
         for n, instance_state in enumerate(state.instance_set.instance_list):
             node_name = instance_state['name']
             node_private_ip = instance_state['private_ip']

@@ -119,7 +119,7 @@ def azure_driver_1(args):
     cidr_util = NetworkDriver()
     core = BaseConfig().create(args)
     base = CloudBase(core)
-    config = NodeConfig().create(core.cloud, args)
+    config = NodeConfig().create(args)
     rg_name = f"{core.project}-rg"
     vpc_name = f"{core.project}-vpc"
     nsg_name = f"{core.project}-nsg"

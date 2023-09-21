@@ -14,9 +14,10 @@ from couchformation.azure.driver.machine import MachineType
 from couchformation.azure.driver.disk import Disk
 from couchformation.azure.driver.image import Image
 from couchformation.azure.network import AzureNetwork
-from couchformation.config import NodeList, DeploymentConfig
+from couchformation.config import NodeList, BaseConfig
 from couchformation.ssh import SSHUtil
 from couchformation.exception import FatalError
+from couchformation.deployment import Service
 from couchformation.provisioner.remote import RemoteProvisioner, ProvisionSet
 import couchformation.state as state
 from couchformation.state import INSTANCES, AzureInstance, AzureDisk
@@ -31,37 +32,37 @@ class AzureNodeError(FatalError):
 
 class AzureDeployment(object):
 
-    def __init__(self, deployment: DeploymentConfig):
-        self.deployment = deployment
-        self.core = self.deployment.core
+    def __init__(self, name: str, core: BaseConfig, service: Service):
+        self.name = name
+        self.service = service
+        self.core = core
         self.project = self.core.project
-        self.region = self.core.region
-        self.auth_mode = self.core.auth_mode
-        self.profile = self.core.profile
-        self.name = self.core.name
+        self.region = self.service.region
+        self.auth_mode = self.service.auth_mode
+        self.profile = self.service.profile
+        self.name = self.service.name
         self.ssh_key = self.core.ssh_key
-        self.os_id = self.core.os_id
-        self.os_version = self.core.os_version
-        self.core.resource_mode()
+        self.os_id = self.service.os_id
+        self.os_version = self.service.os_version
 
         self._name_check(self.name)
-        CloudBase(self.core).test_session()
+        CloudBase(service).test_session()
 
-        state.core = self.core
+        state.config.set(name, service.cloud, core.project_dir)
         state.switch_cloud()
 
-        self.az_network = AzureNetwork(self.core)
-        self.az_base = CloudBase(self.core)
+        self.az_network = AzureNetwork(name, core, service)
+        self.az_base = CloudBase(service)
 
     def create_nodes(self):
         subnet_list = []
-        core = self.core
+        service = self.service
         offset = 1
         node_count = 0
 
         state.update(INSTANCES)
 
-        ssh_pub_key_text = SSHUtil().get_ssh_public_key(core.ssh_key)
+        ssh_pub_key_text = SSHUtil().get_ssh_public_key(self.core.ssh_key)
         rg_name = state.infrastructure.resource_group
         azure_location = self.az_base.region
 
@@ -77,9 +78,9 @@ class AzureDeployment(object):
 
         subnet_cycle = cycle(subnet_list)
 
-        image = Image(core).list_standard(os_id=core.os_id, os_version=core.os_version)
+        image = Image(service).list_standard(os_id=service.os_id, os_version=service.os_version)
         if not image:
-            raise AzureNodeError(f"can not find image for type {core.os_id} {core.os_version}")
+            raise AzureNodeError(f"can not find image for type {service.os_id} {service.os_version}")
 
         logger.info(f"Using image {image['publisher']}/{image['offer']}/{image['sku']} type {image['os_id']} version {image['os_version']}")
 
@@ -88,13 +89,13 @@ class AzureDeployment(object):
 
         offset += node_count
 
-        for n, config in enumerate(self.deployment.config):
+        for n, config in enumerate(self.service.config):
             quantity = config.quantity
             machine_type = config.machine_type
             volume_size = config.volume_size
             services = config.services
 
-            machine = MachineType(core).get_machine(config.machine_type, azure_location)
+            machine = MachineType(service).get_machine(config.machine_type, azure_location)
             if not machine:
                 raise AzureNodeError(f"can not find machine for type {machine_type}")
             machine_name = machine['name']
@@ -120,36 +121,36 @@ class AzureDeployment(object):
 
                 instance_state.disk_list.clear()
                 logger.info(f"Creating disk {swap_disk}")
-                swap_resource = Disk(core).create(rg_name, azure_location, subnet['zone'], swap_tier['disk_size'], swap_tier['disk_tier'], swap_disk)
+                swap_resource = Disk(service).create(rg_name, azure_location, subnet['zone'], swap_tier['disk_size'], swap_tier['disk_tier'], swap_disk)
                 # noinspection PyTypeChecker
                 instance_state.disk_list.append(attr.asdict(AzureDisk(swap_disk, subnet['zone'])))
                 logger.info(f"Creating disk {data_disk}")
-                data_resource = Disk(core).create(rg_name, azure_location, subnet['zone'], disk_tier['disk_size'], disk_tier['disk_tier'], data_disk)
+                data_resource = Disk(service).create(rg_name, azure_location, subnet['zone'], disk_tier['disk_size'], disk_tier['disk_tier'], data_disk)
                 # noinspection PyTypeChecker
                 instance_state.disk_list.append(attr.asdict(AzureDisk(data_disk, subnet['zone'])))
 
                 logger.info(f"Creating public IP {node_pub_ip}")
-                pub_ip_resource = Network(core).create_pub_ip(node_pub_ip, rg_name)
+                pub_ip_resource = Network(service).create_pub_ip(node_pub_ip, rg_name)
                 logger.info(f"Creating NIC {node_nic}")
-                nic_resource = Network(core).create_nic(node_nic, subnet['subnet_id'], subnet['zone'], pub_ip_resource.id, rg_name)
+                nic_resource = Network(service).create_nic(node_nic, subnet['subnet_id'], subnet['zone'], pub_ip_resource.id, rg_name)
 
                 logger.info(f"Creating node {node_name}")
-                Instance(core).run(node_name,
-                                   image['publisher'],
-                                   image['offer'],
-                                   image['sku'],
-                                   subnet['zone'],
-                                   nic_resource.id,
-                                   image['os_user'],
-                                   ssh_pub_key_text,
-                                   rg_name,
-                                   boot_disk,
-                                   machine_type=machine_name)
+                Instance(service).run(node_name,
+                                      image['publisher'],
+                                      image['offer'],
+                                      image['sku'],
+                                      subnet['zone'],
+                                      nic_resource.id,
+                                      image['os_user'],
+                                      ssh_pub_key_text,
+                                      rg_name,
+                                      boot_disk,
+                                      machine_type=machine_name)
 
                 logger.info(f"Attaching disk {swap_disk}")
-                Instance(core).attach_disk(node_name, self.az_base.disk_caching(swap_tier['disk_size']), "1", swap_resource.id, rg_name)
+                Instance(service).attach_disk(node_name, self.az_base.disk_caching(swap_tier['disk_size']), "1", swap_resource.id, rg_name)
                 logger.info(f"Attaching disk {data_disk}")
-                Instance(core).attach_disk(node_name, self.az_base.disk_caching(disk_tier['disk_size']), "2", data_resource.id, rg_name)
+                Instance(service).attach_disk(node_name, self.az_base.disk_caching(disk_tier['disk_size']), "2", data_resource.id, rg_name)
 
                 # noinspection PyTypeChecker
                 instance_state.disk_list.append(attr.asdict(AzureDisk(boot_disk, subnet['zone'])))
@@ -160,8 +161,8 @@ class AzureDeployment(object):
                 instance_state.node_nic = node_nic
                 instance_state.node_pub_ip = node_pub_ip
 
-                nic_details = Network(core).describe_nic(node_nic, rg_name)
-                pub_ip_details = Network(core).describe_pub_ip(node_pub_ip, rg_name)
+                nic_details = Network(service).describe_nic(node_nic, rg_name)
+                pub_ip_details = Network(service).describe_pub_ip(node_pub_ip, rg_name)
                 instance_state.public_ip = pub_ip_details.ip_address
                 instance_state.private_ip = nic_details.ip_configurations[0].private_ip_address
 
@@ -172,7 +173,7 @@ class AzureDeployment(object):
         state.save()
 
     def destroy_nodes(self):
-        core = self.core
+        service = self.service
 
         state.update(INSTANCES)
 
@@ -181,14 +182,14 @@ class AzureDeployment(object):
             rg_name = instance['resource_group']
             node_nic = instance['node_nic']
             node_pub_ip = instance['node_pub_ip']
-            Instance(core).terminate(instance_name, rg_name)
+            Instance(service).terminate(instance_name, rg_name)
             logger.info(f"Removed instance {instance_name}")
-            Network(core).delete_nic(node_nic, rg_name)
+            Network(service).delete_nic(node_nic, rg_name)
             logger.info(f"Removed NIC {node_nic}")
-            Network(core).delete_pub_ip(node_pub_ip, rg_name)
+            Network(service).delete_pub_ip(node_pub_ip, rg_name)
             logger.info(f"Removed public IP {node_pub_ip}")
             for d, disk in reversed(list(enumerate(instance['disk_list']))):
-                Disk(core).delete(disk['name'], rg_name)
+                Disk(service).delete(disk['name'], rg_name)
                 logger.info(f"Removed disk {disk['name']}")
             del state.instance_set.instance_list[n]
 
@@ -209,7 +210,7 @@ class AzureDeployment(object):
         state.instances_display()
 
     def list(self) -> NodeList:
-        node_list = NodeList().create(state.instance_set.username, self.ssh_key, self.core.working_dir, self.core.private_ip)
+        node_list = NodeList().create(state.instance_set.username, self.ssh_key, state.service_dir(), self.core.private_ip)
         for n, instance_state in enumerate(state.instance_set.instance_list):
             node_name = instance_state['name']
             node_private_ip = instance_state['private_ip']

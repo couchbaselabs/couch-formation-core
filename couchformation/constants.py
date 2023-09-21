@@ -187,14 +187,17 @@ MACHINE_TYPES = [
         }
     ]
 
-CBS_PRE_PROVISION = [
-    'curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | sudo -E bash -s - -s -g https://github.com/mminichino/host-prep-lib',
-]
-
-CBS_PROVISION = [
-    'sudo bundlemgr -b CBS',
-    'sudo swmgr cluster create -n testdb -s {{ SERVICES }} -g {{ NODE_ZONE }} -D /cbdata -l {{ PRIVATE_IP_LIST }}',
-]
-CBS_POST_PROVISION = [
-    'sudo swmgr cluster rebalance -l {{ PRIVATE_IP_LIST }}',
-]
+provisioners = {
+    "cbs": {
+        "pre_provision": [
+            'curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | sudo -E bash -s - -s -g https://github.com/mminichino/host-prep-lib',
+        ],
+        "provision": [
+            'sudo bundlemgr -b CBS',
+            'sudo swmgr cluster create -n testdb -s {{ SERVICES }} -g {{ NODE_ZONE }} -D /cbdata -l {{ PRIVATE_IP_LIST }}',
+        ],
+        "post_provision": [
+            'sudo swmgr cluster rebalance -l {{ PRIVATE_IP_LIST }}',
+        ]
+    }
+}

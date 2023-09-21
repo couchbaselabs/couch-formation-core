@@ -8,7 +8,6 @@ import json
 from pwd import getpwnam
 from grp import getgrnam
 from typing import Optional, List, Union
-from couchformation.config import BaseConfig
 
 INFRASTRUCTURE = 0x01
 INSTANCES = 0x02
@@ -178,7 +177,19 @@ class AzureState:
     zone_list: Optional[List[dict]] = attr.ib(default=[])
 
 
-core = BaseConfig()
+@attr.s
+class StateConfig:
+    name: Optional[str] = attr.ib(default=None)
+    cloud: Optional[str] = attr.ib(default=None)
+    project_dir: Optional[str] = attr.ib(default=None)
+
+    def set(self, name, cloud, project_dir):
+        self.name = name
+        self.cloud = cloud
+        self.project_dir = project_dir
+
+
+config = StateConfig()
 
 infrastructure: Union[AWSState, GCPState, AzureState] = AWSState()
 _infrastructure_update = False
@@ -223,29 +234,33 @@ def make_dir(name: str, owner: str = None, group: str = None, mode: int = 0o775)
             raise
 
 
+def service_dir():
+    return os.path.join(config.project_dir, config.name)
+
+
 def switch_cloud() -> None:
     global infrastructure, instance_set
     common_state_data = {}
     resource_state_data = {}
-    common_state_file = os.path.join(core.common_dir, 'state.json')
-    resource_state_file = os.path.join(core.resource_dir, 'state.json')
+    common_state_file = os.path.join(config.project_dir, 'state.json')
+    resource_state_file = os.path.join(service_dir(), 'state.json')
 
     if os.path.exists(common_state_file):
         common_state_data = read_file(common_state_file)
-        if common_state_data['cloud'] != core.cloud:
-            raise StateError(f"Cloud mismatch: state: {common_state_data['cloud']} requested: {core.cloud}")
+        if common_state_data['cloud'] != config.cloud:
+            raise StateError(f"Cloud mismatch: state: {common_state_data['cloud']} requested: {config.cloud}")
     if os.path.exists(resource_state_file):
         resource_state_data = read_file(resource_state_file)
-        if resource_state_data['cloud'] != core.cloud:
-            raise StateError(f"Cloud mismatch: state: {resource_state_data['cloud']} requested: {core.cloud}")
+        if resource_state_data['cloud'] != config.cloud:
+            raise StateError(f"Cloud mismatch: state: {resource_state_data['cloud']} requested: {config.cloud}")
 
-    if core.cloud == 'aws':
+    if config.cloud == 'aws':
         infrastructure = AWSState(**common_state_data)
         instance_set = AWSInstanceSet(**resource_state_data)
-    elif core.cloud == 'gcp':
+    elif config.cloud == 'gcp':
         infrastructure = GCPState(**common_state_data)
         instance_set = GCPInstanceSet(**resource_state_data)
-    elif core.cloud == 'azure':
+    elif config.cloud == 'azure':
         infrastructure = AzureState(**common_state_data)
         instance_set = AzureInstanceSet(**resource_state_data)
 
@@ -260,13 +275,13 @@ def update(mask):
 
 def save():
     if _infrastructure_update:
-        make_dir(core.common_dir)
+        make_dir(config.project_dir)
         # noinspection PyTypeChecker
-        write_file(attr.asdict(infrastructure), os.path.join(core.common_dir, 'state.json'))
-    if _infrastructure_update:
-        make_dir(core.resource_dir)
+        write_file(attr.asdict(infrastructure), os.path.join(config.project_dir, 'state.json'))
+    if _instance_update:
+        make_dir(service_dir())
         # noinspection PyTypeChecker
-        write_file(attr.asdict(instance_set), os.path.join(core.resource_dir, 'state.json'))
+        write_file(attr.asdict(instance_set), os.path.join(service_dir(), 'state.json'))
 
 
 def infrastructure_display():

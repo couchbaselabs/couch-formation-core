@@ -122,7 +122,7 @@ def aws_driver_1(args):
     cidr_util = NetworkDriver()
     core = BaseConfig().create(args)
     base = CloudBase(core)
-    config = NodeConfig().create(core.cloud, args)
+    config = NodeConfig().create(args)
 
     for net in Network(core).cidr_list:
         cidr_util.add_network(net)

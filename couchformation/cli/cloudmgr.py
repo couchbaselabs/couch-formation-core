@@ -3,7 +3,6 @@
 
 import logging
 import warnings
-import argparse
 from overrides import override
 import couchformation
 from couchformation.cli.cli import CLI
@@ -21,15 +20,12 @@ class CloudMgrCLI(CLI):
 
     @override()
     def local_args(self):
-        opt_parser = argparse.ArgumentParser(parents=[self.parser], add_help=False)
-        opt_parser.add_argument('-t', '--type', dest='mode', action='store', default='cbs')
-
         command_subparser = self.parser.add_subparsers(dest='command')
-        command_subparser.add_parser('create', parents=[opt_parser], add_help=False)
-        command_subparser.add_parser('add', parents=[opt_parser], add_help=False)
-        command_subparser.add_parser('deploy', parents=[opt_parser], add_help=False)
-        command_subparser.add_parser('destroy', parents=[opt_parser], add_help=False)
-        command_subparser.add_parser('list', parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('create', add_help=False)
+        command_subparser.add_parser('add', add_help=False)
+        command_subparser.add_parser('deploy', add_help=False)
+        command_subparser.add_parser('destroy', add_help=False)
+        command_subparser.add_parser('list', add_help=False)
 
     def run(self):
         logger.info(f"Couch Formation v{couchformation.__version__}")
@@ -44,8 +40,7 @@ class CloudMgrCLI(CLI):
             project.save()
         elif self.options.command == "deploy":
             project.deploy()
-            if self.options.mode == "cbs":
-                project.provision(C.CBS_PRE_PROVISION, C.CBS_PROVISION, C.CBS_POST_PROVISION)
+            project.provision()
         elif self.options.command == "destroy":
             project.destroy()
         elif self.options.command == "list":

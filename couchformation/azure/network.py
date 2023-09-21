@@ -12,6 +12,7 @@ from couchformation.config import BaseConfig
 from couchformation.exception import FatalError
 import couchformation.state as state
 from couchformation.state import INFRASTRUCTURE, AzureZone
+from couchformation.deployment import Service
 
 logger = logging.getLogger('couchformation.azure.network')
 logger.addHandler(logging.NullHandler())
@@ -23,15 +24,16 @@ class AzureNetworkError(FatalError):
 
 class AzureNetwork(object):
 
-    def __init__(self, core: BaseConfig):
+    def __init__(self, name: str, core: BaseConfig, service: Service):
+        self.name = name
+        self.service = service
         self.core = core
         self.project = core.project
-        self.region = core.region
-        self.auth_mode = core.auth
-        self.profile = core.profile
-        core.common_mode()
+        self.region = service.region
+        self.auth_mode = service.auth
+        self.profile = service.profile
 
-        state.core = self.core
+        state.config.set(name, service.cloud, core.project_dir)
         state.switch_cloud()
 
         try:
@@ -39,10 +41,11 @@ class AzureNetwork(object):
         except ValueError as err:
             raise AzureNetworkError(err)
 
-        self.az_network = Network(core)
-        self.az_base = CloudBase(core)
+        self.az_network = Network(service)
+        self.az_base = CloudBase(service)
 
     def create_vpc(self):
+        service = self.service
         core = self.core
         cidr_util = NetworkDriver()
         rg_name = f"{core.project}-rg"
@@ -69,7 +72,7 @@ class AzureNetwork(object):
 
             if not state.infrastructure.network:
                 vpc_cidr = cidr_util.get_next_network()
-                net_resource = Network(core).create(vpc_name, vpc_cidr, rg_name)
+                net_resource = Network(service).create(vpc_name, vpc_cidr, rg_name)
                 net_resource_id = net_resource.id
                 state.infrastructure.network = vpc_name
                 state.infrastructure.network_cidr = vpc_cidr
@@ -81,10 +84,10 @@ class AzureNetwork(object):
                 cidr_util.set_active_network(vpc_cidr)
 
             if not state.infrastructure.network_security_group:
-                nsg_resource = SecurityGroup(core).create(nsg_name, rg_name)
+                nsg_resource = SecurityGroup(service).create(nsg_name, rg_name)
                 nsg_resource_id = nsg_resource.id
-                SecurityGroup(core).add_rule("AllowSSH", nsg_name, ["22"], 100, rg_name)
-                SecurityGroup(core).add_rule("AllowCB", nsg_name, [
+                SecurityGroup(service).add_rule("AllowSSH", nsg_name, ["22"], 100, rg_name)
+                SecurityGroup(service).add_rule("AllowCB", nsg_name, [
                     "8091-8097",
                     "9123",
                     "9140",
@@ -109,7 +112,7 @@ class AzureNetwork(object):
                 subnet_cidr = state.infrastructure.subnet_cidr
 
             if not state.infrastructure.subnet:
-                subnet_resource = Subnet(core).create(subnet_name, vpc_name, subnet_cidr, nsg_resource_id, rg_name)
+                subnet_resource = Subnet(service).create(subnet_name, vpc_name, subnet_cidr, nsg_resource_id, rg_name)
                 subnet_id = subnet_resource.id
                 state.infrastructure.subnet = subnet_name
                 state.infrastructure.subnet_id = subnet_id
@@ -134,7 +137,7 @@ class AzureNetwork(object):
         state.save()
 
     def destroy_vpc(self):
-        core = self.core
+        service = self.service
 
         state.update(INFRASTRUCTURE)
 
@@ -154,7 +157,7 @@ class AzureNetwork(object):
 
             if state.infrastructure.subnet:
                 subnet_name = state.infrastructure.subnet
-                Subnet(core).delete(vpc_name, subnet_name, rg_name)
+                Subnet(service).delete(vpc_name, subnet_name, rg_name)
                 state.infrastructure.subnet = None
                 state.infrastructure.subnet_id = None
                 logger.info(f"Removed subnet {subnet_name}")
@@ -164,7 +167,7 @@ class AzureNetwork(object):
 
             if state.infrastructure.network_security_group:
                 nsg_name = state.infrastructure.network_security_group
-                SecurityGroup(core).delete(nsg_name, rg_name)
+                SecurityGroup(service).delete(nsg_name, rg_name)
                 state.infrastructure.network_security_group = None
                 state.infrastructure.network_security_group_id = None
                 logger.info(f"Removed network security group {nsg_name}")
@@ -174,7 +177,7 @@ class AzureNetwork(object):
 
             if state.infrastructure.network:
                 vpc_name = state.infrastructure.network
-                Network(core).delete(vpc_name, rg_name)
+                Network(service).delete(vpc_name, rg_name)
                 state.infrastructure.network = None
                 state.infrastructure.network_cidr = None
                 state.infrastructure.network_id = None
