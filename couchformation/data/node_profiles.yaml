@@ -1,0 +1,17 @@
+---
+default:
+  root: false
+  commands:
+    - curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | sudo -E bash -s - -s -g https://github.com/mminichino/host-prep-lib
+cbs:
+  root: true
+  commands:
+    - bundlemgr -b CBS
+    - swmgr cluster create -n testdb -s {{ SERVICES }} -g {{ NODE_ZONE }} -D /cbdata -l {{ PRIVATE_IP_LIST }}
+    - swmgr cluster rebalance -l {{ PRIVATE_IP_LIST }}
+sgw:
+  root: true
+  commands:
+    - bundlemgr -b InstallSGW
+    - swmgr gateway configure -l {{ CONNECT_LIST }}
+    - bundlemgr -b EnableSGW

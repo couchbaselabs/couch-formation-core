@@ -2,10 +2,14 @@
 ##
 
 import os
+from couchformation import get_data_dir
 
 ROOT_DIRECTORY = os.path.join(os.environ.get('HOME'), '.config', 'couch-formation')
 STATE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'state')
 LOG_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'log')
+DATA_DIRECTORY = get_data_dir()
+NODE_PROFILES = os.path.join(DATA_DIRECTORY, "node_profiles.yaml")
+PLAYBOOK_DIR = os.path.join(DATA_DIRECTORY, "playbooks")
 
 GREY_COLOR = "\x1b[38;20m"
 YELLOW_COLOR = "\x1b[33;20m"
