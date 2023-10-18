@@ -10,6 +10,8 @@ push:
 		$(eval REV_FILE := $(shell ls -tr dist/*.gz | tail -1))
 		twine upload $(REV_FILE)
 pypi: setup push
+test_kvdb:
+		python -m pytest tests/test_kvdb.py
 test_aws:
 		python -m pytest tests/test_1.py
 test_gcp:

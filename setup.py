@@ -8,7 +8,7 @@ long_description = (this_directory / "README.md").read_text()
 setup(
     name='couchformation',
     version=couchformation.__version__,
-    packages=['couchformation'],
+    packages=['couchformation', 'couchformation.cli'],
     url='https://github.com/mminichino/couch-formation-core',
     license='Apache License 2.0',
     author='Michael Minichino',
