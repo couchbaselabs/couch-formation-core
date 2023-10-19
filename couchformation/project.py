@@ -8,6 +8,7 @@ from couchformation.gcp.node import GCPDeployment
 from couchformation.azure.node import AzureDeployment
 from couchformation.config import Parameters
 from couchformation.deployment import Deployment
+from couchformation.executor.targets import TargetProfile
 import couchformation.constants as C
 import couchformation.state as state
 
@@ -22,6 +23,7 @@ class ProjectError(FatalError):
 class Project(object):
 
     def __init__(self, args):
+        self.targets = TargetProfile()
         self.parameters = Parameters().create(args)
         try:
             self.dpmt = Deployment(self.parameters)

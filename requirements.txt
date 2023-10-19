@@ -37,3 +37,4 @@ docker>=5.0.3
 paramiko>=3.3.1
 overrides>=7.4.0
 bumpversion>=0.6.0
+PyYAML>=5.1

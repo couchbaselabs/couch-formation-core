@@ -9,6 +9,7 @@ STATE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'state')
 LOG_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'log')
 DATA_DIRECTORY = get_data_dir()
 NODE_PROFILES = os.path.join(DATA_DIRECTORY, "node_profiles.yaml")
+TARGET_PROFILES = os.path.join(DATA_DIRECTORY, "target_profiles.yaml")
 PLAYBOOK_DIR = os.path.join(DATA_DIRECTORY, "playbooks")
 
 GREY_COLOR = "\x1b[38;20m"
