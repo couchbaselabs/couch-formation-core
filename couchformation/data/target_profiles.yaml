@@ -5,90 +5,69 @@ aws:
       module: AWSNetwork
       deploy: create_vpc
       destroy: destroy_vpc
-      parameters:
-        - project
-        - region
-        - auth_mode
-        - profile
-        - ssh_key
-        - cidr
   node:
     couchformation.aws.node:
       module: AWSDeployment
       deploy: deploy
       destroy: destroy
-      parameters:
-        - name
-        - project
-        - region
-        - auth_mode
-        - profile
-        - ssh_key
-        - os_id
-        - os_version
-        - machine_type
-        - quantity
-        - volume_iops
-        - volume_size
+  parameters:
+    - region
+    - auth_mode
+    - profile
+    - ssh_key
+    - cidr
+    - os_id
+    - os_version
+    - machine_type
+    - quantity
+    - services
+    - volume_iops
+    - volume_size
 gcp:
   network:
     couchformation.gcp.network:
       module: GCPNetwork
       deploy: create_vpc
       destroy: destroy_vpc
-      parameters:
-        - project
-        - region
-        - auth_mode
-        - profile
-        - ssh_key
-        - cidr
   node:
     couchformation.gcp.node:
       module: GCPDeployment
       deploy: deploy
       destroy: destroy
-      parameters:
-        - name
-        - project
-        - region
-        - auth_mode
-        - profile
-        - ssh_key
-        - os_id
-        - os_version
-        - machine_type
-        - quantity
-        - volume_size
+  parameters:
+    - region
+    - auth_mode
+    - profile
+    - ssh_key
+    - cidr
+    - os_id
+    - os_version
+    - machine_type
+    - quantity
+    - services
+    - volume_size
 azure:
   network:
     couchformation.azure.network:
       module: AzureNetwork
       deploy: create_vpc
       destroy: destroy_vpc
-      parameters:
-        - project
-        - region
-        - auth_mode
-        - profile
-        - ssh_key
-        - cidr
   node:
     couchformation.azure.node:
       module: AzureDeployment
       deploy: deploy
       destroy: destroy
-      parameters:
-        - name
-        - project
-        - region
-        - auth_mode
-        - profile
-        - ssh_key
-        - os_id
-        - os_version
-        - machine_type
-        - quantity
-        - volume_iops
-        - volume_size
-        - volume_tier
+  parameters:
+    - region
+    - auth_mode
+    - profile
+    - ssh_key
+    - cidr
+    - os_id
+    - os_version
+    - machine_type
+    - quantity
+    - services
+    - volume_iops
+    - volume_size
+    - volume_tier

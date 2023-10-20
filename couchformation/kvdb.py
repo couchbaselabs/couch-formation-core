@@ -15,6 +15,10 @@ def connect(*args, **kwargs):
     return KeyValueStore(*args, **kwargs)
 
 
+def documents(*args, **kwargs):
+    return KeyValueStore(*args, **kwargs).documents()
+
+
 class KeyValueStore(UserDict):
 
     def __init__(self, filename=None, tablename="kv"):
@@ -57,7 +61,7 @@ class KeyValueStore(UserDict):
         self.close()
 
     def __str__(self):
-        return f"SqliteDict({self.filename})"
+        return f"KeyValueStore({self.filename}, {self.tablename})"
 
     def __repr__(self):
         return str(self)
@@ -110,16 +114,14 @@ class KeyValueStore(UserDict):
         self.conn.execute(f"""DELETE FROM \"{self.tablename}\" WHERE key = ?""", (key,))
         self.commit()
 
-    def update(self, items=(), **kwargs):
-        try:
-            items = items.items()
-        except AttributeError:
-            pass
-        items = [(k, v) for k, v in items]
+    def update(self, *args, **kwargs):
+        if not args and not kwargs:
+            return
+        items = [(k, v) for k, v in kwargs.items()]
+        for d in args:
+            items.extend([(k, v) for k, v in d.items()])
 
         self.conn.executemany(f"""REPLACE INTO \"{self.tablename}\" (key, value) VALUES (?, ?)""", items)
-        if kwargs:
-            self.update(kwargs)
         self.commit()
 
     def __iter__(self):
@@ -139,10 +141,22 @@ class KeyValueStore(UserDict):
             res = cursor.fetchall()
         return [name[0] for name in res]
 
-    def doc_id_list(self):
+    def document_len(self, name):
+        rows = self._select(f"""SELECT COUNT(*) FROM \"{name}\"""")[0]
+        return rows[0]
+
+    @property
+    def document_id(self):
+        return self.tablename
+
+    def document(self, name):
+        self.tablename = name
+        self._table(self.tablename)
+
+    def documents(self):
         self.cursor.execute("""SELECT name FROM sqlite_master WHERE type=\"table\"""")
         res = self.cursor.fetchall()
-        return [name[0] for name in res]
+        return [KeyValueStore(self.filename, name[0]) for name in res if self.document_len(name[0]) > 0]
 
     def commit(self):
         if self.conn is not None:

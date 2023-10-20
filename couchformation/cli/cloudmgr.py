@@ -3,11 +3,11 @@
 
 import logging
 import warnings
+import argparse
 from overrides import override
 import couchformation
 from couchformation.cli.cli import CLI
 from couchformation.project import Project
-import couchformation.constants as C
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger()
@@ -20,24 +20,32 @@ class CloudMgrCLI(CLI):
 
     @override()
     def local_args(self):
+        opt_parser = argparse.ArgumentParser(parents=[self.parser], add_help=False)
+        opt_parser.add_argument('-b', '--build', action='store', help="Build Type", default="cbs")
+        opt_parser.add_argument('-c', '--cloud', action='store', help="Infrastructure", default="cbs")
+        opt_parser.add_argument('-p', '--project', action='store', help="Project Name", default="resources")
+        opt_parser.add_argument('-n', '--name', action='store', help="Deployment Name", default="nodes")
+        opt_parser.add_argument('-x', '--connect', action='store', help="Connection Name", default=None)
+        opt_parser.add_argument('-g', '--group', action='store', help="Group Number", default=1, type=int)
+
         command_subparser = self.parser.add_subparsers(dest='command')
-        command_subparser.add_parser('create', add_help=False)
-        command_subparser.add_parser('add', add_help=False)
-        command_subparser.add_parser('deploy', add_help=False)
-        command_subparser.add_parser('destroy', add_help=False)
-        command_subparser.add_parser('list', add_help=False)
+        command_subparser.add_parser('create', help="Create", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('add', help="Add Resource Group", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('deploy', help="Deploy", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('destroy', help="Remove Resources", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('list', help="Display Information", parents=[opt_parser], add_help=False)
 
     def run(self):
         logger.info(f"Couch Formation v{couchformation.__version__}")
 
-        project = Project(self.remainder)
+        project = Project(self.options, self.remainder)
 
         if self.options.command == "create":
             project.create()
-            project.save()
+            # project.save()
         elif self.options.command == "add":
             project.add()
-            project.save()
+            # project.save()
         elif self.options.command == "deploy":
             project.deploy()
             project.provision()

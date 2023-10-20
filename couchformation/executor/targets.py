@@ -1,9 +1,10 @@
 ##
 ##
 
-from typing import List
+from typing import List, Optional
 import attr
 import yaml
+import argparse
 import couchformation.constants as C
 
 
@@ -13,7 +14,11 @@ class Profile:
     module: str = attr.ib()
     deploy: str = attr.ib()
     destroy: str = attr.ib()
-    parameters: List[str] = attr.ib()
+
+
+@attr.s
+class Parameters:
+    options: List[str] = attr.ib()
 
 
 @attr.s
@@ -21,6 +26,8 @@ class CloudProfile:
     name: str = attr.ib()
     network: Profile = attr.ib()
     node: Profile = attr.ib()
+    parameters: Parameters = attr.ib()
+    options: Optional[argparse.Namespace] = attr.ib(default=None)
 
 
 @attr.s
@@ -36,10 +43,18 @@ class ProfileSet:
 
 class TargetProfile(object):
 
-    def __init__(self):
+    def __init__(self, options):
         self.cfg_file = C.TARGET_PROFILES
+        self.options = options
         self.config = ProfileSet()
         self.load_config()
+
+    def get(self, cloud) -> CloudProfile:
+        profile = self.config.get(cloud)
+        if not profile:
+            raise ValueError(f"Cloud {cloud} is not supported")
+        profile.options = self.initialize_args(self.options, profile.parameters.options)
+        return profile
 
     def load_config(self):
         with open(self.cfg_file, "r") as f:
@@ -47,7 +62,8 @@ class TargetProfile(object):
                 for cloud, settings in yaml.safe_load(f).items():
                     network = Profile(*self.construct_profile(settings, 'network'))
                     node = Profile(*self.construct_profile(settings, 'node'))
-                    profile = CloudProfile(cloud, network, node)
+                    # parameters = Parameters(*self.construct_profile(settings, 'parameters'))
+                    profile = CloudProfile(cloud, network, node, Parameters(settings.get('parameters')))
                     self.config.add(profile)
             except yaml.YAMLError as err:
                 RuntimeError(f"Can not open target config file {self.cfg_file}: {err}")
@@ -60,5 +76,12 @@ class TargetProfile(object):
         module = elements.get('module')
         deploy = elements.get('deploy')
         destroy = elements.get('destroy')
-        parameters = elements.get('parameters')
-        return driver, module, deploy, destroy, parameters
+        return driver, module, deploy, destroy
+
+    @staticmethod
+    def initialize_args(args, parameters):
+        parser = argparse.ArgumentParser(add_help=False)
+        for attribute in parameters:
+            parser.add_argument(f"--{attribute}", action='store')
+        options, undefined = parser.parse_known_args(args)
+        return options

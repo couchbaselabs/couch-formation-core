@@ -6,8 +6,8 @@ from couchformation.exception import FatalError
 from couchformation.aws.node import AWSDeployment
 from couchformation.gcp.node import GCPDeployment
 from couchformation.azure.node import AzureDeployment
-from couchformation.config import Parameters
-from couchformation.deployment import Deployment
+from couchformation.config import Parameters, get_project_dir
+from couchformation.deployment import Deployment, NodeGroup
 from couchformation.executor.targets import TargetProfile
 import couchformation.constants as C
 import couchformation.state as state
@@ -22,13 +22,16 @@ class ProjectError(FatalError):
 
 class Project(object):
 
-    def __init__(self, args):
-        self.targets = TargetProfile()
-        self.parameters = Parameters().create(args)
-        try:
-            self.dpmt = Deployment(self.parameters)
-        except Exception as err:
-            raise ProjectError(f"{err}")
+    def __init__(self, args, remainder):
+        self.options = args
+        self.remainder = remainder
+        self.cloud = self.options.cloud
+        self.profile = TargetProfile(remainder).get(self.cloud)
+        # self.parameters = Parameters().create(args)
+        # try:
+        #     self.dpmt = Deployment(self.parameters)
+        # except Exception as err:
+        #     raise ProjectError(f"{err}")
 
     @staticmethod
     def deployer(cloud: str):
@@ -43,15 +46,13 @@ class Project(object):
 
     def create(self):
         logger.info(f"Creating new service")
-        self.dpmt.store_config(overwrite=True)
+        NodeGroup(self.options, self.profile.options).create()
+        # self.dpmt.store_config(overwrite=True)
 
     def add(self):
         logger.info(f"Adding node group to service")
-        self.dpmt.store_config()
-
-    def save(self):
-        logger.info(f"Saving deployment")
-        self.dpmt.to_file()
+        self.options.group = 2
+        NodeGroup(self.options, self.profile.options).create()
 
     def deploy(self):
         for name, core, service in self.dpmt.services:
@@ -93,3 +94,7 @@ class Project(object):
     @property
     def deployment(self) -> Deployment:
         return self.dpmt
+
+    @property
+    def location(self):
+        return get_project_dir(self.options.project)

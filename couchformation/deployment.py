@@ -4,11 +4,17 @@
 import attr
 import os
 import json
+import uuid
+import argparse
 from typing import Optional, List, Tuple
 from enum import Enum
 from couchformation.exception import FatalError
-from couchformation.config import BaseConfig, NodeConfig, Parameters, AuthMode
-from couchformation.util import FileManager
+from couchformation.config import BaseConfig, NodeConfig, Parameters, AuthMode, get_project_dir
+from couchformation.util import FileManager, UUIDGen, dict_merge
+from couchformation.kvdb import KeyValueStore
+from couchformation.executor.targets import TargetProfile, CloudProfile
+
+DEPLOYMENT = "deployment.db"
 
 
 class DeploymentError(FatalError):
@@ -46,6 +52,29 @@ class Service:
     @property
     def auth(self) -> AuthMode:
         return AuthMode[self.auth_mode]
+
+
+class NodeGroup(object):
+
+    def __init__(self, options: argparse.Namespace):
+        self.options = options
+
+        filename = os.path.join(get_project_dir(self.options.project), DEPLOYMENT)
+        self.db = KeyValueStore(filename)
+
+    def create(self, parameters: argparse.Namespace):
+
+        generator = UUIDGen()
+        generator.recompute(self.options.project)
+        generator.recompute(self.options.name)
+        generator.recompute(f"{self.options.group:04d}")
+
+        opt_dict = vars(self.options)
+        parm_dict = vars(self.parameters)
+
+        combined = dict_merge(opt_dict, parm_dict)
+        db = KeyValueStore(filename, generator.uuid)
+        db.update(combined)
 
 
 class Deployment(object):

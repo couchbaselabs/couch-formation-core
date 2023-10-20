@@ -3,6 +3,8 @@
 
 import os
 import logging
+import uuid
+from uuid import UUID
 from shutil import copyfile
 from pwd import getpwnam
 from grp import getgrnam
@@ -14,6 +16,12 @@ logger.addHandler(logging.NullHandler())
 
 class FileManagerError(FatalError):
     pass
+
+
+def dict_merge(dict1, dict2):
+    new_dict = dict(dict1)
+    new_dict.update(dict2)
+    return new_dict
 
 
 class FileManager(object):
@@ -53,3 +61,18 @@ class FileManager(object):
             copyfile(source, destination)
         except Exception as err:
             raise FileManagerError(f"can not copy {source} to {destination}: {err}")
+
+
+class UUIDGen(object):
+
+    def __init__(self):
+        self._last_uuid = UUID('00000000000000000000000000000000')
+        self._uuid = self._last_uuid
+
+    def recompute(self, text):
+        self._uuid = uuid.uuid5(self._last_uuid, text)
+        self._last_uuid = self._uuid
+
+    @property
+    def uuid(self):
+        return self._uuid
