@@ -4,15 +4,14 @@
 import attr
 import os
 import json
-import uuid
 import argparse
+import couchformation.constants as C
 from typing import Optional, List, Tuple
 from enum import Enum
 from couchformation.exception import FatalError
 from couchformation.config import BaseConfig, NodeConfig, Parameters, AuthMode, get_project_dir
-from couchformation.util import FileManager, UUIDGen, dict_merge
+from couchformation.util import FileManager, dict_merge
 from couchformation.kvdb import KeyValueStore
-from couchformation.executor.targets import TargetProfile, CloudProfile
 
 DEPLOYMENT = "deployment.db"
 
@@ -58,23 +57,64 @@ class NodeGroup(object):
 
     def __init__(self, options: argparse.Namespace):
         self.options = options
+        self.project = self.options.project
+        self.name = self.options.name
+        self.cloud = self.options.cloud
 
-        filename = os.path.join(get_project_dir(self.options.project), DEPLOYMENT)
+        filename = os.path.join(get_project_dir(self.project), f"{self.name}.db")
+        network = os.path.join(get_project_dir(self.project), C.NETWORK)
+        metadata = os.path.join(get_project_dir(self.project), C.METADATA)
         self.db = KeyValueStore(filename)
+        self.net = KeyValueStore(network)
+        self.meta = KeyValueStore(metadata)
 
-    def create(self, parameters: argparse.Namespace):
-
-        generator = UUIDGen()
-        generator.recompute(self.options.project)
-        generator.recompute(self.options.name)
-        generator.recompute(f"{self.options.group:04d}")
+    def create_network(self, parameters: argparse.Namespace, group=1):
+        document = f"network:{self.cloud}"
 
         opt_dict = vars(self.options)
-        parm_dict = vars(self.parameters)
-
+        parm_dict = vars(parameters)
         combined = dict_merge(opt_dict, parm_dict)
-        db = KeyValueStore(filename, generator.uuid)
-        db.update(combined)
+
+        if group == 1:
+            self.net.remove(document)
+            self.net.document(document)
+            self.meta.document('network')
+            self.net.update(combined)
+            self.meta[self.cloud] = True
+
+    def create_node_group(self, parameters: argparse.Namespace, group=1):
+        document = f"{self.name}:{group:04d}"
+
+        opt_dict = vars(self.options)
+        parm_dict = vars(parameters)
+        combined = dict_merge(opt_dict, parm_dict)
+
+        if group == 1:
+            self.db.clean()
+        self.db.document(document)
+        self.meta.document('resources')
+        self.db.update(combined)
+        self.meta[self.name] = self.cloud
+
+        self.create_network(parameters, group)
+
+    def add_to_node_group(self, parameters: argparse.Namespace):
+        count = len(self.db.doc_id_startswith(self.name))
+        if count == 0:
+            raise ValueError(f"attempting to add to empty node group")
+        self.create_node_group(parameters, count + 1)
+
+    def get_node_groups(self) -> List[KeyValueStore]:
+        self.meta.document('resources')
+        for resource in self.meta.keys():
+            filename = os.path.join(get_project_dir(self.project), f"{resource}.db")
+            db = KeyValueStore(filename)
+            doc_list = db.doc_id_startswith(resource)
+            yield [KeyValueStore(filename, doc) for doc in doc_list]
+
+    def get_networks(self) -> List[KeyValueStore]:
+        doc_list = self.net.doc_id_startswith('network')
+        return [KeyValueStore(self.net.file_name, doc) for doc in doc_list]
 
 
 class Deployment(object):

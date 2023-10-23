@@ -114,6 +114,13 @@ class KeyValueStore(UserDict):
         self.conn.execute(f"""DELETE FROM \"{self.tablename}\" WHERE key = ?""", (key,))
         self.commit()
 
+    @property
+    def as_dict(self):
+        d = {}
+        for k, v in self.iteritems():
+            d.update({k: v})
+        return d
+
     def update(self, *args, **kwargs):
         if not args and not kwargs:
             return
@@ -132,6 +139,22 @@ class KeyValueStore(UserDict):
         self.conn.execute(f"""DELETE FROM \"{self.tablename}\";""")
         self.conn.commit()
 
+    def remove(self, name):
+        self.conn.commit()
+        try:
+            self.conn.execute(f"""DROP TABLE \"{name}\";""")
+        except sqlite3.OperationalError:
+            pass
+        self.conn.commit()
+
+    def clean(self):
+        self.cursor.execute("""SELECT name FROM sqlite_master WHERE type=\"table\"""")
+        res = self.cursor.fetchall()
+        for name in res:
+            self.conn.commit()
+            self.conn.execute(f"""DROP TABLE \"{name[0]}\";""")
+            self.conn.commit()
+
     @staticmethod
     def get_document_names(filename):
         if not os.path.isfile(filename):
@@ -145,9 +168,25 @@ class KeyValueStore(UserDict):
         rows = self._select(f"""SELECT COUNT(*) FROM \"{name}\"""")[0]
         return rows[0]
 
+    def doc_id_startswith(self, text):
+        self.cursor.execute(f"""SELECT name FROM sqlite_master WHERE type=\"table\" AND name LIKE '{text}%'""")
+        res = self.cursor.fetchall()
+        return [name[0] for name in res]
+
+    def document_exists(self, name):
+        try:
+            self._select(f"""SELECT COUNT(*) FROM \"{name}\"""")
+            return True
+        except sqlite3.OperationalError:
+            return False
+
     @property
     def document_id(self):
         return self.tablename
+
+    @property
+    def file_name(self):
+        return self.filename
 
     def document(self, name):
         self.tablename = name

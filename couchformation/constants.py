@@ -12,6 +12,9 @@ NODE_PROFILES = os.path.join(DATA_DIRECTORY, "node_profiles.yaml")
 TARGET_PROFILES = os.path.join(DATA_DIRECTORY, "target_profiles.yaml")
 PLAYBOOK_DIR = os.path.join(DATA_DIRECTORY, "playbooks")
 
+METADATA = "metadata.db"
+NETWORK = "network.db"
+
 GREY_COLOR = "\x1b[38;20m"
 YELLOW_COLOR = "\x1b[33;20m"
 RED_COLOR = "\x1b[31;20m"

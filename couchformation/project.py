@@ -9,6 +9,7 @@ from couchformation.azure.node import AzureDeployment
 from couchformation.config import Parameters, get_project_dir
 from couchformation.deployment import Deployment, NodeGroup
 from couchformation.executor.targets import TargetProfile
+from couchformation.executor.dispatch import JobDispatch
 import couchformation.constants as C
 import couchformation.state as state
 
@@ -27,6 +28,7 @@ class Project(object):
         self.remainder = remainder
         self.cloud = self.options.cloud
         self.profile = TargetProfile(remainder).get(self.cloud)
+        self.runner = JobDispatch()
         # self.parameters = Parameters().create(args)
         # try:
         #     self.dpmt = Deployment(self.parameters)
@@ -46,22 +48,31 @@ class Project(object):
 
     def create(self):
         logger.info(f"Creating new service")
-        NodeGroup(self.options, self.profile.options).create()
+        NodeGroup(self.options).create_node_group(self.profile.options)
         # self.dpmt.store_config(overwrite=True)
 
     def add(self):
         logger.info(f"Adding node group to service")
-        self.options.group = 2
-        NodeGroup(self.options, self.profile.options).create()
+        NodeGroup(self.options).add_to_node_group(self.profile.options)
 
     def deploy(self):
-        for name, core, service in self.dpmt.services:
-            if self.parameters.name and self.parameters.name != name:
-                continue
-            logger.info(f"Deploying service {name}")
-            deployer = self.deployer(service.cloud)
-            env = deployer(name, core, service)
-            env.deploy()
+        for net in NodeGroup(self.options).get_networks():
+            print(net.document_id)
+            print(net.file_name)
+            logger.info(f"Deploying network for cloud {net.get('cloud')}")
+        for groups in NodeGroup(self.options).get_node_groups():
+            for db in groups:
+                print(db.document_id)
+                print(db.file_name)
+                logger.info(f"Deploying service {db.get('name')} node group {db.get('group')}")
+                module = "couchformation.aws.null"
+                instance = self.profile.node.module
+                method = self.profile.node.deploy
+                self.runner.dispatch(module, instance, method, db.as_dict)
+                # deployer = self.deployer(service.cloud)
+                # env = deployer(name, core, service)
+                # env.deploy()
+        self.runner.join()
 
     def destroy(self):
         for name, core, service in self.dpmt.services:

@@ -22,7 +22,7 @@ class CloudMgrCLI(CLI):
     def local_args(self):
         opt_parser = argparse.ArgumentParser(parents=[self.parser], add_help=False)
         opt_parser.add_argument('-b', '--build', action='store', help="Build Type", default="cbs")
-        opt_parser.add_argument('-c', '--cloud', action='store', help="Infrastructure", default="cbs")
+        opt_parser.add_argument('-c', '--cloud', action='store', help="Infrastructure", default="aws")
         opt_parser.add_argument('-p', '--project', action='store', help="Project Name", default="resources")
         opt_parser.add_argument('-n', '--name', action='store', help="Deployment Name", default="nodes")
         opt_parser.add_argument('-x', '--connect', action='store', help="Connection Name", default=None)
@@ -48,7 +48,7 @@ class CloudMgrCLI(CLI):
             # project.save()
         elif self.options.command == "deploy":
             project.deploy()
-            project.provision()
+            # project.provision()
         elif self.options.command == "destroy":
             project.destroy()
         elif self.options.command == "list":
