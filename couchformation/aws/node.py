@@ -1,23 +1,20 @@
 ##
 ##
 
-import attr
 import re
 import logging
 import time
-from itertools import cycle
+from itertools import cycle, islice
 from typing import List
-import couchformation.aws.driver.constants as C
 from couchformation.aws.driver.image import Image
 from couchformation.aws.driver.machine import MachineType
 from couchformation.aws.driver.instance import Instance
 from couchformation.aws.driver.base import CloudBase
 from couchformation.aws.network import AWSNetwork
-from couchformation.config import NodeList, BaseConfig
+from couchformation.config import NodeList, get_state_file
 import couchformation.state as state
-from couchformation.state import INSTANCES, AWSInstance
 from couchformation.exception import FatalError
-from couchformation.deployment import Service
+from couchformation.kvdb import KeyValueStore
 from couchformation.provisioner.remote import RemoteProvisioner, ProvisionSet
 
 logger = logging.getLogger('couchformation.aws.node')
@@ -30,88 +27,78 @@ class AWSNodeError(FatalError):
 
 class AWSDeployment(object):
 
-    def __init__(self, name: str, core: BaseConfig, service: Service):
-        self.name = name
-        self.service = service
-        self.core = core
-        self.project = self.core.project
-        self.region = self.service.region
-        self.auth_mode = self.service.auth_mode
-        self.profile = self.service.profile
-        self.ssh_key = self.core.ssh_key
-        self.os_id = self.service.os_id
-        self.os_version = self.service.os_version
+    def __init__(self, parameters: dict):
+        self.parameters = parameters
+        self.name = parameters.get('name')
+        self.project = parameters.get('project')
+        self.region = parameters.get('region')
+        self.auth_mode = parameters.get('auth_mode')
+        self.profile = parameters.get('profile')
+        self.ssh_key = parameters.get('ssh_key')
+        self.os_id = parameters.get('os_id')
+        self.os_version = parameters.get('os_version')
+        self.cloud = parameters.get('cloud')
+        self.number = parameters.get('number')
+        self.machine_type = parameters.get('machine_type')
+        self.volume_iops = parameters.get('volume_iops') if parameters.get('volume_iops') else "3000"
+        self.volume_size = parameters.get('volume_size') if parameters.get('volume_size') else "256"
+        self.services = parameters.get('services') if parameters.get('services') else "default"
+        self.node_name = f"{self.name}-node-{self.number:02d}"
 
-        state.config.set(name, service.cloud, core.project_dir)
-        state.switch_cloud()
+        filename = get_state_file(self.project, self.name)
+        document = self.node_name
+        self.state = KeyValueStore(filename, document)
 
-        self._name_check(self.name)
-        CloudBase(service).test_session()
+        CloudBase(self.parameters).test_session()
 
-        self.aws_network = AWSNetwork(name, core, service)
+        self.aws_network = AWSNetwork(self.parameters)
 
     def create_nodes(self):
         subnet_list = []
-        service = self.service
-        offset = 1
-        node_count = 0
 
-        state.update(INSTANCES)
+        if self.state.get('instance_id'):
+            logger.info(f"Node {self.node_name} already exists")
+            return
 
-        ssh_key_name = state.infrastructure.ssh_key
-        sg_id = state.infrastructure.security_group_id
+        ssh_key_name = self.aws_network.ssh_key_id
+        sg_id = self.aws_network.security_group_id
 
-        for n, zone_state in enumerate(state.infrastructure.zone_list):
+        for n, zone_state in enumerate(self.aws_network.zones):
             subnet_list.append(dict(
-                subnet_id=zone_state['subnet_id'],
-                zone=zone_state['zone'],
-                cidr=zone_state['cidr'],
+                subnet_id=zone_state[2],
+                zone=zone_state[0],
+                cidr=zone_state[1],
             ))
 
         if len(subnet_list) == 0:
             raise AWSNodeError(f"can not get subnet list, check project settings")
 
         subnet_cycle = cycle(subnet_list)
+        subnet = next(islice(subnet_cycle, self.number - 1, None))
 
-        image = Image(service).list_standard(os_id=service.os_id, os_version=service.os_version)
+        image = Image(self.parameters).list_standard(os_id=self.os_id, os_version=self.os_version)
         if not image:
-            raise AWSNodeError(f"can not find image for type {service.os_id} {service.os_version}")
+            raise AWSNodeError(f"can not find image for type {self.os_id} {self.os_version}")
 
         logger.info(f"Using image {image['name']} type {image['os_id']} version {image['os_version']}")
 
-        state.instance_set.name = self.name
-        state.instance_set.username = image['os_user']
+        self.state['service'] = self.name
+        self.state['username'] = image['os_user']
 
-        offset += node_count
+        machine_type = self.machine_type
+        volume_iops = int(self.volume_iops)
+        volume_size = int(self.volume_size)
+        services = self.services
 
-        for n, config in enumerate(self.service.config):
-            quantity = config.quantity
-            machine_type = config.machine_type
-            volume_iops = int(config.volume_iops)
-            volume_size = int(config.volume_size)
-            services = config.services
+        machine = MachineType(self.parameters).get_machine(self.machine_type)
+        if not machine:
+            raise AWSNodeError(f"can not find machine for type {machine_type}")
+        machine_name = machine['name']
+        machine_ram = int(machine['memory'] / 1024)
+        logger.info(f"Selecting machine type {machine_name}")
 
-            logger.info(f"Deploying node group {n+1} with {quantity} nodes")
-
-            machine = MachineType(service).get_machine(config.machine_type)
-            if not machine:
-                raise AWSNodeError(f"can not find machine for type {machine_type}")
-            machine_name = machine['name']
-            machine_ram = int(machine['memory'] / 1024)
-            logger.info(f"Selecting machine type {machine_name}")
-
-            for i in range(int(quantity)):
-                node_count += 1
-                instance_state = AWSInstance()
-                subnet = next(subnet_cycle)
-                node_num = i + offset
-                node_name = f"{self.name}-node-{node_num:02d}"
-
-                if next((instance for instance in state.instance_set.instance_list if instance['name'] == node_name), None):
-                    continue
-
-                logger.info(f"Creating node {node_name}")
-                instance_id = Instance(service).run(node_name,
+        logger.info(f"Creating node {self.node_name}")
+        instance_id = Instance(self.parameters).run(self.node_name,
                                                     image['name'],
                                                     ssh_key_name,
                                                     sg_id,
@@ -122,48 +109,38 @@ class AWSDeployment(object):
                                                     data_iops=volume_iops,
                                                     instance_type=machine_name)
 
-                instance_state.instance_id = instance_id
-                instance_state.name = node_name
-                instance_state.services = services
-                instance_state.zone = subnet['zone']
+        self.state['instance_id'] = instance_id
+        self.state['name'] = self.node_name
+        self.state['services'] = services
+        self.state['zone'] = subnet['zone']
+        self.aws_network.add_service(self.node_name)
 
-                while True:
-                    try:
-                        instance_details = Instance(service).details(instance_id)
-                        instance_state.public_ip = instance_details['PublicIpAddress']
-                        instance_state.private_ip = instance_details['PrivateIpAddress']
-                        break
-                    except KeyError:
-                        time.sleep(1)
+        while True:
+            try:
+                instance_details = Instance(self.parameters).details(instance_id)
+                self.state['public_ip'] = instance_details['PublicIpAddress']
+                self.state['private_ip'] = instance_details['PrivateIpAddress']
+                break
+            except KeyError:
+                time.sleep(1)
 
-                # noinspection PyTypeChecker
-                state.instance_set.instance_list.append(attr.asdict(instance_state))
-                logger.info(f"Created instance {instance_id}")
-
-        state.save()
+        logger.info(f"Created instance {instance_id}")
 
     def destroy_nodes(self):
-        service = self.service
-
-        state.update(INSTANCES)
-
-        for n, instance in reversed(list(enumerate(state.instance_set.instance_list))):
-            instance_id = instance['instance_id']
-            Instance(service).terminate(instance_id)
-            del state.instance_set.instance_list[n]
+        if self.state.get('instance_id'):
+            instance_id = self.state['instance_id']
+            Instance(self.parameters).terminate(instance_id)
+            self.state.clear()
+            self.aws_network.remove_service(self.node_name)
             logger.info(f"Removed instance {instance_id}")
 
-        state.save()
-
     def deploy(self):
-        self.aws_network.create()
-        logger.info(f"Creating cloud infrastructure for {self.project} in {C.CLOUD_KEY.upper()}")
+        logger.info(f"Creating cloud infrastructure for {self.project} in {self.cloud.upper()}")
         self.create_nodes()
 
     def destroy(self):
-        logger.info(f"Removing cloud infrastructure for {self.project} in {C.CLOUD_KEY.upper()}")
+        logger.info(f"Removing cloud infrastructure for {self.project} in {self.cloud.upper()}")
         self.destroy_nodes()
-        self.aws_network.destroy()
 
     @staticmethod
     def output():

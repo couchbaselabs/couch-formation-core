@@ -66,16 +66,19 @@ class Project(object):
             self.runner.dispatch(module, instance, method, net.as_dict)
         self.runner.join()
         for groups in NodeGroup(self.options).get_node_groups():
+            number = 0
             for db in groups:
                 for n in range(int(db['quantity'])):
-                    logger.info(f"Deploying service {db.get('name')} node group {db.get('group')} node {n + 1}")
-                    module = "couchformation.aws.null"
-                    instance = self.profile.node.module
-                    method = self.profile.node.deploy
-                    self.runner.dispatch(module, instance, method, db.as_dict)
-                    # deployer = self.deployer(service.cloud)
-                    # env = deployer(name, core, service)
-                    # env.deploy()
+                    number += 1
+                    logger.info(f"Deploying service {db.get('name')} node group {db.get('group')} node {number}")
+                    cloud = db.get('cloud')
+                    profile = TargetProfile(self.remainder).get(cloud)
+                    module = profile.node.driver
+                    instance = profile.node.module
+                    method = profile.node.deploy
+                    parameters = db.as_dict
+                    parameters['number'] = number
+                    self.runner.dispatch(module, instance, method, parameters)
         self.runner.join()
 
     def destroy(self):

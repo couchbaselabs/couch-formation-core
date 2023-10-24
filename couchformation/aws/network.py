@@ -190,6 +190,27 @@ class AWSNetwork(object):
     def output():
         state.infrastructure_display()
 
+    def get(self, key):
+        return self.state.get(key)
+
+    @property
+    def ssh_key_id(self):
+        return self.state.get('ssh_key')
+
+    @property
+    def security_group_id(self):
+        return self.state.get('security_group_id')
+
+    @property
+    def zones(self):
+        return self.state.list_get('zone')
+
+    def add_service(self, name):
+        self.state.list_add('services', name)
+
+    def remove_service(self, name):
+        self.state.list_remove('services', name)
+
     def validate(self):
         variables = [a for a in dir(self) if not callable(getattr(self, a)) and not a.startswith("__")]
         for variable in variables:
