@@ -2,7 +2,6 @@
 ##
 
 import attr
-import concurrent.futures
 import logging
 import socket
 import time
@@ -10,10 +9,10 @@ import os
 import jinja2
 from typing import Optional, List
 from couchformation.exception import NonFatalError
-from couchformation.config import NodeList, NodeEntry
+from couchformation.config import NodeList, get_state_dir
 from couchformation.provisioner.ssh import RunSSHCommand
+from couchformation.executor.targets import BuildConfig
 import couchformation.constants as C
-import couchformation.state as state
 
 logger = logging.getLogger('couchformation.provisioner.remote')
 logger.addHandler(logging.NullHandler())
@@ -72,88 +71,74 @@ class ProvisionSet:
 
 class RemoteProvisioner(object):
 
-    def __init__(self, config: ProvisionSet):
-        self.config = config
-        self.executor = concurrent.futures.ThreadPoolExecutor()
-        self.tasks = set()
+    def __init__(self, parameters: dict, default: BuildConfig, build: BuildConfig):
+        self.parameters = parameters
+        self.build = build
+        self.default = default
+        self.service = parameters.get('service')
+        self.project = parameters.get('project')
+        self.public_ip = parameters.get('public_ip')
+        self.private_ip = parameters.get('private_ip')
+        self.username = parameters.get('username')
+        self.ssh_key = parameters.get('ssh_key')
+        self.zone = parameters.get('zone')
+        self.services = parameters.get('services')
+        self.connect = parameters.get('connect')
+        self.private_ip_list = parameters.get('private_ip_list')
+        self.use_private_ip = parameters.get('use_private_ip')
 
         self.file_output = logging.getLogger('couchformation.provisioner.output')
         self.file_output.propagate = False
-        if self.config.nodes.working_dir:
-            self.log_file = os.path.join(self.config.nodes.working_dir, 'provision.log')
-            file_handler = logging.FileHandler(self.log_file)
-            file_handler.setFormatter(CustomLogFormatter())
-            self.file_output.addHandler(file_handler)
-            self.file_output.setLevel(logging.DEBUG)
-        else:
-            self.log_file = None
-            self.file_output.addHandler(logging.NullHandler())
+
+        self.log_file = os.path.join(get_state_dir(self.project, self.service), 'provision.log')
+        file_handler = logging.FileHandler(self.log_file)
+        file_handler.setFormatter(CustomLogFormatter())
+        self.file_output.addHandler(file_handler)
+        self.file_output.setLevel(logging.DEBUG)
 
     def run(self):
-        if self.config.pre_install_cmd:
-            logger.info(f"Begin pre-install process")
-            for command in self.config.pre_install_cmd:
-                self.exec(command)
-                self.join()
-        logger.info(f"Begin installation process")
-        for command in self.config.install_cmd:
-            self.exec(command)
-            self.join()
-        if self.config.post_install_cmd:
-            logger.info(f"Begin post-installation process")
-            for command in self.config.post_install_cmd:
-                self.exec(command)
-                self.join()
+        for command in self.default.commands:
+            if self.build.root:
+                command = f"""sudo {command}"""
+            res = self.exec(command)
+            if res != 0:
+                return res
+        for command in self.build.commands:
+            if self.build.root:
+                command = f"""sudo {command}"""
+            res = self.exec(command)
+            if res != 0:
+                return res
+        return 0
 
-    def dispatch(self, node: NodeEntry, command: str):
-        username = self.config.nodes.username
-        ssh_key_file = self.config.nodes.ssh_key
-
-        if node.use_private_ip:
-            hostname = node.private_ip
+    def exec(self, command: str):
+        if self.use_private_ip:
+            hostname = self.private_ip
         else:
-            hostname = node.public_ip
+            hostname = self.public_ip
 
         if not self.wait_port(hostname):
             raise ProvisionerError(f"Host {hostname} is not reachable")
 
         logger.info(f"Connection to {hostname} successful")
 
-        _command = self.resolve_variables(node, command)
+        _command = self.resolve_variables(command)
 
-        logger.info(f"Connecting to {hostname} as {username}")
-        logger.debug(f"Using SSH key {ssh_key_file}")
+        logger.info(f"Connecting to {hostname} as {self.username}")
+        logger.debug(f"Using SSH key {self.ssh_key}")
         logger.debug(f"Running command: {_command}")
 
-        exit_code, output = RunSSHCommand().lib_exec(ssh_key_file, username, hostname, _command)
+        exit_code, output = RunSSHCommand().lib_exec(self.ssh_key, self.username, hostname, _command)
+
+        for line in output.readlines():
+            line_out = line.decode("utf-8").strip()
+            log_out = f"{hostname}: {line_out}"
+            logger.info(log_out)
+            self.file_output.info(log_out)
 
         logger.info(f"Command complete for host {hostname}")
 
-        return hostname, output, exit_code
-
-    def exec(self, command: str):
-        for node in self.config.nodes.node_list:
-            self.tasks.add(self.executor.submit(self.dispatch, node, command))
-
-    def join(self):
-        cmd_failed = False
-        while self.tasks:
-            done, self.tasks = concurrent.futures.wait(self.tasks, return_when=concurrent.futures.FIRST_COMPLETED)
-            for task in done:
-                try:
-                    hostname, output, last_exit = task.result()
-                    for line in output.readlines():
-                        line_out = line.decode("utf-8").strip()
-                        log_out = f"{hostname}: {line_out}"
-                        logger.info(log_out)
-                        self.file_output.info(log_out)
-                    if last_exit != 0:
-                        cmd_failed = True
-                        logger.error("command returned non-zero result, see log for details")
-                except Exception as err:
-                    raise ProvisionerError(err)
-        if cmd_failed:
-            raise ProvisionerError("command returned non-zero result")
+        return exit_code
 
     @staticmethod
     def wait_port(address: str, port: int = 22, retry_count=300, factor=0.1):
@@ -172,19 +157,15 @@ class RemoteProvisioner(object):
                 wait *= (2 ** (retry_number + 1))
                 time.sleep(wait)
 
-    def resolve_variables(self, node: NodeEntry, line: str):
-        connect_list = None
-        if state.services.services.get(node.connect_svc):
-            service_net = state.services.services.get(node.connect_svc)
-            connect_list = ','.join(service_net.get('private', []))
+    def resolve_variables(self, line: str):
         env = jinja2.Environment(undefined=jinja2.DebugUndefined)
         raw_template = env.from_string(line)
         formatted_value = raw_template.render(
-            PRIVATE_IP_LIST=self.config.nodes.ip_csv_list(),
-            NODE_ZONE=node.availability_zone,
-            SERVICES=node.services,
-            CONNECT_SERVICE=node.connect_svc,
-            CONNECT_IP=node.connect_ip,
-            CONNECT_LIST=connect_list if connect_list else node.connect_ip if node.connect_ip else '127.0.0.1'
+            PRIVATE_IP_LIST=self.private_ip_list,
+            NODE_ZONE=self.zone,
+            SERVICES=self.services,
+            CONNECT_SERVICE=self.connect,
+            CONNECT_IP=self.connect,
+            CONNECT_LIST=self.connect if self.connect else '127.0.0.1'
         )
         return formatted_value

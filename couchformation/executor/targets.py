@@ -41,6 +41,24 @@ class ProfileSet:
         return next((p for p in self.profiles if p.name == cloud), None)
 
 
+@attr.s
+class BuildConfig:
+    name: str = attr.ib()
+    root: bool = attr.ib()
+    commands: List[str] = attr.ib()
+
+
+@attr.s
+class BuildSet:
+    profiles: List[BuildConfig] = attr.ib(default=[])
+
+    def add(self, p: BuildConfig):
+        self.profiles.append(p)
+
+    def get(self, name):
+        return next((p for p in self.profiles if p.name == name), None)
+
+
 class TargetProfile(object):
 
     def __init__(self, options):
@@ -85,3 +103,26 @@ class TargetProfile(object):
             parser.add_argument(f"--{attribute}", action='store')
         options, undefined = parser.parse_known_args(args)
         return options
+
+
+class BuildProfile(object):
+
+    def __init__(self):
+        self.cfg_file = C.NODE_PROFILES
+        self.config = BuildSet()
+        self.load_config()
+
+    def get(self, name) -> BuildConfig:
+        profile = self.config.get(name)
+        if not profile:
+            raise ValueError(f"Build type {name} is not supported")
+        return profile
+
+    def load_config(self):
+        with open(self.cfg_file, "r") as f:
+            try:
+                for name, settings in yaml.safe_load(f).items():
+                    profile = BuildConfig(name, settings.get('root'), settings.get('commands'))
+                    self.config.add(profile)
+            except yaml.YAMLError as err:
+                RuntimeError(f"Can not open node config file {self.cfg_file}: {err}")

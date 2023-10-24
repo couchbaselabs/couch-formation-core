@@ -35,6 +35,10 @@ def get_state_file(project: str, name: str):
     return os.path.join(get_project_dir(project), name, C.STATE)
 
 
+def get_state_dir(project: str, name: str):
+    return os.path.join(get_project_dir(project), name)
+
+
 def str_to_int(value: Union[str, int]) -> int:
     return int(value)
 

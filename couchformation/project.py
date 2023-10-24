@@ -6,12 +6,11 @@ from couchformation.exception import FatalError
 from couchformation.aws.node import AWSDeployment
 from couchformation.gcp.node import GCPDeployment
 from couchformation.azure.node import AzureDeployment
-from couchformation.config import Parameters, get_project_dir
+from couchformation.config import get_project_dir
 from couchformation.deployment import Deployment, NodeGroup
 from couchformation.executor.targets import TargetProfile
 from couchformation.executor.dispatch import JobDispatch
-import couchformation.constants as C
-import couchformation.state as state
+from couchformation.executor.targets import BuildProfile
 
 logger = logging.getLogger('couchformation.exec.process')
 logger.addHandler(logging.NullHandler())
@@ -99,15 +98,19 @@ class Project(object):
         return ip_list
 
     def provision(self):
-        state.services.import_list(self.list())
-        for name, core, service in self.dpmt.services:
-            if self.parameters.name and self.parameters.name != name:
-                continue
-            deployer = self.deployer(service.cloud)
-            env = deployer(name, core, service)
-            provision_cmds = C.provisioners.get(service.model)
-            if provision_cmds:
-                env.provision(provision_cmds.get('pre_provision', []), provision_cmds.get('provision', []), provision_cmds.get('post_provision', []))
+        for groups in NodeGroup(self.options).get_node_groups():
+            number = 0
+            for db in groups:
+                for n in range(int(db['quantity'])):
+                    number += 1
+                    logger.info(f"Deploying service {db.get('name')} node group {db.get('group')} node {number}")
+                    build = BuildProfile()
+                    module = "couchformation.provisioner.remote"
+                    instance = "RemoteProvisioner"
+                    method = "run"
+                    parameters = db.as_dict
+                    parameters['number'] = number
+                    self.runner.dispatch(module, instance, method, parameters)
 
     @property
     def deployment(self) -> Deployment:
