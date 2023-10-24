@@ -3,8 +3,8 @@
 
 import logging
 import concurrent.futures
+import couchformation.executor.worker as worker
 from multiprocessing import get_context
-from couchformation.executor.taskqueue import TaskQueue
 
 logger = logging.getLogger('couchformation.executor.dispatch')
 logger.addHandler(logging.NullHandler())
@@ -26,7 +26,7 @@ class JobDispatch(object):
         self.tasks = set()
 
     def dispatch(self, *args, **kwargs):
-        self.tasks.add(self.executor.submit(run, *args, **kwargs))
+        self.tasks.add(self.executor.submit(worker.main, *args, **kwargs))
 
     def join(self):
         cmd_failed = False
@@ -35,6 +35,8 @@ class JobDispatch(object):
             for task in done:
                 try:
                     res = task.result()
+                    if res:
+                        logger.debug(f"task result: {res}")
                 except Exception as err:
                     raise RuntimeError(err)
         if cmd_failed:

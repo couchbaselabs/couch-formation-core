@@ -2,6 +2,7 @@
 ##
 
 import os
+import json
 import logging
 import sqlite3
 import tempfile
@@ -120,6 +121,47 @@ class KeyValueStore(UserDict):
         for k, v in self.iteritems():
             d.update({k: v})
         return d
+
+    def list_add(self, name, *args):
+        data = self.list_get(name)
+        data.append(args)
+        new_list = json.dumps(data)
+        self.conn.execute(f"""REPLACE INTO \"{self.tablename}\" (key, value) VALUES (?,?)""", (name, new_list))
+        self.commit()
+
+    def list_remove(self, name, match):
+        data = self.list_get(name)
+        new_data = [e for e in data if match not in e]
+        new_list = json.dumps(new_data)
+        self.conn.execute(f"""REPLACE INTO \"{self.tablename}\" (key, value) VALUES (?,?)""", (name, new_list))
+        self.commit()
+
+    def list_get(self, name):
+        item = self._select(f"""SELECT value FROM \"{self.tablename}\" WHERE key = ?""", (name,))
+        if len(item) == 0:
+            current_list = '[]'
+        else:
+            current_list = item[0][0]
+        data = json.loads(current_list)
+        return data
+
+    def list_element(self, name, match):
+        data = self.list_get(name)
+        for element in data:
+            if match in element:
+                return element
+        return None
+
+    def list_exists(self, name, match):
+        data = self.list_get(name)
+        for element in data:
+            if match in element:
+                return True
+        return False
+
+    def list_len(self, name):
+        data = self.list_get(name)
+        return len(data)
 
     def update(self, *args, **kwargs):
         if not args and not kwargs:
