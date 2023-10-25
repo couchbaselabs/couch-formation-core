@@ -49,7 +49,7 @@ class RunSSHCommand(object):
 
         for retry_number in range(retry_count + 1):
             try:
-                ssh.connect(hostname, username=ssh_user, key_filename=ssh_key)
+                ssh.connect(hostname, username=ssh_user, key_filename=ssh_key, timeout=60, auth_timeout=30, banner_timeout=30)
             except paramiko.ssh_exception.SSHException:
                 if retry_number == retry_count:
                     raise RuntimeError(f"can not connect to {hostname} with SSH")

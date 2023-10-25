@@ -102,7 +102,7 @@ class Project(object):
                 method = profile.node.destroy
                 for n in range(int(db['quantity'])):
                     number += 1
-                    logger.info(f"Deploying service {db.get('name')} node group {db.get('group')} node {number}")
+                    logger.info(f"Removing service {db.get('name')} node group {db.get('group')} node {number}")
                     parameters = db.as_dict
                     parameters['number'] = number
                     self.runner.dispatch(module, instance, method, parameters)
