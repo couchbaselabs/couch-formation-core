@@ -12,4 +12,4 @@ def main(module, instance, method, *args, **kwargs):
     i = getattr(m, instance)
     obj = i(*args, **kwargs)
     f = getattr(obj, method)
-    f()
+    return f()

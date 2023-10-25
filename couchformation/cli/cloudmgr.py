@@ -27,6 +27,7 @@ class CloudMgrCLI(CLI):
         opt_parser.add_argument('-n', '--name', action='store', help="Deployment Name", default="nodes")
         opt_parser.add_argument('-x', '--connect', action='store', help="Connection Name", default=None)
         opt_parser.add_argument('-g', '--group', action='store', help="Group Number", default=1, type=int)
+        opt_parser.add_argument('-P', '--provisioner', action='store', help="Provisioner Name", default="remote")
 
         command_subparser = self.parser.add_subparsers(dest='command')
         command_subparser.add_parser('create', help="Create", parents=[opt_parser], add_help=False)

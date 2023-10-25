@@ -6,6 +6,7 @@ import subprocess
 import logging
 import io
 import select
+import time
 
 logger = logging.getLogger('couchformation.provisioner.ssh')
 logger.addHandler(logging.NullHandler())
@@ -41,12 +42,22 @@ class RunSSHCommand(object):
         return p.returncode, buffer
 
     @staticmethod
-    def lib_exec(ssh_key: str, ssh_user: str, hostname: str, command: str):
+    def lib_exec(ssh_key: str, ssh_user: str, hostname: str, command: str, retry_count=60, factor=0.5):
         output = io.BytesIO()
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        ssh.connect(hostname, username=ssh_user, key_filename=ssh_key)
+        for retry_number in range(retry_count + 1):
+            try:
+                ssh.connect(hostname, username=ssh_user, key_filename=ssh_key)
+            except paramiko.ssh_exception.SSHException:
+                if retry_number == retry_count:
+                    raise RuntimeError(f"can not connect to {hostname} with SSH")
+                logger.info(f"Waiting for an SSH connection to {hostname}")
+                wait = factor
+                wait *= (2 ** (retry_number + 1))
+                time.sleep(wait)
+
         stdin, stdout, stderr = ssh.exec_command(command)
         channel = stdout.channel
         stdin.close()

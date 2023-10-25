@@ -5,11 +5,13 @@ aws:
       module: AWSNetwork
       deploy: create_vpc
       destroy: destroy_vpc
+      info: info
   node:
     couchformation.aws.node:
       module: AWSDeployment
       deploy: deploy
       destroy: destroy
+      info: info
   parameters:
     - region
     - auth_mode
@@ -29,11 +31,13 @@ gcp:
       module: GCPNetwork
       deploy: create_vpc
       destroy: destroy_vpc
+      info: info
   node:
     couchformation.gcp.node:
       module: GCPDeployment
       deploy: deploy
       destroy: destroy
+      info: info
   parameters:
     - region
     - auth_mode
@@ -52,11 +56,13 @@ azure:
       module: AzureNetwork
       deploy: create_vpc
       destroy: destroy_vpc
+      info: info
   node:
     couchformation.azure.node:
       module: AzureDeployment
       deploy: deploy
       destroy: destroy
+      info: info
   parameters:
     - region
     - auth_mode

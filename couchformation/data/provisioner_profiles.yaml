@@ -1,0 +1,18 @@
+---
+remote:
+  driver: couchformation.provisioner.remote
+  module: RemoteProvisioner
+  method: run
+  parameters:
+    - service
+    - project
+    - public_ip
+    - private_ip
+    - username
+    - ssh_key
+    - zone
+    - services
+    - connect
+    - private_ip_list
+    - public_ip_list
+    - use_private_ip

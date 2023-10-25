@@ -53,12 +53,12 @@ class AWSDeployment(object):
 
         self.aws_network = AWSNetwork(self.parameters)
 
-    def create_nodes(self):
+    def deploy(self):
         subnet_list = []
 
         if self.state.get('instance_id'):
             logger.info(f"Node {self.node_name} already exists")
-            return
+            return self.state.as_dict
 
         ssh_key_name = self.aws_network.ssh_key_id
         sg_id = self.aws_network.security_group_id
@@ -125,6 +125,7 @@ class AWSDeployment(object):
                 time.sleep(1)
 
         logger.info(f"Created instance {instance_id}")
+        return self.state.as_dict
 
     def destroy_nodes(self):
         if self.state.get('instance_id'):
@@ -134,13 +135,16 @@ class AWSDeployment(object):
             self.aws_network.remove_service(self.node_name)
             logger.info(f"Removed instance {instance_id}")
 
-    def deploy(self):
-        logger.info(f"Creating cloud infrastructure for {self.project} in {self.cloud.upper()}")
-        self.create_nodes()
+    # def deploy(self):
+    #     logger.info(f"Creating cloud infrastructure for {self.project} in {self.cloud.upper()}")
+    #     return self.create_nodes()
 
     def destroy(self):
         logger.info(f"Removing cloud infrastructure for {self.project} in {self.cloud.upper()}")
         self.destroy_nodes()
+
+    def info(self):
+        return self.state.as_dict
 
     @staticmethod
     def output():

@@ -1,7 +1,7 @@
 ##
 ##
 
-from typing import List, Optional
+from typing import List, Optional, Dict
 import attr
 import yaml
 import argparse
@@ -14,6 +14,7 @@ class Profile:
     module: str = attr.ib()
     deploy: str = attr.ib()
     destroy: str = attr.ib()
+    info: str = attr.ib()
 
 
 @attr.s
@@ -59,6 +60,27 @@ class BuildSet:
         return next((p for p in self.profiles if p.name == name), None)
 
 
+@attr.s
+class Provisioner:
+    name: str = attr.ib()
+    driver: str = attr.ib()
+    module: str = attr.ib()
+    method: str = attr.ib()
+    options: List[str] = attr.ib()
+    parameters: Dict = attr.ib()
+
+
+@attr.s
+class ProvisionerSet:
+    provisioners: List[Provisioner] = attr.ib(default=[])
+
+    def add(self, p: Provisioner):
+        self.provisioners.append(p)
+
+    def get(self, name):
+        return next((p for p in self.provisioners if p.name == name), None)
+
+
 class TargetProfile(object):
 
     def __init__(self, options):
@@ -94,7 +116,8 @@ class TargetProfile(object):
         module = elements.get('module')
         deploy = elements.get('deploy')
         destroy = elements.get('destroy')
-        return driver, module, deploy, destroy
+        info = elements.get('info')
+        return driver, module, deploy, destroy, info
 
     @staticmethod
     def initialize_args(args, parameters):
@@ -126,3 +149,47 @@ class BuildProfile(object):
                     self.config.add(profile)
             except yaml.YAMLError as err:
                 RuntimeError(f"Can not open node config file {self.cfg_file}: {err}")
+
+
+class ProvisionerProfile(object):
+
+    def __init__(self):
+        self.cfg_file = C.PROVISIONER_PROFILES
+        self.config = ProvisionerSet()
+        self.load_config()
+
+    def get(self, name, *args) -> Provisioner:
+        profile = self.config.get(name)
+        if not profile:
+            raise ValueError(f"Provisioner type {name} is not supported")
+        profile.parameters = self.initialize_parameters(profile.options, args)
+        return profile
+
+    def load_config(self):
+        with open(self.cfg_file, "r") as f:
+            try:
+                for name, settings in yaml.safe_load(f).items():
+                    provisioner = Provisioner(*self.construct_profile(name, settings))
+                    self.config.add(provisioner)
+            except yaml.YAMLError as err:
+                RuntimeError(f"Can not open provisioner config file {self.cfg_file}: {err}")
+
+    @staticmethod
+    def construct_profile(name, settings):
+        driver = settings.get('driver')
+        module = settings.get('module')
+        method = settings.get('method')
+        options = settings.get('parameters')
+        parameters = {}
+        return name, driver, module, method, options, parameters
+
+    @staticmethod
+    def initialize_parameters(expected, args):
+        p = {}
+        for d in args:
+            for attribute in expected:
+                if p.get(attribute):
+                    continue
+                if d.get(attribute):
+                    p[attribute] = d.get(attribute)
+        return p

@@ -11,7 +11,7 @@ from typing import Optional, List
 from couchformation.exception import NonFatalError
 from couchformation.config import NodeList, get_state_dir
 from couchformation.provisioner.ssh import RunSSHCommand
-from couchformation.executor.targets import BuildConfig
+from couchformation.executor.targets import BuildConfig, Provisioner
 import couchformation.constants as C
 
 logger = logging.getLogger('couchformation.provisioner.remote')
@@ -71,21 +71,21 @@ class ProvisionSet:
 
 class RemoteProvisioner(object):
 
-    def __init__(self, parameters: dict, default: BuildConfig, build: BuildConfig):
-        self.parameters = parameters
+    def __init__(self, provisioner: Provisioner, default: BuildConfig, build: BuildConfig):
+        self.parameters = provisioner.parameters
         self.build = build
         self.default = default
-        self.service = parameters.get('service')
-        self.project = parameters.get('project')
-        self.public_ip = parameters.get('public_ip')
-        self.private_ip = parameters.get('private_ip')
-        self.username = parameters.get('username')
-        self.ssh_key = parameters.get('ssh_key')
-        self.zone = parameters.get('zone')
-        self.services = parameters.get('services')
-        self.connect = parameters.get('connect')
-        self.private_ip_list = parameters.get('private_ip_list')
-        self.use_private_ip = parameters.get('use_private_ip')
+        self.service = self.parameters.get('service')
+        self.project = self.parameters.get('project')
+        self.public_ip = self.parameters.get('public_ip')
+        self.private_ip = self.parameters.get('private_ip')
+        self.username = self.parameters.get('username')
+        self.ssh_key = self.parameters.get('ssh_key')
+        self.zone = self.parameters.get('zone')
+        self.services = self.parameters.get('services')
+        self.connect = self.parameters.get('connect')
+        self.private_ip_list = ','.join(self.parameters.get('private_ip_list'))
+        self.use_private_ip = self.parameters.get('use_private_ip') if self.parameters.get('use_private_ip') else False
 
         self.file_output = logging.getLogger('couchformation.provisioner.output')
         self.file_output.propagate = False
@@ -137,14 +137,15 @@ class RemoteProvisioner(object):
             self.file_output.info(log_out)
 
         logger.info(f"Command complete for host {hostname}")
+        logger.debug(f"[{_command}] returned {exit_code} on {hostname}")
 
         return exit_code
 
     @staticmethod
     def wait_port(address: str, port: int = 22, retry_count=300, factor=0.1):
         for retry_number in range(retry_count + 1):
-            socket.setdefaulttimeout(1)
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
             result = sock.connect_ex((address, port))
             sock.close()
             if result == 0:

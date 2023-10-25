@@ -7,10 +7,10 @@ from couchformation.aws.node import AWSDeployment
 from couchformation.gcp.node import GCPDeployment
 from couchformation.azure.node import AzureDeployment
 from couchformation.config import get_project_dir
+from couchformation.util import dict_merge_list
 from couchformation.deployment import Deployment, NodeGroup
-from couchformation.executor.targets import TargetProfile
+from couchformation.executor.targets import TargetProfile, ProvisionerProfile, BuildProfile
 from couchformation.executor.dispatch import JobDispatch
-from couchformation.executor.targets import BuildProfile
 
 logger = logging.getLogger('couchformation.exec.process')
 logger.addHandler(logging.NullHandler())
@@ -26,6 +26,7 @@ class Project(object):
         self.options = args
         self.remainder = remainder
         self.cloud = self.options.cloud
+        self.provisioner = self.options.provisioner
         self.profile = TargetProfile(remainder).get(self.cloud)
         self.runner = JobDispatch()
         # self.parameters = Parameters().create(args)
@@ -63,31 +64,49 @@ class Project(object):
             instance = profile.network.module
             method = profile.network.deploy
             self.runner.dispatch(module, instance, method, net.as_dict)
-        self.runner.join()
+        list(self.runner.join())
         for groups in NodeGroup(self.options).get_node_groups():
             number = 0
             for db in groups:
+                cloud = db.get('cloud')
+                profile = TargetProfile(self.remainder).get(cloud)
+                module = profile.node.driver
+                instance = profile.node.module
+                method = profile.node.deploy
                 for n in range(int(db['quantity'])):
                     number += 1
                     logger.info(f"Deploying service {db.get('name')} node group {db.get('group')} node {number}")
-                    cloud = db.get('cloud')
-                    profile = TargetProfile(self.remainder).get(cloud)
-                    module = profile.node.driver
-                    instance = profile.node.module
-                    method = profile.node.deploy
                     parameters = db.as_dict
                     parameters['number'] = number
                     self.runner.dispatch(module, instance, method, parameters)
-        self.runner.join()
+            result_list = list(self.runner.join())
+            combined = dict_merge_list(*result_list)
+            for result in result_list:
+                provisioner = ProvisionerProfile().get(self.provisioner, result, combined, groups[0].as_dict)
+                default = BuildProfile().get('default')
+                build = BuildProfile().get(self.options.build)
+                module = provisioner.driver
+                instance = provisioner.module
+                method = provisioner.method
+                self.runner.dispatch(module, instance, method, provisioner, default, build)
+            list(self.runner.join())
 
     def destroy(self):
-        for name, core, service in self.dpmt.services:
-            if self.parameters.name and self.parameters.name != name:
-                continue
-            logger.info(f"Removing service {name}")
-            deployer = self.deployer(service.cloud)
-            env = deployer(name, core, service)
-            env.destroy()
+        for groups in NodeGroup(self.options).get_node_groups():
+            number = 0
+            for db in groups:
+                cloud = db.get('cloud')
+                profile = TargetProfile(self.remainder).get(cloud)
+                module = profile.node.driver
+                instance = profile.node.module
+                method = profile.node.destroy
+                for n in range(int(db['quantity'])):
+                    number += 1
+                    logger.info(f"Deploying service {db.get('name')} node group {db.get('group')} node {number}")
+                    parameters = db.as_dict
+                    parameters['number'] = number
+                    self.runner.dispatch(module, instance, method, parameters)
+            list(self.runner.join())
 
     def list(self):
         ip_list = {}

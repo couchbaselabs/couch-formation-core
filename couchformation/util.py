@@ -4,6 +4,7 @@
 import os
 import logging
 import uuid
+import collections
 from uuid import UUID
 from shutil import copyfile
 from pwd import getpwnam
@@ -22,6 +23,14 @@ def dict_merge(dict1, dict2):
     new_dict = dict(dict1)
     new_dict.update(dict2)
     return new_dict
+
+
+def dict_merge_list(*dicts):
+    res = collections.defaultdict(list)
+    for d in dicts:
+        for k, v in d.items():
+            res[f"{k}_list"].append(v)
+    return {k: set(v) for k, v in res.items()}
 
 
 class FileManager(object):

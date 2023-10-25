@@ -28,16 +28,17 @@ class JobDispatch(object):
     def dispatch(self, *args, **kwargs):
         self.tasks.add(self.executor.submit(worker.main, *args, **kwargs))
 
+    @staticmethod
+    def foreground(*args, **kwargs):
+        return worker.main(*args, **kwargs)
+
     def join(self):
-        cmd_failed = False
         while self.tasks:
             done, self.tasks = concurrent.futures.wait(self.tasks, return_when=concurrent.futures.FIRST_COMPLETED)
             for task in done:
                 try:
                     res = task.result()
-                    if res:
-                        logger.debug(f"task result: {res}")
+                    logger.debug(f"task result: {res}")
+                    yield res
                 except Exception as err:
                     raise RuntimeError(err)
-        if cmd_failed:
-            raise RuntimeError("command returned non-zero result")
