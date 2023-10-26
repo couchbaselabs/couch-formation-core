@@ -5,17 +5,14 @@ import re
 import logging
 import time
 from itertools import cycle, islice
-from typing import List
 from couchformation.aws.driver.image import Image
 from couchformation.aws.driver.machine import MachineType
 from couchformation.aws.driver.instance import Instance
 from couchformation.aws.driver.base import CloudBase
 from couchformation.aws.network import AWSNetwork
-from couchformation.config import NodeList, get_state_file
-import couchformation.state as state
+from couchformation.config import get_state_file
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
-from couchformation.provisioner.remote import RemoteProvisioner, ProvisionSet
 
 logger = logging.getLogger('couchformation.aws.node')
 logger.addHandler(logging.NullHandler())
@@ -127,7 +124,7 @@ class AWSDeployment(object):
         logger.info(f"Created instance {instance_id}")
         return self.state.as_dict
 
-    def destroy_nodes(self):
+    def destroy(self):
         if self.state.get('instance_id'):
             instance_id = self.state['instance_id']
             Instance(self.parameters).terminate(instance_id)
@@ -135,41 +132,8 @@ class AWSDeployment(object):
             self.aws_network.remove_service(self.node_name)
             logger.info(f"Removed instance {instance_id}")
 
-    # def deploy(self):
-    #     logger.info(f"Creating cloud infrastructure for {self.project} in {self.cloud.upper()}")
-    #     return self.create_nodes()
-
-    def destroy(self):
-        logger.info(f"Removing cloud infrastructure for {self.project} in {self.cloud.upper()}")
-        self.destroy_nodes()
-
     def info(self):
         return self.state.as_dict
-
-    @staticmethod
-    def output():
-        state.instances_display()
-
-    def list(self) -> NodeList:
-        node_list = NodeList().create(state.instance_set.username, self.ssh_key, state.service_dir(), self.core.private_ip)
-        for n, instance_state in enumerate(state.instance_set.instance_list):
-            node_name = instance_state['name']
-            node_private_ip = instance_state['private_ip']
-            node_public_ip = instance_state['public_ip']
-            availability_zone = instance_state['zone']
-            services = instance_state['services']
-            node_list.add(node_name, node_private_ip, node_public_ip, availability_zone, services, self.service.connect_svc, self.service.connect_ip)
-        return node_list
-
-    def provision(self, pre_commands: List[str], commands: List[str], post_commands: List[str]):
-        nodes = self.list()
-        ps = ProvisionSet()
-        ps.add_pre_install(pre_commands)
-        ps.add_install(commands)
-        ps.add_post_install(post_commands)
-        ps.add_nodes(nodes)
-        rp = RemoteProvisioner(ps)
-        rp.run()
 
     @staticmethod
     def _calc_iops(value: str):
@@ -184,9 +148,3 @@ class AWSDeployment(object):
             return value
         else:
             raise AWSNodeError("names must only contain letters, numbers, dashes and underscores")
-
-    def validate(self):
-        variables = [a for a in dir(self) if not callable(getattr(self, a)) and not a.startswith("__")]
-        for variable in variables:
-            if getattr(self, variable) is None:
-                raise ValueError(f"setting \"{variable}\" is null")

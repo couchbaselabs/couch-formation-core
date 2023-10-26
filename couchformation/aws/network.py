@@ -12,7 +12,6 @@ from couchformation.aws.driver.route import RouteTable
 import couchformation.aws.driver.constants as C
 from couchformation.config import get_state_file
 from couchformation.ssh import SSHUtil
-import couchformation.state as state
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
 
@@ -39,11 +38,6 @@ class AWSNetwork(object):
         filename = get_state_file(self.project, 'common')
         document = f"network:{self.cloud}"
         self.state = KeyValueStore(filename, document)
-
-        # try:
-        #     self.validate()
-        # except ValueError as err:
-        #     raise AWSNetworkError(err)
 
         self.aws_network = Network(self.parameters)
 
@@ -129,8 +123,6 @@ class AWSNetwork(object):
         except Exception as err:
             raise AWSNetworkError(f"Error creating VPC: {err}")
 
-        state.save()
-
     def destroy_vpc(self):
         if self.state.list_len('services') > 0:
             logger.info(f"Active services, leaving project network in place")
@@ -145,32 +137,32 @@ class AWSNetwork(object):
                 logger.info(f"Removed subnet {subnet_id}")
 
             if self.state.get('route_table_id'):
-                rt_id = state.infrastructure.route_table_id
+                rt_id = self.state.get('route_table_id')
                 RouteTable(self.parameters).delete(rt_id)
                 del self.state['route_table_id']
                 logger.info(f"Removed route table {rt_id}")
 
             if self.state.get('internet_gateway_id'):
-                ig_id = state.infrastructure.internet_gateway_id
+                ig_id = self.state.get('internet_gateway_id')
                 InternetGateway(self.parameters).delete(ig_id)
                 del self.state['internet_gateway_id']
                 logger.info(f"Removing internet gateway {ig_id}")
 
             if self.state.get('security_group_id'):
-                sg_id = state.infrastructure.security_group_id
+                sg_id = self.state.get('security_group_id')
                 SecurityGroup(self.parameters).delete(sg_id)
                 del self.state['security_group_id']
                 logger.info(f"Removing security group {sg_id}")
 
             if self.state.get('vpc_id'):
-                vpc_id = state.infrastructure.vpc_id
+                vpc_id = self.state.get('vpc_id')
                 Network(self.parameters).delete(vpc_id)
                 del self.state['vpc_id']
                 del self.state['vpc_cidr']
                 logger.info(f"Removing VPC {vpc_id}")
 
             if self.state.get('ssh_key'):
-                ssh_key_name = state.infrastructure.ssh_key
+                ssh_key_name = self.state.get('ssh_key')
                 SSHKey(self.parameters).delete(ssh_key_name)
                 del self.state['ssh_key']
                 logger.info(f"Removing key pair {ssh_key_name}")
@@ -185,10 +177,6 @@ class AWSNetwork(object):
     def destroy(self):
         logger.info(f"Removing cloud network for {self.project} in {C.CLOUD_KEY.upper()}")
         self.destroy_vpc()
-
-    @staticmethod
-    def output():
-        state.infrastructure_display()
 
     def get(self, key):
         return self.state.get(key)
@@ -210,9 +198,3 @@ class AWSNetwork(object):
 
     def remove_service(self, name):
         self.state.list_remove('services', name)
-
-    def validate(self):
-        variables = [a for a in dir(self) if not callable(getattr(self, a)) and not a.startswith("__")]
-        for variable in variables:
-            if getattr(self, variable) is None:
-                raise ValueError(f"setting \"{variable}\" is null")
