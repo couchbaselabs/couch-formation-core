@@ -59,7 +59,7 @@ class CloudBase(object):
 
         self.read_config()
 
-        if AuthMode[parameters.get('auth_mode')] == AuthMode.default:
+        if not parameters.get('auth_mode') or AuthMode[parameters.get('auth_mode')] == AuthMode.default:
             self.default_auth()
         else:
             self.sso_auth()

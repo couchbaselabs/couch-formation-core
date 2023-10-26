@@ -31,7 +31,7 @@ class Network(CloudBase):
                         region_name = subnet.rsplit('/', 4)[-3]
                         if region_name != self.region:
                             continue
-                        result = Subnet(self.config).details(self.region, subnet_name)
+                        result = Subnet(self.parameters).details(self.region, subnet_name)
                         subnet_list.append(result)
                     network_block = {'cidr': network.get('IPv4Range', None),
                                      'name': network['name'],
@@ -52,7 +52,7 @@ class Network(CloudBase):
     def cidr_list(self):
         try:
             for network in self.list():
-                for item in Subnet(self.config).list(network['name']):
+                for item in Subnet(self.parameters).list(network['name']):
                     yield item['cidr']
         except EmptyResultSet:
             return iter(())
@@ -132,7 +132,7 @@ class Subnet(CloudBase):
 
     def create(self, name: str, network: str, cidr: str) -> str:
         operation = {}
-        network_info = Network(self.config).details(network)
+        network_info = Network(self.parameters).details(network)
         subnetwork_body = {
             "name": name,
             "network": network_info['selfLink'],
