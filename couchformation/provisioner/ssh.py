@@ -5,8 +5,8 @@ import paramiko
 import subprocess
 import logging
 import io
-import select
 import time
+import socket
 
 logger = logging.getLogger('couchformation.provisioner.ssh')
 logger.addHandler(logging.NullHandler())
@@ -43,44 +43,38 @@ class RunSSHCommand(object):
 
     @staticmethod
     def lib_exec(ssh_key: str, ssh_user: str, hostname: str, command: str, retry_count=60, factor=0.5):
-        output = io.BytesIO()
+        bufsize = 4096
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         for retry_number in range(retry_count + 1):
             try:
-                ssh.connect(hostname, username=ssh_user, key_filename=ssh_key, timeout=60, auth_timeout=30, banner_timeout=30)
-            except paramiko.ssh_exception.SSHException:
+                ssh.connect(hostname, username=ssh_user, key_filename=ssh_key, timeout=10, auth_timeout=10, banner_timeout=10)
+            except paramiko.ssh_exception.BadHostKeyException as err:
+                raise RuntimeError(f"host key mismatch for {hostname}: {err}")
+            except paramiko.ssh_exception.AuthenticationException as err:
+                raise RuntimeError(f"failed to authenticate to {hostname}: {err}")
+            except (paramiko.ssh_exception.SSHException, TimeoutError, socket.timeout):
                 if retry_number == retry_count:
-                    raise RuntimeError(f"can not connect to {hostname} with SSH")
+                    raise RuntimeError(f"can not connect to {hostname}")
                 logger.info(f"Waiting for an SSH connection to {hostname}")
                 wait = factor
                 wait *= (2 ** (retry_number + 1))
                 time.sleep(wait)
 
-        stdin, stdout, stderr = ssh.exec_command(command)
-        channel = stdout.channel
-        stdin.close()
-        channel.shutdown_write()
+        try:
+            ssh.get_transport().set_keepalive(5)
+            chan = ssh.get_transport().open_session()
+        except Exception as err:
+            raise RuntimeError(f"failed to open SSH session on {hostname}: {err}")
 
-        while not channel.closed:
-            readq, _, _ = select.select([channel], [], [], 0)
-            for c in readq:
-                if c.recv_ready():
-                    output.write(channel.recv(len(c.in_buffer)))
-                if c.recv_stderr_ready():
-                    output.write(channel.recv(len(c.in_buffer)))
-            if channel.exit_status_ready() and not channel.recv_stderr_ready() and not channel.recv_ready():
-                channel.shutdown_read()
-                channel.close()
-                break
+        chan.exec_command(command)
 
-        stdout.close()
-        stderr.close()
+        stdout = b''.join(chan.makefile('rb', bufsize))
+        stderr = b''.join(chan.makefile_stderr('rb', bufsize))
 
-        exit_code = channel.recv_exit_status()
+        exit_code = chan.recv_exit_status()
 
         ssh.close()
-        output.seek(0)
 
-        return exit_code, output
+        return exit_code, stdout, stderr
