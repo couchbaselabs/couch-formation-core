@@ -128,12 +128,15 @@ class RemoteProvisioner(object):
         logger.debug(f"Using SSH key {self.ssh_key}")
         logger.debug(f"Running command: {_command}")
 
+        time.sleep(1)
         self.file_output.info(f"{hostname}: [{_command}] begins")
 
         exit_code, stdout, stderr = RunSSHCommand().lib_exec(self.ssh_key, self.username, hostname, _command)
 
         output = stdout.decode("utf-8").split('\n')
         for line in output:
+            if len(line) == 0:
+                continue
             log_out = f"{hostname}: {line}"
             logger.info(log_out)
             self.file_output.info(log_out)

@@ -42,7 +42,7 @@ class RunSSHCommand(object):
         return p.returncode, buffer
 
     @staticmethod
-    def lib_exec(ssh_key: str, ssh_user: str, hostname: str, command: str, retry_count=60, factor=0.5):
+    def lib_exec(ssh_key: str, ssh_user: str, hostname: str, command: str, retry_count=10, factor=0.1):
         bufsize = 4096
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -76,5 +76,6 @@ class RunSSHCommand(object):
         exit_code = chan.recv_exit_status()
 
         ssh.close()
+        time.sleep(1)
 
         return exit_code, stdout, stderr
