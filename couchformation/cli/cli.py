@@ -105,7 +105,7 @@ class CLI(object):
         self.remainder = None
 
         if self.args is None:
-            self.args = sys.argv
+            self.args = sys.argv[1:]
 
         self.init_parser()
 
@@ -141,6 +141,6 @@ class CLI(object):
 
     def process_args(self):
         self.local_args()
-        self.options, self.remainder = self.parser.parse_known_args()
+        self.options, self.remainder = self.parser.parse_known_args(self.args)
         if self.options.debug:
             logger.setLevel(logging.DEBUG)

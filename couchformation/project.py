@@ -113,7 +113,7 @@ class Project(object):
             self.runner.dispatch(module, instance, method, net.as_dict)
         list(self.runner.join())
 
-    def list(self):
+    def list(self, api=False):
         for groups in NodeGroup(self.options).get_node_groups():
             number = 0
             for db in groups:
@@ -129,7 +129,10 @@ class Project(object):
                     self.runner.dispatch(module, instance, method, parameters)
             result_list = list(self.runner.join())
             for result in result_list:
-                logger.info(f"Node: {result.get('name')} Private IP: {result.get('private_ip')} Public IP: {result.get('public_ip')}")
+                if not api:
+                    logger.info(f"Node: {result.get('name')} Private IP: {result.get('private_ip')} Public IP: {result.get('public_ip')}")
+                else:
+                    yield result
 
     @property
     def location(self):

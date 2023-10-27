@@ -18,6 +18,7 @@ sys.path.append(parent)
 sys.path.append(current)
 
 from couchformation.project import Project
+from couchformation.cli.cloudmgr import CloudMgrCLI
 
 
 class BasicAuth(AuthBase):
@@ -37,51 +38,39 @@ class BasicAuth(AuthBase):
         return r
 
 
-pre_provision_cmds = [
-    'curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | sudo -E bash -s - -s -g https://github.com/mminichino/host-prep-lib',
-]
-
-provision_cmds = [
-    'sudo bundlemgr -b CBS',
-    'sudo swmgr cluster create -n testdb -s {{ SERVICES }} -g {{ NODE_ZONE }} -l {{ PRIVATE_IP_LIST }}',
-]
-post_provision_cmds = [
-    'sudo swmgr cluster rebalance -l {{ PRIVATE_IP_LIST }}',
-]
-
-
 def test_1():
-    args = ["--type", "cbs", "--cloud", "gcp", "--project", "pytest-gcp", "--name", "test-cluster",
+    args = ["create", "--build", "cbs", "--cloud", "gcp", "--project", "pytest-gcp", "--name", "test-cluster",
             "--region", "us-central1", "--quantity", "3", "--os_id", "ubuntu", "--os_version", "22.04",
             "--ssh_key", "/Users/michael/.ssh/mminichino-default-key-pair.pem", "--machine_type", "4x16"]
-    project = Project(args)
+    cm = CloudMgrCLI(args)
+    project = Project(cm.options, cm.remainder)
     project.create()
-    project.save()
 
 
 def test_2():
-    args = ["--type", "cbs", "--cloud", "gcp", "--project", "pytest-gcp", "--name", "test-cluster",
+    args = ["add", "--build", "cbs", "--cloud", "gcp", "--project", "pytest-gcp", "--name", "test-cluster",
             "--region", "us-central1", "--quantity", "2", "--os_id", "ubuntu", "--os_version", "22.04",
             "--ssh_key", "/Users/michael/.ssh/mminichino-default-key-pair.pem", "--machine_type", "4x16", "--services", "analytics"]
-    project = Project(args)
+    cm = CloudMgrCLI(args)
+    project = Project(cm.options, cm.remainder)
     project.add()
-    project.save()
 
 
 def test_3():
-    args = ["--type", "cbs", "--project", "pytest-gcp", "--name", "test-cluster"]
-    project = Project(args)
+    args = ["deploy", "--project", "pytest-gcp"]
+    cm = CloudMgrCLI(args)
+    project = Project(cm.options, cm.remainder)
     project.deploy()
-    project.provision(pre_provision_cmds, provision_cmds, post_provision_cmds)
 
 
 def test_4():
-    args = ["--type", "cbs", "--project", "pytest-gcp", "--name", "test-cluster"]
+    args = ["list", "--project", "pytest-gcp"]
     username = "Administrator"
     password = "password"
-    project = Project(args)
-    nodes = project.list()
-    connect_ip = nodes.provision_list()[0]
+    cm = CloudMgrCLI(args)
+    project = Project(cm.options, cm.remainder)
+    nodes = list(project.list(api=True))
+    connect_ip = nodes[0].get('public_ip')
 
     session = requests.Session()
     retries = Retry(total=60,
@@ -96,6 +85,7 @@ def test_4():
 
 
 def test_5():
-    args = ["--type", "cbs", "--project", "pytest-gcp", "--name", "test-cluster"]
-    project = Project(args)
+    args = ["destroy", "--project", "pytest-gcp"]
+    cm = CloudMgrCLI(args)
+    project = Project(cm.options, cm.remainder)
     project.destroy()
