@@ -1,5 +1,9 @@
 ---
 aws:
+  base:
+    couchformation.aws.driver.base:
+      module: CloudBase
+      test: test_session
   network:
     couchformation.aws.network:
       module: AWSNetwork
@@ -26,6 +30,10 @@ aws:
     - volume_iops
     - volume_size
 gcp:
+  base:
+    couchformation.gcp.driver.base:
+      module: CloudBase
+      test: test_session
   network:
     couchformation.gcp.network:
       module: GCPNetwork
@@ -51,6 +59,10 @@ gcp:
     - services
     - volume_size
 azure:
+  base:
+    couchformation.azure.driver.base:
+      module: CloudBase
+      test: test_session
   network:
     couchformation.azure.network:
       module: AzureNetwork

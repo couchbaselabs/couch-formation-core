@@ -58,6 +58,7 @@ class Project(object):
             module = profile.network.driver
             instance = profile.network.module
             method = profile.network.deploy
+            self.runner.foreground(profile.base.driver, profile.base.module, profile.base.test, net.as_dict)
             self.runner.dispatch(module, instance, method, net.as_dict)
         list(self.runner.join())
         for groups in NodeGroup(self.options).get_node_groups():

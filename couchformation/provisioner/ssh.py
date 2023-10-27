@@ -46,6 +46,7 @@ class RunSSHCommand(object):
         bufsize = 4096
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        time.sleep(0.5)
 
         for retry_number in range(retry_count + 1):
             try:
@@ -76,6 +77,6 @@ class RunSSHCommand(object):
         exit_code = chan.recv_exit_status()
 
         ssh.close()
-        time.sleep(1)
+        time.sleep(0.5)
 
         return exit_code, stdout, stderr

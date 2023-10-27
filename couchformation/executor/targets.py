@@ -23,8 +23,16 @@ class Parameters:
 
 
 @attr.s
+class CloudDriverBase:
+    driver: str = attr.ib()
+    module: str = attr.ib()
+    test: str = attr.ib()
+
+
+@attr.s
 class CloudProfile:
     name: str = attr.ib()
+    base: CloudDriverBase = attr.ib()
     network: Profile = attr.ib()
     node: Profile = attr.ib()
     parameters: Parameters = attr.ib()
@@ -100,10 +108,10 @@ class TargetProfile(object):
         with open(self.cfg_file, "r") as f:
             try:
                 for cloud, settings in yaml.safe_load(f).items():
+                    base = CloudDriverBase(*self.construct_driver(settings, 'base'))
                     network = Profile(*self.construct_profile(settings, 'network'))
                     node = Profile(*self.construct_profile(settings, 'node'))
-                    # parameters = Parameters(*self.construct_profile(settings, 'parameters'))
-                    profile = CloudProfile(cloud, network, node, Parameters(settings.get('parameters')))
+                    profile = CloudProfile(cloud, base, network, node, Parameters(settings.get('parameters')))
                     self.config.add(profile)
             except yaml.YAMLError as err:
                 RuntimeError(f"Can not open target config file {self.cfg_file}: {err}")
@@ -118,6 +126,15 @@ class TargetProfile(object):
         destroy = elements.get('destroy')
         info = elements.get('info')
         return driver, module, deploy, destroy, info
+
+    @staticmethod
+    def construct_driver(settings, key):
+        config = settings.get(key)
+        driver = list(config.keys())[0]
+        elements = config.get(driver)
+        module = elements.get('module')
+        test = elements.get('test')
+        return driver, module, test
 
     @staticmethod
     def initialize_args(args, parameters):
