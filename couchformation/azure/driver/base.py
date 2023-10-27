@@ -14,7 +14,6 @@ from couchformation.config import AuthMode
 from couchformation.exception import FatalError, NonFatalError
 from couchformation.azure.driver.constants import get_auth_directory, get_config_default, get_config_main
 from couchformation.azure.driver.constants import AzureDiskTiers
-from couchformation.deployment import Service
 
 logger = logging.getLogger('couchformation.azure.driver.base')
 logger.addHandler(logging.NullHandler())
@@ -32,8 +31,8 @@ class EmptyResultSet(NonFatalError):
 
 class CloudBase(object):
 
-    def __init__(self, service: Service):
-        self.config = service
+    def __init__(self, parameters: dict):
+        self.parameters = parameters
         self.auth_directory = get_auth_directory()
         self.config_default = get_config_default()
         self.config_main = get_config_main()
@@ -47,10 +46,10 @@ class CloudBase(object):
         self.azure_zone = None
         self.subscription_client = None
 
-        if self.config.auth == AuthMode.default:
+        if not parameters.get('auth_mode') or AuthMode[parameters.get('auth_mode')] == AuthMode.default:
             self.credential, self.azure_subscription_id = self.default_auth()
         else:
-            raise AzureDriverError(f"Unsupported auth mode {self.config.auth.name}")
+            raise AzureDriverError(f"Unsupported auth mode {parameters.get('auth_mode')}")
 
         if not self.credential or not self.azure_subscription_id:
             raise AzureDriverError("unauthorized (use az login)")
@@ -59,7 +58,7 @@ class CloudBase(object):
         self.compute_client = ComputeManagementClient(self.credential, self.azure_subscription_id)
         self.network_client = NetworkManagementClient(self.credential, self.azure_subscription_id)
 
-        self.azure_location = self.config.region
+        self.azure_location = parameters.get('region')
 
         self.zones()
 
