@@ -73,7 +73,7 @@ def test_4():
     connect_ip = nodes[0].get('public_ip')
 
     session = requests.Session()
-    retries = Retry(total=60,
+    retries = Retry(total=5,
                     backoff_factor=0.1,
                     status_forcelist=[500, 501, 503])
     session.mount('http://', HTTPAdapter(max_retries=retries))

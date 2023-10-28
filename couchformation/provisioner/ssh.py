@@ -42,11 +42,10 @@ class RunSSHCommand(object):
         return p.returncode, buffer
 
     @staticmethod
-    def lib_exec(ssh_key: str, ssh_user: str, hostname: str, command: str, retry_count=10, factor=0.1):
+    def lib_exec(ssh_key: str, ssh_user: str, hostname: str, command: str, retry_count=15, factor=0.1):
         bufsize = 4096
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        time.sleep(1)
 
         for retry_number in range(retry_count + 1):
             try:
@@ -63,20 +62,27 @@ class RunSSHCommand(object):
                 wait *= (2 ** (retry_number + 1))
                 time.sleep(wait)
 
-        try:
-            ssh.get_transport().set_keepalive(5)
-            chan = ssh.get_transport().open_session()
-        except Exception as err:
-            raise RuntimeError(f"failed to open SSH session on {hostname}: {err}")
-
-        chan.exec_command(command)
-
-        stdout = b''.join(chan.makefile('rb', bufsize))
-        stderr = b''.join(chan.makefile_stderr('rb', bufsize))
-
-        exit_code = chan.recv_exit_status()
-
-        ssh.close()
-        time.sleep(1)
-
-        return exit_code, stdout, stderr
+        for retry_number in range(retry_count + 1):
+            try:
+                ssh.get_transport().set_keepalive(5)
+                stdin, stdout, stderr = ssh.exec_command(command, bufsize=bufsize, timeout=10)
+                channel = stdout.channel
+                stdin.close()
+                channel.shutdown_write()
+                exit_code = channel.recv_exit_status()
+                timeout = 5
+                end_time = time.time() + timeout
+                while not stdout.channel.eof_received:
+                    time.sleep(0.5)
+                    if time.time() > end_time:
+                        stdout.channel.close()
+                        break
+                ssh.close()
+                return exit_code, stdout, stderr
+            except (TimeoutError, socket.timeout):
+                if retry_number == retry_count:
+                    raise RuntimeError(f"command timeout on {hostname}")
+                logger.info(f"Retrying command on {hostname}")
+                wait = factor
+                wait *= (2 ** (retry_number + 1))
+                time.sleep(wait)

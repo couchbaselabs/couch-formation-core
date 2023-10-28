@@ -121,6 +121,7 @@ class RemoteProvisioner(object):
             raise ProvisionerError(f"Host {hostname} is not reachable")
 
         logger.info(f"Connection to {hostname} successful")
+        time.sleep(0.5)
 
         _command = self.resolve_variables(command)
 
@@ -132,11 +133,9 @@ class RemoteProvisioner(object):
 
         exit_code, stdout, stderr = RunSSHCommand().lib_exec(self.ssh_key, self.username, hostname, _command)
 
-        output = stdout.decode("utf-8").split('\n')
-        for line in output:
-            if len(line) == 0:
-                continue
-            log_out = f"{hostname}: {line}"
+        for line in stdout.readlines():
+            line_out = line.strip()
+            log_out = f"{hostname}: {line_out}"
             logger.info(log_out)
             self.file_output.info(log_out)
 

@@ -15,7 +15,6 @@ from couchformation.config import get_log_dir
 import couchformation.constants as C
 from couchformation.util import FileManager
 from couchformation.exception import FatalError
-import couchformation.state as state
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger()
@@ -24,10 +23,9 @@ logger = logging.getLogger()
 def break_signal_handler(signum, frame):
     signal_name = signal.Signals(signum).name
     (filename, line, function, lines, index) = inspect.getframeinfo(frame)
-    logger.debug(f"received break signal {signal_name} in {filename} {function} at line {line}")
-    tb = traceback.format_exc()
-    logger.debug(tb)
-    state.save()
+    logger.info(f"received signal {signal_name} in {filename} {function} at line {line}")
+    tb = ''.join(traceback.format_stack(frame))
+    logger.info(tb)
     print("")
     print("Break received, aborting.")
     sys.exit(1)

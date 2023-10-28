@@ -96,6 +96,7 @@ class Project(object):
                 module = profile.node.driver
                 instance = profile.node.module
                 method = profile.node.destroy
+                self.runner.foreground(profile.base.driver, profile.base.module, profile.base.test, db.as_dict)
                 for n in range(int(db['quantity'])):
                     number += 1
                     logger.info(f"Removing service {db.get('name')} node group {db.get('group')} node {number}")

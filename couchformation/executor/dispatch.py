@@ -34,7 +34,7 @@ class JobDispatch(object):
 
     def join(self):
         while self.tasks:
-            done, self.tasks = concurrent.futures.wait(self.tasks, return_when=concurrent.futures.FIRST_COMPLETED)
+            done, self.tasks = concurrent.futures.wait(self.tasks, return_when=concurrent.futures.ALL_COMPLETED)
             for task in done:
                 try:
                     res = task.result()
