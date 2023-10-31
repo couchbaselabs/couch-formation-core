@@ -93,7 +93,6 @@ class Project(object):
 
             for step, command in enumerate(default.commands):
                 for p_set in p_list:
-                    print(p_set)
                     logger.info(f"Provisioning node {p_set.get('name')} - default step #{step + 1}")
                     self.runner.dispatch(p_module, p_instance, p_method, p_set, command, default.root)
                 exit_codes = list(self.runner.join())

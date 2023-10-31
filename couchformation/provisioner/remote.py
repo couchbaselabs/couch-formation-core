@@ -120,7 +120,7 @@ class RemoteProvisioner(object):
 
         file_output.info(f"{hostname}: [{_command}] begins")
 
-        exit_code, stdout, stderr = RunSSHCommand().lib_exec(self.ssh_key, self.username, hostname, _command, working_dir)
+        exit_code, stdout, stderr = RunSSHCommand(self.ssh_key, self.username, hostname, _command, working_dir).exec()
 
         for line in stdout.readlines():
             line_out = line.strip()

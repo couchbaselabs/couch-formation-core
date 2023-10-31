@@ -39,8 +39,8 @@ class BasicAuth(AuthBase):
 
 
 def test_1():
-    args = ["create", "--build", "cbs", "--cloud", "gcp", "--project", "pytest-gcp", "--name", "test-cluster",
-            "--region", "us-central1", "--quantity", "3", "--os_id", "ubuntu", "--os_version", "22.04",
+    args = ["create", "--build", "cbs", "--cloud", "azure", "--project", "pytest-azure", "--name", "test-cluster",
+            "--region", "eastus", "--quantity", "3", "--os_id", "ubuntu", "--os_version", "22.04",
             "--ssh_key", "/Users/michael/.ssh/mminichino-default-key-pair.pem", "--machine_type", "4x16"]
     cm = CloudMgrCLI(args)
     project = Project(cm.options, cm.remainder)
@@ -48,8 +48,8 @@ def test_1():
 
 
 def test_2():
-    args = ["add", "--build", "cbs", "--cloud", "gcp", "--project", "pytest-gcp", "--name", "test-cluster",
-            "--region", "us-central1", "--quantity", "2", "--os_id", "ubuntu", "--os_version", "22.04",
+    args = ["add", "--build", "cbs", "--cloud", "azure", "--project", "pytest-azure", "--name", "test-cluster",
+            "--region", "eastus", "--quantity", "2", "--os_id", "ubuntu", "--os_version", "22.04",
             "--ssh_key", "/Users/michael/.ssh/mminichino-default-key-pair.pem", "--machine_type", "4x16", "--services", "analytics"]
     cm = CloudMgrCLI(args)
     project = Project(cm.options, cm.remainder)
@@ -57,14 +57,14 @@ def test_2():
 
 
 def test_3():
-    args = ["deploy", "--project", "pytest-gcp"]
+    args = ["deploy", "--project", "pytest-azure"]
     cm = CloudMgrCLI(args)
     project = Project(cm.options, cm.remainder)
     project.deploy()
 
 
 def test_4():
-    args = ["list", "--project", "pytest-gcp"]
+    args = ["list", "--project", "pytest-azure"]
     username = "Administrator"
     password = "password"
     cm = CloudMgrCLI(args)
@@ -85,7 +85,7 @@ def test_4():
 
 
 def test_5():
-    args = ["destroy", "--project", "pytest-gcp"]
+    args = ["destroy", "--project", "pytest-azure"]
     cm = CloudMgrCLI(args)
     project = Project(cm.options, cm.remainder)
     project.destroy()
