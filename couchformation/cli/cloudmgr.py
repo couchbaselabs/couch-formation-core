@@ -30,10 +30,11 @@ class CloudMgrCLI(CLI):
         opt_parser.add_argument('-P', '--provisioner', action='store', help="Provisioner Name", default="remote")
 
         command_subparser = self.parser.add_subparsers(dest='command')
-        command_subparser.add_parser('create', help="Create", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('create', help="Create New Service", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('add', help="Add Resource Group", parents=[opt_parser], add_help=False)
-        command_subparser.add_parser('deploy', help="Deploy", parents=[opt_parser], add_help=False)
-        command_subparser.add_parser('destroy', help="Remove Resources", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('deploy', help="Deploy Project", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('destroy', help="Destroy Services", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('remove', help="Remove Services", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('list', help="Display Information", parents=[opt_parser], add_help=False)
 
     def run(self):
@@ -49,6 +50,8 @@ class CloudMgrCLI(CLI):
             project.deploy()
         elif self.options.command == "destroy":
             project.destroy()
+        elif self.options.command == "remove":
+            project.remove()
         elif self.options.command == "list":
             project.list()
 

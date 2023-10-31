@@ -82,6 +82,15 @@ class Project(object):
             public_ip_list = [d['public_ip'] for d in result_list]
             result_list = [dict(item, private_ip_list=private_ip_list, public_ip_list=public_ip_list) for item in result_list]
 
+            if groups[0].get('connect'):
+                connect_list = self.list(api=True, service=groups[0].get('connect'))
+                connect_list = sorted(connect_list, key=lambda d: d['name'])
+                if len(connect_list) == 0:
+                    raise ProjectError(f"Connect: No nodes in service {groups[0].get('connect')}")
+                logger.info(f"Connecting service {groups[0].get('name')} to {groups[0].get('connect')}")
+                private_connect_list = [d['private_ip'] for d in connect_list]
+                result_list = [dict(item, connect=private_connect_list) for item in result_list]
+
             provisioner = ProvisionerProfile().get(self.provisioner)
             p_module = provisioner.driver
             p_instance = provisioner.module
@@ -99,7 +108,7 @@ class Project(object):
                 if any(n != 0 for n in exit_codes):
                     raise ProjectError(f"Provisioning step failed")
 
-            build = BuildProfile().get(self.options.build)
+            build = BuildProfile().get(groups[0].get('build'))
 
             for step, command in enumerate(build.commands):
                 for p_set in p_list:
@@ -109,8 +118,10 @@ class Project(object):
                 if any(n != 0 for n in exit_codes):
                     raise ProjectError(f"Provisioning step failed")
 
-    def destroy(self):
-        for groups in NodeGroup(self.options).get_node_groups():
+    def destroy(self, service=None):
+        for groups in reversed(list(NodeGroup(self.options).get_node_groups())):
+            if service and groups[0].get('name') != service:
+                continue
             number = 0
             for db in groups:
                 cloud = db.get('cloud')
@@ -136,9 +147,20 @@ class Project(object):
             self.runner.dispatch(module, instance, method, net.as_dict)
         list(self.runner.join())
 
-    def list(self, api=False):
+    def remove(self):
+        if self.options.name:
+            service = self.options.name
+        else:
+            service = None
+        logger.info("Removing All Services" if not service else f"Removing {service}")
+        self.destroy(service=service)
+        NodeGroup(self.options).remove_node_groups(service)
+
+    def list(self, api=False, service=None):
         return_list = []
         for groups in NodeGroup(self.options).get_node_groups():
+            if service and groups[0].get('name') != service:
+                continue
             number = 0
             for db in groups:
                 cloud = db.get('cloud')
@@ -152,7 +174,11 @@ class Project(object):
                     parameters['number'] = number
                     self.runner.dispatch(module, instance, method, parameters)
             result_list = list(self.runner.join())
+            if any(d.get('name') is None for d in result_list):
+                continue
             result_list = sorted(result_list, key=lambda d: d['name'])
+            if not api:
+                logger.info(f"Service: {groups[0].get('name')}")
             for result in result_list:
                 if not api:
                     logger.info(f"Node: {result.get('name')} "

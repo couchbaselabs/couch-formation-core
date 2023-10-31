@@ -82,7 +82,9 @@ class RemoteProvisioner(object):
         self.ssh_key = self.parameters.get('ssh_key')
         self.zone = self.parameters.get('zone')
         self.services = self.parameters.get('services')
-        self.connect = self.parameters.get('connect')
+        self.connect = ','.join(self.parameters.get('connect')) \
+            if self.parameters.get('connect') and type(self.parameters.get('connect')) is list \
+            else self.parameters.get('connect')
         self.private_ip_list = ','.join(self.parameters.get('private_ip_list'))
         self.use_private_ip = self.parameters.get('use_private_ip') if self.parameters.get('use_private_ip') else False
 

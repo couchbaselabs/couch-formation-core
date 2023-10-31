@@ -112,6 +112,18 @@ class NodeGroup(object):
             doc_list = db.doc_id_startswith(resource)
             yield [KeyValueStore(filename, doc) for doc in doc_list]
 
+    def remove_node_groups(self, name=None):
+        self.meta.document('resources')
+        for resource in self.meta.keys():
+            if name and resource != name:
+                continue
+            filename = os.path.join(get_project_dir(self.project), f"{resource}.db")
+            db = KeyValueStore(filename)
+            doc_list = db.doc_id_startswith(resource)
+            for doc in doc_list:
+                db.remove(doc)
+            del self.meta[resource]
+
     def get_networks(self) -> List[KeyValueStore]:
         doc_list = self.net.doc_id_startswith('network')
         return [KeyValueStore(self.net.file_name, doc) for doc in doc_list]
