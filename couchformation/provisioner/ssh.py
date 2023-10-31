@@ -84,8 +84,8 @@ class RunSSHCommand(object):
         file_handler = logging.FileHandler(log_file)
         file_handler.setFormatter(CustomLogFormatter())
         file_output.addHandler(file_handler)
-        # file_output.setLevel(logging.root.level)
-        file_output.setLevel(logging.DEBUG)
+        file_output.setLevel(logging.root.level)
+        # file_output.setLevel(logging.DEBUG)
         logging.setLogRecordFactory(record_factory_factory(hostname))
 
         for retry_number in range(retry_count + 1):
