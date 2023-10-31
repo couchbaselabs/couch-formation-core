@@ -7,7 +7,6 @@ from couchformation.aws.node import AWSDeployment
 from couchformation.gcp.node import GCPDeployment
 from couchformation.azure.node import AzureDeployment
 from couchformation.config import get_project_dir
-from couchformation.util import dict_merge_list
 from couchformation.deployment import NodeGroup
 from couchformation.executor.targets import TargetProfile, ProvisionerProfile, BuildProfile
 from couchformation.executor.dispatch import JobDispatch
@@ -76,16 +75,40 @@ class Project(object):
                     parameters['number'] = number
                     self.runner.dispatch(module, instance, method, parameters)
             result_list = list(self.runner.join())
-            combined = dict_merge_list(*result_list)
-            for result in result_list:
-                provisioner = ProvisionerProfile().get(self.provisioner, result, combined, groups[0].as_dict)
-                default = BuildProfile().get('default')
-                build = BuildProfile().get(self.options.build)
-                module = provisioner.driver
-                instance = provisioner.module
-                method = provisioner.method
-                self.runner.dispatch(module, instance, method, provisioner, default, build)
-            list(self.runner.join())
+            if len(result_list) != number:
+                raise ProjectError(f"Partial deployment: deployed {len(result_list)} expected {number}")
+            result_list = sorted(result_list, key=lambda d: d['name'])
+            private_ip_list = [d['private_ip'] for d in result_list]
+            public_ip_list = [d['public_ip'] for d in result_list]
+            result_list = [dict(item, private_ip_list=private_ip_list, public_ip_list=public_ip_list) for item in result_list]
+
+            provisioner = ProvisionerProfile().get(self.provisioner)
+            p_module = provisioner.driver
+            p_instance = provisioner.module
+            p_method = provisioner.method
+
+            p_list = [provisioner.parameter_gen(result, groups[0].as_dict) for result in result_list]
+
+            default = BuildProfile().get('default')
+
+            for step, command in enumerate(default.commands):
+                for p_set in p_list:
+                    print(p_set)
+                    logger.info(f"Provisioning node {p_set.get('name')} - default step #{step + 1}")
+                    self.runner.dispatch(p_module, p_instance, p_method, p_set, command, default.root)
+                exit_codes = list(self.runner.join())
+                if any(n != 0 for n in exit_codes):
+                    raise ProjectError(f"Provisioning step failed")
+
+            build = BuildProfile().get(self.options.build)
+
+            for step, command in enumerate(build.commands):
+                for p_set in p_list:
+                    logger.info(f"Provisioning node {p_set.get('name')} - build step #{step + 1}")
+                    self.runner.dispatch(p_module, p_instance, p_method, p_set, command, build.root)
+                exit_codes = list(self.runner.join())
+                if any(n != 0 for n in exit_codes):
+                    raise ProjectError(f"Provisioning step failed")
 
     def destroy(self):
         for groups in NodeGroup(self.options).get_node_groups():
@@ -115,6 +138,7 @@ class Project(object):
         list(self.runner.join())
 
     def list(self, api=False):
+        return_list = []
         for groups in NodeGroup(self.options).get_node_groups():
             number = 0
             for db in groups:
@@ -129,11 +153,15 @@ class Project(object):
                     parameters['number'] = number
                     self.runner.dispatch(module, instance, method, parameters)
             result_list = list(self.runner.join())
+            result_list = sorted(result_list, key=lambda d: d['name'])
             for result in result_list:
                 if not api:
-                    logger.info(f"Node: {result.get('name')} Private IP: {result.get('private_ip')} Public IP: {result.get('public_ip')}")
-                else:
-                    yield result
+                    logger.info(f"Node: {result.get('name')} "
+                                f"Private IP: {result.get('private_ip'):<15} "
+                                f"Public IP: {result.get('public_ip'):<15} "
+                                f"Services: {result.get('services')}")
+                return_list.append(result)
+        return return_list
 
     @property
     def location(self):

@@ -11,7 +11,6 @@ from typing import Optional, List
 from couchformation.exception import NonFatalError
 from couchformation.config import NodeList, get_state_dir
 from couchformation.provisioner.ssh import RunSSHCommand
-from couchformation.executor.targets import BuildConfig, Provisioner
 import couchformation.constants as C
 
 logger = logging.getLogger('couchformation.provisioner.remote')
@@ -71,10 +70,10 @@ class ProvisionSet:
 
 class RemoteProvisioner(object):
 
-    def __init__(self, provisioner: Provisioner, default: BuildConfig, build: BuildConfig):
-        self.parameters = provisioner.parameters
-        self.build = build
-        self.default = default
+    def __init__(self, parameters: dict, command: str, root: bool = True):
+        self.parameters = parameters
+        self.command = command
+        self.root = root
         self.service = self.parameters.get('service')
         self.project = self.parameters.get('project')
         self.public_ip = self.parameters.get('public_ip')
@@ -87,35 +86,25 @@ class RemoteProvisioner(object):
         self.private_ip_list = ','.join(self.parameters.get('private_ip_list'))
         self.use_private_ip = self.parameters.get('use_private_ip') if self.parameters.get('use_private_ip') else False
 
-        self.file_output = logging.getLogger('couchformation.provisioner.output')
-        self.file_output.propagate = False
-
-        self.log_file = os.path.join(get_state_dir(self.project, self.service), 'provision.log')
-        file_handler = logging.FileHandler(self.log_file)
-        file_handler.setFormatter(CustomLogFormatter())
-        self.file_output.addHandler(file_handler)
-        self.file_output.setLevel(logging.DEBUG)
-
     def run(self):
-        for command in self.default.commands:
-            if self.build.root:
-                command = f"""sudo {command}"""
-            res = self.exec(command)
-            if res != 0:
-                return res
-        for command in self.build.commands:
-            if self.build.root:
-                command = f"""sudo {command}"""
-            res = self.exec(command)
-            if res != 0:
-                return res
-        return 0
+        working_dir = get_state_dir(self.project, self.service)
+        file_output = logging.getLogger('couchformation.provisioner.output')
+        file_output.propagate = False
+        log_file = os.path.join(working_dir, 'provision.log')
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setFormatter(CustomLogFormatter())
+        file_output.addHandler(file_handler)
+        file_output.setLevel(logging.DEBUG)
 
-    def exec(self, command: str):
         if self.use_private_ip:
             hostname = self.private_ip
         else:
             hostname = self.public_ip
+
+        if self.root:
+            command = f"""sudo {self.command}"""
+        else:
+            command = self.command
 
         if not self.wait_port(hostname):
             raise ProvisionerError(f"Host {hostname} is not reachable")
@@ -129,21 +118,23 @@ class RemoteProvisioner(object):
         logger.debug(f"Using SSH key {self.ssh_key}")
         logger.debug(f"Running command: {_command}")
 
-        self.file_output.info(f"{hostname}: [{_command}] begins")
+        file_output.info(f"{hostname}: [{_command}] begins")
 
-        exit_code, stdout, stderr = RunSSHCommand().lib_exec(self.ssh_key, self.username, hostname, _command)
+        exit_code, stdout, stderr = RunSSHCommand().lib_exec(self.ssh_key, self.username, hostname, _command, working_dir)
 
         for line in stdout.readlines():
             line_out = line.strip()
             log_out = f"{hostname}: {line_out}"
             logger.info(log_out)
-            self.file_output.info(log_out)
+            file_output.info(log_out)
 
-        self.file_output.info(f"{hostname}: [{_command}] complete")
+        file_output.info(f"{hostname}: [{_command}] complete")
 
         logger.info(f"Command complete for host {hostname}")
         logger.debug(f"[{_command}] returned {exit_code} on {hostname}")
 
+        file_output.removeHandler(file_handler)
+        file_handler.close()
         return exit_code
 
     @staticmethod

@@ -77,6 +77,21 @@ class Provisioner:
     options: List[str] = attr.ib()
     parameters: Dict = attr.ib()
 
+    def parameter_gen(self, *args):
+        parameters = self.initialize_parameters(self.options, args)
+        return parameters
+
+    @staticmethod
+    def initialize_parameters(expected, args):
+        p = {}
+        for d in args:
+            for attribute in expected:
+                if p.get(attribute):
+                    continue
+                if d.get(attribute):
+                    p[attribute] = d.get(attribute)
+        return p
+
 
 @attr.s
 class ProvisionerSet:
@@ -175,11 +190,10 @@ class ProvisionerProfile(object):
         self.config = ProvisionerSet()
         self.load_config()
 
-    def get(self, name, *args) -> Provisioner:
+    def get(self, name) -> Provisioner:
         profile = self.config.get(name)
         if not profile:
             raise ValueError(f"Provisioner type {name} is not supported")
-        profile.parameters = self.initialize_parameters(profile.options, args)
         return profile
 
     def load_config(self):
@@ -199,14 +213,3 @@ class ProvisionerProfile(object):
         options = settings.get('parameters')
         parameters = {}
         return name, driver, module, method, options, parameters
-
-    @staticmethod
-    def initialize_parameters(expected, args):
-        p = {}
-        for d in args:
-            for attribute in expected:
-                if p.get(attribute):
-                    continue
-                if d.get(attribute):
-                    p[attribute] = d.get(attribute)
-        return p

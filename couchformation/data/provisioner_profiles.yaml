@@ -4,6 +4,7 @@ remote:
   module: RemoteProvisioner
   method: run
   parameters:
+    - name
     - service
     - project
     - public_ip
