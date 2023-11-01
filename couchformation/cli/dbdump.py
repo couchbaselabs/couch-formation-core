@@ -3,7 +3,7 @@
 
 import logging
 import warnings
-import argparse
+import json
 from overrides import override
 from couchformation.cli.cli import CLI
 import couchformation.kvdb as kvdb
@@ -19,15 +19,17 @@ class DBDumpCLI(CLI):
 
     @override()
     def local_args(self):
-        opt_parser = argparse.ArgumentParser(parents=[self.parser], add_help=False)
-        opt_parser.add_argument('-t', '--table', action='store', help="Table Name")
+        self.parser.add_argument('-j', '--json', action='store_true', help="Output JSON")
 
     def run(self):
         for file in self.remainder:
             for doc in kvdb.documents(file):
-                print(f"Document: {doc.document_id}")
-                for key, value in doc.items():
-                    print(f"{key:<12} = {value}")
+                if self.options.json:
+                    print(json.dumps(doc.as_dict, indent=2))
+                else:
+                    print(f"Document: {doc.document_id}")
+                    for key, value in doc.items():
+                        print(f"{key:<12} = {value}")
 
 
 def main(args=None):

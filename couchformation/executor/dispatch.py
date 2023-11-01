@@ -4,18 +4,15 @@
 import logging
 import concurrent.futures
 import couchformation.executor.worker as worker
+from couchformation.exception import NonFatalLogError
 from multiprocessing import get_context
 
 logger = logging.getLogger('couchformation.executor.dispatch')
 logger.addHandler(logging.NullHandler())
 
 
-def run(module, instance, method, *args, **kwargs):
-    m = __import__(module, fromlist=[""])
-    i = getattr(m, instance)
-    obj = i(*args, **kwargs)
-    f = getattr(obj, method)
-    f()
+class TaskError(NonFatalLogError):
+    pass
 
 
 class JobDispatch(object):
@@ -41,4 +38,4 @@ class JobDispatch(object):
                     logger.debug(f"task result: {res}")
                     yield res
                 except Exception as err:
-                    raise RuntimeError(err)
+                    raise TaskError(f"task exception: {err}")

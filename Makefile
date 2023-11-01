@@ -27,11 +27,27 @@ download:
 		$(PROJECT_VERSION)
 test_kvdb:
 		python -m pytest tests/test_kvdb.py
-test_aws:
+test_aws_drv:
 		python -m pytest tests/test_1.py
-test_gcp:
+test_gcp_drv:
 		python -m pytest tests/test_2.py
-test_azure:
+test_azure_drv:
 		python -m pytest tests/test_3.py
+test_aws_cli:
+		python -m pytest tests/test_4.py
+test_gcp_cli:
+		python -m pytest tests/test_5.py
+test_azure_cli:
+		python -m pytest tests/test_6.py
+test_drv:
+		python -m pytest tests/test_1.py tests/test_2.py tests/test_3.py
+test_cli:
+		python -m pytest tests/test_4.py tests/test_5.py tests/test_6.py
 test:
-		python -m pytest tests/test_1.py tests/test_2.py pytest tests/test_3.py
+		python -m pytest tests/test_1.py \
+		tests/test_2.py \
+		tests/test_3.py \
+		tests/test_4.py \
+		tests/test_5.py \
+		tests/test_6.py \
+		tests/test_kvdb.py
