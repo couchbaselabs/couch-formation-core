@@ -24,8 +24,8 @@ $ pip install couchformation
 
 ## Configure and deploy a Couchbase Server cluster:
 ````
-$ cloudmgr create --type cbs --cloud gcp --project test-gcp --name test-cluster --region us-central1 --quantity 3 --os_id ubuntu --os_version 22.04 --ssh_key /Users/jdoe/.ssh/jdoe-default-key-pair.pem --machine_type 4x16
+$ cloudmgr create --build cbs --cloud gcp --project test-gcp --name test-cluster --region us-central1 --quantity 3 --os_id ubuntu --os_version 22.04 --ssh_key /Users/jdoe/.ssh/jdoe-default-key-pair.pem --machine_type 4x16
 ````
 ````
-$ cloudmgr deploy --type cbs --project test-gcp --name test-cluster
+$ cloudmgr deploy --project test-gcp
 ````
