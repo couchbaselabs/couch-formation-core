@@ -11,6 +11,7 @@ from google.cloud import storage
 from google.oauth2 import service_account
 from couchformation.config import AuthMode
 from couchformation.exception import FatalError, NonFatalError
+from couchformation.retry import retry
 from couchformation.gcp.driver.constants import get_auth_directory, get_default_credentials
 
 logger = logging.getLogger('couchformation.gcp.driver.base')
@@ -19,6 +20,10 @@ logging.getLogger("googleapiclient").setLevel(logging.ERROR)
 
 
 class GCPDriverError(FatalError):
+    pass
+
+
+class GCPDriverTransientError(NonFatalError):
     pass
 
 
@@ -86,15 +91,19 @@ class CloudBase(object):
         file_handle.close()
         return auth_data
 
+    @retry()
     def zones(self) -> list:
-        request = self.gcp_client.zones().list(project=self.gcp_project)
-        while request is not None:
-            response = request.execute()
-            for zone in response['items']:
-                if not zone['name'].startswith(self.gcp_region):
-                    continue
-                self.gcp_zone_list.append(zone['name'])
-            request = self.gcp_client.zones().list_next(previous_request=request, previous_response=response)
+        try:
+            request = self.gcp_client.zones().list(project=self.gcp_project)
+            while request is not None:
+                response = request.execute()
+                for zone in response['items']:
+                    if not zone['name'].startswith(self.gcp_region):
+                        continue
+                    self.gcp_zone_list.append(zone['name'])
+                request = self.gcp_client.zones().list_next(previous_request=request, previous_response=response)
+        except Exception as err:
+            raise GCPDriverTransientError(f"error getting zones: {err}")
 
         self.gcp_zone_list = sorted(set(self.gcp_zone_list))
 

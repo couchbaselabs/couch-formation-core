@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 import couchformation
 
 from pathlib import Path
@@ -8,7 +8,7 @@ long_description = (this_directory / "README.md").read_text()
 setup(
     name='couchformation',
     version=couchformation.__version__,
-    packages=['couchformation', 'couchformation.cli'],
+    packages=find_packages(),
     url='https://github.com/mminichino/couch-formation-core',
     license='Apache License 2.0',
     author='Michael Minichino',
@@ -16,6 +16,7 @@ setup(
     entry_points={
         'console_scripts': [
             'cloudmgr = couchformation.cli.cloudmgr:main',
+            'dbdump = couchformation.cli.dbdump:main'
         ]
     },
     install_requires=[
@@ -54,9 +55,11 @@ setup(
         "pytest-asyncio==0.21.1",
         "pytest-rerunfailures==12.0",
         "sqlite-utils~=3.11",
+        "docker>=5.0.3",
         "paramiko>=3.3.1",
         "overrides>=7.4.0",
-        "bumpversion>=0.6.0"
+        "bumpversion>=0.6.0",
+        "PyYAML>=5.1"
     ],
     author_email='info@unix.us.com',
     description='Couchbase Cloud Automation',
