@@ -19,6 +19,7 @@ setup(
             'dbdump = couchformation.cli.dbdump:main'
         ]
     },
+    package_data={'couchformation': ['data/*']},
     install_requires=[
         "attrs==23.1.0",
         "boto3==1.28.11",
