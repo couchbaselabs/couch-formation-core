@@ -89,3 +89,29 @@ azure:
     - volume_iops
     - volume_size
     - volume_tier
+capella:
+  base:
+    couchformation.capella.driver.base:
+      module: CloudBase
+      test: test_session
+  network:
+    couchformation.null:
+      module: NullClass
+      deploy: null_f
+      destroy: null_f
+      info: null_f
+  node:
+    couchformation.capella.node:
+      module: CapellaDeployment
+      deploy: deploy
+      destroy: destroy
+      info: info
+  parameters:
+    - region
+    - cidr
+    - machine_type
+    - quantity
+    - volume_size
+    - allow
+    - username
+    - password
