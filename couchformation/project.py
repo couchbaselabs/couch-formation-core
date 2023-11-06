@@ -92,7 +92,17 @@ class Project(object):
         self.runner.foreground(module, instance, method, net.as_dict)
 
     def _deploy_saas(self, group):
-        pass
+        cloud = group[0].get('cloud')
+        profile = TargetProfile(self.remainder).get(cloud)
+        module = profile.node.driver
+        instance = profile.node.module
+        compose = profile.node.compose
+        deploy = profile.node.deploy
+        for n, db in enumerate(group):
+            parameters = db.as_dict
+            parameters['number'] = n + 1
+            self.runner.foreground(module, instance, compose, parameters)
+        self.runner.foreground(module, instance, deploy, group[0].as_dict)
 
     def _deploy_node(self, group):
         number = 0

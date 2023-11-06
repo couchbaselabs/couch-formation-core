@@ -10,12 +10,14 @@ aws:
       deploy: create_vpc
       destroy: destroy_vpc
       info: info
+      compose: null
   node:
     couchformation.aws.node:
       module: AWSDeployment
       deploy: deploy
       destroy: destroy
       info: info
+      compose: null
   parameters:
     - region
     - auth_mode
@@ -40,12 +42,14 @@ gcp:
       deploy: create_vpc
       destroy: destroy_vpc
       info: info
+      compose: null
   node:
     couchformation.gcp.node:
       module: GCPDeployment
       deploy: deploy
       destroy: destroy
       info: info
+      compose: null
   parameters:
     - region
     - auth_mode
@@ -69,12 +73,14 @@ azure:
       deploy: create_vpc
       destroy: destroy_vpc
       info: info
+      compose: null
   node:
     couchformation.azure.node:
       module: AzureDeployment
       deploy: deploy
       destroy: destroy
       info: info
+      compose: null
   parameters:
     - region
     - auth_mode
@@ -100,12 +106,14 @@ capella:
       deploy: null_f
       destroy: null_f
       info: null_f
+      compose: null_f
   node:
     couchformation.capella.node:
       module: CapellaDeployment
       deploy: deploy
       destroy: destroy
       info: info
+      compose: compose
   parameters:
     - region
     - cidr

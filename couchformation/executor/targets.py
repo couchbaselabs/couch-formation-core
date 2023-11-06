@@ -21,6 +21,7 @@ class Profile:
     deploy: str = attr.ib()
     destroy: str = attr.ib()
     info: str = attr.ib()
+    compose: str = attr.ib()
 
 
 @attr.s
@@ -164,7 +165,8 @@ class TargetProfile(object):
         deploy = elements.get('deploy')
         destroy = elements.get('destroy')
         info = elements.get('info')
-        return driver, module, deploy, destroy, info
+        compose = elements.get('compose')
+        return driver, module, deploy, destroy, info, compose
 
     @staticmethod
     def construct_driver(settings, key):
