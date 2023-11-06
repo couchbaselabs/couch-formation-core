@@ -128,6 +128,10 @@ class NodeGroup(object):
         doc_list = self.net.doc_id_startswith('network')
         return [KeyValueStore(self.net.file_name, doc) for doc in doc_list]
 
+    def get_network(self, cloud):
+        doc_list = self.net.doc_id_startswith('network')
+        return next((KeyValueStore(self.net.file_name, doc) for doc in doc_list if doc.endswith(cloud)), None)
+
 
 class Deployment(object):
 

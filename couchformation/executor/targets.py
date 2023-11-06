@@ -2,10 +2,16 @@
 ##
 
 from typing import List, Optional, Dict
+from enum import Enum
 import attr
 import yaml
 import argparse
 import couchformation.constants as C
+
+
+class DeployMode(Enum):
+    node = 'node'
+    saas = 'saas'
 
 
 @attr.s
@@ -102,6 +108,24 @@ class ProvisionerSet:
 
     def get(self, name):
         return next((p for p in self.provisioners if p.name == name), None)
+
+
+@attr.s
+class Strategy:
+    name: str = attr.ib()
+    deployer: str = attr.ib()
+    provisioner: str = attr.ib()
+
+
+@attr.s
+class StrategySet:
+    strategies: List[Strategy] = attr.ib(default=[])
+
+    def add(self, s: Strategy):
+        self.strategies.append(s)
+
+    def get(self, name):
+        return next((p for p in self.strategies if p.name == name), None)
 
 
 class TargetProfile(object):
@@ -213,3 +237,32 @@ class ProvisionerProfile(object):
         options = settings.get('parameters')
         parameters = {}
         return name, driver, module, method, options, parameters
+
+
+class DeployStrategy(object):
+
+    def __init__(self):
+        self.cfg_file = C.STRATEGY_PROFILES
+        self.config = StrategySet()
+        self.load_config()
+
+    def get(self, name) -> Strategy:
+        strategy = self.config.get(name)
+        if not strategy:
+            raise ValueError(f"Strategy type {name} is not supported")
+        return strategy
+
+    def load_config(self):
+        with open(self.cfg_file, "r") as f:
+            try:
+                for name, settings in yaml.safe_load(f).items():
+                    strategy = Strategy(*self.construct_strategy(name, settings))
+                    self.config.add(strategy)
+            except yaml.YAMLError as err:
+                RuntimeError(f"Can not open strategy config file {self.cfg_file}: {err}")
+
+    @staticmethod
+    def construct_strategy(name, settings):
+        deployer = settings.get('deployer')
+        provisioner = settings.get('provisioner')
+        return name, deployer, provisioner

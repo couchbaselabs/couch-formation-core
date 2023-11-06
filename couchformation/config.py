@@ -126,7 +126,7 @@ class BaseConfig:
 
     @classmethod
     def create(cls, data: Union[list, dict]):
-        if type(data) == list:
+        if type(data) is list:
             c = cls()
             c.initialize_args(data)
         else:
@@ -176,7 +176,7 @@ class NodeConfig:
 
     @classmethod
     def create(cls, data: Union[list, dict]):
-        if type(data) == list:
+        if type(data) is list:
             c = cls()
             c.initialize_args(data)
         else:

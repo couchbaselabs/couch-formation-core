@@ -1,0 +1,13 @@
+---
+cbs:
+  deployer: node
+  provisioner: remote
+sgw:
+  deployer: node
+  provisioner: remote
+generic:
+  deployer: node
+  provisioner: remote
+capella:
+  deployer: saas
+  provisioner: null
