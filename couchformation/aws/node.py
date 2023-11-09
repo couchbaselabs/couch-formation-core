@@ -10,9 +10,10 @@ from couchformation.aws.driver.machine import MachineType
 from couchformation.aws.driver.instance import Instance
 from couchformation.aws.driver.base import CloudBase
 from couchformation.aws.network import AWSNetwork
-from couchformation.config import get_state_file
+from couchformation.config import get_state_file, get_state_dir
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
+from couchformation.util import FileManager
 
 logger = logging.getLogger('couchformation.aws.node')
 logger.addHandler(logging.NullHandler())
@@ -43,6 +44,13 @@ class AWSDeployment(object):
         self.node_name = f"{self.name}-node-{self.number:02d}"
 
         filename = get_state_file(self.project, self.name)
+
+        try:
+            state_dir = get_state_dir(self.project, self.name)
+            FileManager().make_dir(state_dir)
+        except Exception as err:
+            raise AWSNodeError(f"can not create state dir: {err}")
+
         document = self.node_name
         self.state = KeyValueStore(filename, document)
 

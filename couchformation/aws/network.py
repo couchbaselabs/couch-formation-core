@@ -10,10 +10,11 @@ from couchformation.aws.driver.gateway import InternetGateway
 from couchformation.aws.driver.nsg import SecurityGroup
 from couchformation.aws.driver.route import RouteTable
 import couchformation.aws.driver.constants as C
-from couchformation.config import get_state_file
+from couchformation.config import get_state_file, get_state_dir
 from couchformation.ssh import SSHUtil
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
+from couchformation.util import FileManager
 
 logger = logging.getLogger('couchformation.aws.network')
 logger.addHandler(logging.NullHandler())
@@ -36,6 +37,13 @@ class AWSNetwork(object):
         self.cloud = parameters.get('cloud')
 
         filename = get_state_file(self.project, 'common')
+
+        try:
+            state_dir = get_state_dir(self.project, 'common')
+            FileManager().make_dir(state_dir)
+        except Exception as err:
+            raise AWSNetworkError(f"can not create state dir: {err}")
+
         document = f"network:{self.cloud}"
         self.state = KeyValueStore(filename, document)
 
