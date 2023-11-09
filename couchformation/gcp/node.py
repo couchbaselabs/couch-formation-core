@@ -11,10 +11,12 @@ from couchformation.gcp.driver.machine import MachineType
 from couchformation.gcp.driver.disk import Disk
 from couchformation.gcp.driver.image import Image
 from couchformation.gcp.network import GCPNetwork
-from couchformation.config import get_state_file
+from couchformation.config import get_state_file, get_state_dir
 from couchformation.ssh import SSHUtil
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
+from couchformation.util import FileManager
+
 
 logger = logging.getLogger('couchformation.gcp.node')
 logger.addHandler(logging.NullHandler())
@@ -46,6 +48,13 @@ class GCPDeployment(object):
         self.data_disk = f"{self.name}-data-{self.number:02d}"
 
         filename = get_state_file(self.project, self.name)
+
+        try:
+            state_dir = get_state_dir(self.project, self.name)
+            FileManager().make_dir(state_dir)
+        except Exception as err:
+            raise GCPNodeError(f"can not create state dir: {err}")
+
         document = self.node_name
         self.state = KeyValueStore(filename, document)
 

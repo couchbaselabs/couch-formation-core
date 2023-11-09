@@ -11,10 +11,11 @@ from couchformation.azure.driver.machine import MachineType
 from couchformation.azure.driver.disk import Disk
 from couchformation.azure.driver.image import Image
 from couchformation.azure.network import AzureNetwork
-from couchformation.config import get_state_file
+from couchformation.config import get_state_file, get_state_dir
 from couchformation.ssh import SSHUtil
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
+from couchformation.util import FileManager
 
 logger = logging.getLogger('couchformation.azure.node')
 logger.addHandler(logging.NullHandler())
@@ -49,6 +50,13 @@ class AzureDeployment(object):
         self.node_nic = f"{self.name}-node-{self.number:02d}-nic"
 
         filename = get_state_file(self.project, self.name)
+
+        try:
+            state_dir = get_state_dir(self.project, self.name)
+            FileManager().make_dir(state_dir)
+        except Exception as err:
+            raise AzureNodeError(f"can not create state dir: {err}")
+
         document = self.node_name
         self.state = KeyValueStore(filename, document)
 

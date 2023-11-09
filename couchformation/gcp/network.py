@@ -8,9 +8,11 @@ from couchformation.gcp.driver.network import Network, Subnet
 from couchformation.gcp.driver.firewall import Firewall
 from couchformation.gcp.driver.base import CloudBase
 import couchformation.gcp.driver.constants as C
-from couchformation.config import get_state_file
+from couchformation.config import get_state_file, get_state_dir
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
+from couchformation.util import FileManager
+
 
 logger = logging.getLogger('couchformation.gcp.network')
 logger.addHandler(logging.NullHandler())
@@ -33,6 +35,13 @@ class GCPNetwork(object):
         self.cloud = parameters.get('cloud')
 
         filename = get_state_file(self.project, 'common')
+
+        try:
+            state_dir = get_state_dir(self.project, 'common')
+            FileManager().make_dir(state_dir)
+        except Exception as err:
+            raise GCPNetworkError(f"can not create state dir: {err}")
+
         document = f"network:{self.cloud}"
         self.state = KeyValueStore(filename, document)
 

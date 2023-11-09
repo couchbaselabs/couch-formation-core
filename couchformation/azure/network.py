@@ -7,9 +7,11 @@ from couchformation.network import NetworkDriver
 from couchformation.azure.driver.network import Network, Subnet, SecurityGroup
 from couchformation.azure.driver.base import CloudBase
 import couchformation.azure.driver.constants as C
-from couchformation.config import get_state_file
+from couchformation.config import get_state_file, get_state_dir
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
+from couchformation.util import FileManager
+
 
 logger = logging.getLogger('couchformation.azure.network')
 logger.addHandler(logging.NullHandler())
@@ -32,6 +34,13 @@ class AzureNetwork(object):
         self.cloud = parameters.get('cloud')
 
         filename = get_state_file(self.project, 'common')
+
+        try:
+            state_dir = get_state_dir(self.project, 'common')
+            FileManager().make_dir(state_dir)
+        except Exception as err:
+            raise AzureNetworkError(f"can not create state dir: {err}")
+
         document = f"network:{self.cloud}"
         self.state = KeyValueStore(filename, document)
 
