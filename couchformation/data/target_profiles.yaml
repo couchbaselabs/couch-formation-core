@@ -115,10 +115,12 @@ capella:
       info: info
       compose: compose
   parameters:
+    - provider
     - region
     - cidr
     - machine_type
     - quantity
+    - services
     - volume_size
     - allow
     - username

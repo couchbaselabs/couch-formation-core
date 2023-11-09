@@ -74,7 +74,7 @@ class Project(object):
                 results = self._list_node(group, api)
                 return_list.extend(results)
             elif strategy.deployer == DeployMode.saas.value:
-                results = self._list_saas()
+                results = self._list_saas(group, api)
                 return_list.extend(results)
         return return_list
 
@@ -180,7 +180,12 @@ class Project(object):
         list(self.runner.join())
 
     def _destroy_saas(self, group):
-        pass
+        cloud = group[0].get('cloud')
+        profile = TargetProfile(self.remainder).get(cloud)
+        module = profile.node.driver
+        instance = profile.node.module
+        method = profile.node.destroy
+        self.runner.foreground(module, instance, method, group[0].as_dict)
 
     def _destroy_network(self, cloud):
         net = NodeGroup(self.options).get_network(cloud)
@@ -233,9 +238,25 @@ class Project(object):
 
         return return_list
 
-    @staticmethod
-    def _list_saas():
+    def _list_saas(self, group, api=False):
         return_list = []
+
+        cloud = group[0].get('cloud')
+        profile = TargetProfile(self.remainder).get(cloud)
+        module = profile.node.driver
+        instance = profile.node.module
+        method = profile.node.info
+
+        result = self.runner.foreground(module, instance, method, group[0].as_dict)
+        return_list.append(result)
+
+        if not api:
+            logger.info(f"ID: {result.get('instance_id')} "
+                        f"Name: {result.get('name')} "
+                        f"Cloud: {result.get('provider')} "
+                        f"Network CIDR: {result.get('cidr')} "
+                        f"Allow CIDR: {result.get('allow')}")
+
         return return_list
 
     @property

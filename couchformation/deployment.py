@@ -60,10 +60,16 @@ class NodeGroup(object):
         self.project = self.options.project
         self.name = self.options.name
         self.cloud = self.options.cloud
+        self.project_dir = get_project_dir(self.project)
 
-        filename = os.path.join(get_project_dir(self.project), f"{self.name}.db")
-        network = os.path.join(get_project_dir(self.project), C.NETWORK)
-        metadata = os.path.join(get_project_dir(self.project), C.METADATA)
+        try:
+            FileManager().make_dir(self.project_dir)
+        except Exception as err:
+            raise DeploymentError(f"can not create project dir: {err}")
+
+        filename = os.path.join(self.project_dir, f"{self.name}.db")
+        network = os.path.join(self.project_dir, C.NETWORK)
+        metadata = os.path.join(self.project_dir, C.METADATA)
         self.db = KeyValueStore(filename)
         self.net = KeyValueStore(network)
         self.meta = KeyValueStore(metadata)
