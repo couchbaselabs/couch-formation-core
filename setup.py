@@ -8,7 +8,7 @@ long_description = (this_directory / "README.md").read_text()
 setup(
     name='couchformation',
     version=couchformation.__version__,
-    packages=find_packages(),
+    packages=find_packages(exclude=['tests']),
     url='https://github.com/mminichino/couch-formation-core',
     license='Apache License 2.0',
     author='Michael Minichino',
@@ -61,7 +61,8 @@ setup(
         "overrides>=7.4.0",
         "bumpversion>=0.6.0",
         "PyYAML>=5.1",
-        "cbcmgr>=2.1.5"
+        "cbcmgr>=2.1.7",
+        "pyhostprep>=0.1.45"
     ],
     author_email='info@unix.us.com',
     description='Couchbase Cloud Automation',

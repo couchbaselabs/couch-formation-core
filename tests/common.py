@@ -117,7 +117,36 @@ def container_mkdir(container_id: Container, directory: str):
     assert exit_code == 0
 
 
-def start_container(image: str, platform: str = "linux/amd64", volume_mount: str = "/opt") -> Container:
+def expand_ranges(text):
+    range_list = []
+    for i in text.split(','):
+        if '-' not in i:
+            range_list.append(int(i))
+        else:
+            l, h = map(int, i.split('-'))
+            range_list += range(l, h+1)
+    return range_list
+
+
+def create_port_dict(port_list: List[int]):
+    result = {}
+    for port in port_list:
+        key = f"{port}/tcp"
+        result.update({key: port})
+    return result
+
+
+def start_container(image: str,
+                    name: str,
+                    volume_mount: Union[str, None] = None,
+                    dir_mount: Union[str, None] = None,
+                    platform: Union[str, None] = None,
+                    ports: Union[str, None] = None,
+                    command: Union[str, list, None] = None) -> Container:
+    if not platform:
+        platform = f"linux/{os.uname().machine}"
+    if not ports:
+        ports = "80,443"
     docker_api = APIClient(base_url='unix://var/run/docker.sock')
     client = docker.from_env()
     client.images.prune()
@@ -125,30 +154,36 @@ def start_container(image: str, platform: str = "linux/amd64", volume_mount: str
     client.networks.prune()
     client.volumes.prune()
     docker_api.prune_builds()
+    volume_map = None
+
+    port_struct = create_port_dict(expand_ranges(ports))
 
     print(f"Starting {image} container")
 
     try:
-        volume = client.volumes.create(name="pytest-volume", driver="local", driver_opts={"type": "tmpfs", "device": "tmpfs", "o": "size=2048m"})
+        if volume_mount and not dir_mount:
+            volume = client.volumes.create(name=f"{name}-vol", driver="local", driver_opts={"type": "tmpfs", "device": "tmpfs", "o": "size=2048m"})
+            volume_map = [f"{volume.name}:{volume_mount}"]
+        elif dir_mount:
+            if not volume_mount:
+                volume_mount = dir_mount
+            volume_map = [f"{dir_mount}:{volume_mount}"]
         container_id = client.containers.run(image,
                                              tty=True,
                                              detach=True,
-                                             privileged=True,
                                              platform=platform,
-                                             name="pytest",
-                                             ports={'8091/tcp': 8091},
-                                             security_opt=["seccomp=unconfined", "apparmor=unconfined"],
-                                             volumes=[f"{volume.name}:{volume_mount}"],
-                                             command=["/usr/sbin/init"]
+                                             name=name,
+                                             ports=port_struct,
+                                             volumes=volume_map,
+                                             command=command
                                              )
     except docker.errors.APIError as e:
         if e.status_code == 409:
-            container_id = client.containers.get('pytest')
+            container_id = client.containers.get(name)
         else:
             raise
 
     print("Container started")
-    print("Done.")
     return container_id
 
 
@@ -167,17 +202,17 @@ def container_log(container_id: Container, directory: str):
         out_file.close()
 
 
-def run_in_container(container_id: Container, directory: str, command: Union[str, List[str]]):
-    print(f"Running: {command if type(command) == str else ' '.join(command)}")
+def run_in_container(name: str, command: Union[str, List[str]], directory: Union[str, None] = None):
+    container_id = get_container_id(name)
+    print(f"Running: {command}")
     exit_code, output = container_id.exec_run(command, workdir=directory)
     for line in output.split(b'\n'):
         if len(line) > 0:
             print(line.decode("utf-8"))
     assert exit_code == 0
-    print("Done.")
 
 
-def get_container_id(name: str = "pytest"):
+def get_container_id(name: str) -> Union[Container, None]:
     client = docker.from_env()
     try:
         return client.containers.get(name)
@@ -185,15 +220,37 @@ def get_container_id(name: str = "pytest"):
         return None
 
 
-def stop_container(container_id: Container):
+def get_container_ip(name: str):
+    container_id = get_container_id(name)
+    try:
+        return container_id.attrs['NetworkSettings']['IPAddress']
+    except KeyError:
+        return None
+
+
+def get_container_binds(name: str):
+    binds = []
+    container_id = get_container_id(name)
+    mounts = container_id.attrs.get('Mounts', [])
+    for mount in mounts:
+        m_type = mount.get('Type')
+        if m_type == 'bind':
+            binds.append(mount.get('Source'))
+    return binds
+
+
+def stop_container(name: str):
+    container_id = get_container_id(name)
+    if not container_id:
+        return
     client = docker.from_env()
     print("Stopping container")
     container_id.stop()
     print("Removing test container")
     container_id.remove()
     try:
-        volume = client.volumes.get("pytest-volume")
-        volume._remove()
+        volume = client.volumes.get(f"{name}-vol")
+        volume.remove()
     except docker.errors.NotFound:
         pass
     print("Done.")
