@@ -59,16 +59,28 @@ class ProfileSet:
 
 @attr.s
 class BuildConfig:
-    name: str = attr.ib()
+    provisioner: str = attr.ib()
     root: bool = attr.ib()
     commands: List[str] = attr.ib()
 
 
 @attr.s
-class BuildSet:
-    profiles: List[BuildConfig] = attr.ib(default=[])
+class BuildConfigSequence:
+    name: str = attr.ib()
+    sequence: List[BuildConfig] = attr.ib(default=[])
 
-    def add(self, p: BuildConfig):
+    def add(self, b: BuildConfig):
+        self.sequence.append(b)
+
+    def get(self) -> List[BuildConfig]:
+        return self.sequence
+
+
+@attr.s
+class BuildSet:
+    profiles: List[BuildConfigSequence] = attr.ib(default=[])
+
+    def add(self, p: BuildConfigSequence):
         self.profiles.append(p)
 
     def get(self, name):
@@ -193,18 +205,21 @@ class BuildProfile(object):
         self.config = BuildSet()
         self.load_config()
 
-    def get(self, name) -> BuildConfig:
-        profile = self.config.get(name)
-        if not profile:
+    def get(self, name) -> BuildConfigSequence:
+        sequence = self.config.get(name)
+        if not sequence:
             raise ValueError(f"Build type {name} is not supported")
-        return profile
+        return sequence
 
     def load_config(self):
         with open(self.cfg_file, "r") as f:
             try:
                 for name, settings in yaml.safe_load(f).items():
-                    profile = BuildConfig(name, settings.get('root'), settings.get('commands'))
-                    self.config.add(profile)
+                    sequence = BuildConfigSequence(name, [])
+                    for element in settings:
+                        profile = BuildConfig(element.get('provisioner'), element.get('root'), element.get('commands'))
+                        sequence.add(profile)
+                    self.config.add(sequence)
             except yaml.YAMLError as err:
                 RuntimeError(f"Can not open node config file {self.cfg_file}: {err}")
 

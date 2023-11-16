@@ -17,3 +17,14 @@ remote:
     - private_ip_list
     - public_ip_list
     - use_private_ip
+docker:
+  driver: couchformation.provisioner.docker
+  module: ContainerExec
+  method: run
+  parameters:
+    - name
+    - service
+    - project
+    - private_ip
+    - services
+    - private_ip_list

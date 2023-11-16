@@ -135,32 +135,37 @@ class Project(object):
             private_connect_list = [d['private_ip'] for d in connect_list]
             result_list = [dict(item, connect=private_connect_list) for item in result_list]
 
-        provisioner = ProvisionerProfile().get(self.provisioner)
-        p_module = provisioner.driver
-        p_instance = provisioner.module
-        p_method = provisioner.method
+        default_seq = BuildProfile().get('default')
 
-        p_list = [provisioner.parameter_gen(result, group[0].as_dict) for result in result_list]
+        for build_config in default_seq.get():
+            provisioner = ProvisionerProfile().get(build_config.provisioner)
+            p_module = provisioner.driver
+            p_instance = provisioner.module
+            p_method = provisioner.method
+            p_list = [provisioner.parameter_gen(result, group[0].as_dict) for result in result_list]
+            for step, command in enumerate(build_config.commands):
+                for p_set in p_list:
+                    logger.info(f"Provisioning node {p_set.get('name')} - default step #{step + 1}")
+                    self.runner.dispatch(p_module, p_instance, p_method, p_set, command, build_config.root)
+                exit_codes = list(self.runner.join())
+                if any(n != 0 for n in exit_codes):
+                    raise ProjectError(f"Provisioning step failed")
 
-        default = BuildProfile().get('default')
+        build_seq = BuildProfile().get(group[0].get('build'))
 
-        for step, command in enumerate(default.commands):
-            for p_set in p_list:
-                logger.info(f"Provisioning node {p_set.get('name')} - default step #{step + 1}")
-                self.runner.dispatch(p_module, p_instance, p_method, p_set, command, default.root)
-            exit_codes = list(self.runner.join())
-            if any(n != 0 for n in exit_codes):
-                raise ProjectError(f"Provisioning step failed")
-
-        build = BuildProfile().get(group[0].get('build'))
-
-        for step, command in enumerate(build.commands):
-            for p_set in p_list:
-                logger.info(f"Provisioning node {p_set.get('name')} - build step #{step + 1}")
-                self.runner.dispatch(p_module, p_instance, p_method, p_set, command, build.root)
-            exit_codes = list(self.runner.join())
-            if any(n != 0 for n in exit_codes):
-                raise ProjectError(f"Provisioning step failed")
+        for build_config in build_seq.get():
+            provisioner = ProvisionerProfile().get(build_config.provisioner)
+            p_module = provisioner.driver
+            p_instance = provisioner.module
+            p_method = provisioner.method
+            p_list = [provisioner.parameter_gen(result, group[0].as_dict) for result in result_list]
+            for step, command in enumerate(build_config.commands):
+                for p_set in p_list:
+                    logger.info(f"Provisioning node {p_set.get('name')} - build step #{step + 1}")
+                    self.runner.dispatch(p_module, p_instance, p_method, p_set, command, build_config.root)
+                exit_codes = list(self.runner.join())
+                if any(n != 0 for n in exit_codes):
+                    raise ProjectError(f"Provisioning step failed")
 
     def _destroy_node(self, group):
         number = 0
