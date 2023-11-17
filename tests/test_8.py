@@ -47,7 +47,7 @@ class CustomFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-class TestMainAWS(unittest.TestCase):
+class TestMainDocker(unittest.TestCase):
 
     def setUp(self):
         warnings.filterwarnings("ignore")
@@ -89,7 +89,8 @@ class TestMainAWS(unittest.TestCase):
             cidr_util.add_network(net)
 
         net_name = f"{self.project}-net"
-        node_name = f"{self.project}-node-01"
+        cbs_node_name = f"{self.project}-node-01"
+        sgw_node_name = f"{self.project}-node-02"
 
         cidr_util.get_next_network()
         subnet_list = list(cidr_util.get_next_subnet())
@@ -98,4 +99,17 @@ class TestMainAWS(unittest.TestCase):
 
         net_id = Network(self.parameters).create(net_name, subnet_list[1])
 
-        container_id = Container(self.parameters).run(self.image, node_name, network=net_id.name)
+        print("Creating CBS container")
+        container_cbs = Container(self.parameters).run("couchbase/server", cbs_node_name, network=net_id.name)
+
+        print("Configuring CBS container")
+        run_cmd = 'curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | bash -s - -s -g https://github.com/mminichino/host-prep-lib'
+        exit_code, output = Container(self.parameters).run_in_container(cbs_node_name, run_cmd)
+        assert exit_code == 0
+
+        run_cmd = 'swmgr cluster create -n testdb'
+        exit_code, output = Container(self.parameters).run_in_container(cbs_node_name, run_cmd)
+        assert exit_code == 0
+
+        print("Creating SGW container")
+        container_sgw = Container(self.parameters).run("couchbase/sync-gateway", sgw_node_name, network=net_id.name)

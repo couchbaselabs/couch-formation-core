@@ -1,0 +1,14 @@
+---
+couchbase/server:
+  ports: 8091-8097,18091-18097,9102,11207,11210
+  volume:
+    type: local
+    directory: /opt/couchbase/var
+    size: 2048
+couchbase/sync-gateway:
+  ports: 4984-4986
+  volume:
+    type: command
+    directory: /tmp/config
+    run: "swmgr gateway configure -l {{ port_18091 }} -f sync_gateway.json -S /tmp/config"
+    command: /tmp/config/sync_gateway.json

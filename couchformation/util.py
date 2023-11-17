@@ -5,10 +5,12 @@ import os
 import logging
 import uuid
 import collections
+from typing import Union
 from uuid import UUID
 from shutil import copyfile
 from pwd import getpwnam
 from grp import getgrnam
+from pyhostprep.command import RunShellCommand
 from couchformation.exception import FatalError
 
 logger = logging.getLogger('couchformation.util')
@@ -62,6 +64,12 @@ class FileManager(object):
             os.chmod(name, mode)
         else:
             self.make_dir(name, owner, group, mode)
+
+    def dir_populate(self, path: str, command: Union[str, None] = None):
+        self.make_dir(path)
+        if command:
+            cmd = command.split()
+            RunShellCommand().cmd_exec(cmd, path)
 
     @staticmethod
     def copy_file(source: str, destination: str) -> None:

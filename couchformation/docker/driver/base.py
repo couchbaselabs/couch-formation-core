@@ -25,6 +25,7 @@ class CloudBase(object):
     def __init__(self, parameters: dict):
         self.parameters = parameters
         self.project = parameters.get('project')
+        self.name = parameters.get('name')
 
         self.client = docker.from_env()
         self.docker_api = APIClient(base_url='unix://var/run/docker.sock')

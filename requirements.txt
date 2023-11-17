@@ -39,4 +39,4 @@ overrides>=7.4.0
 bumpversion>=0.6.0
 PyYAML>=5.1
 cbcmgr>=2.1.7
-pyhostprep>=0.1.45
+pyhostprep>=0.1.50

@@ -62,7 +62,7 @@ setup(
         "bumpversion>=0.6.0",
         "PyYAML>=5.1",
         "cbcmgr>=2.1.7",
-        "pyhostprep>=0.1.45"
+        "pyhostprep>=0.1.50"
     ],
     author_email='info@unix.us.com',
     description='Couchbase Cloud Automation',
