@@ -3,7 +3,6 @@
 import sys
 import argparse
 import tempfile
-import shutil
 from common import start_container, stop_container, get_container_ip, run_in_container
 from pyhostprep.gateway import GatewayConfig, SyncGateway
 
