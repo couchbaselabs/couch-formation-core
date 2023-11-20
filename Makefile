@@ -41,18 +41,23 @@ test_azure_cli:
 		python -m pytest tests/test_6.py
 test_capella_cli:
 		python -m pytest tests/test_7.py
-test_docker_cli:
+test_docker_drv:
 		python -m pytest tests/test_8.py
+test_docker_cli:
+		python -m pytest tests/test_9.py
 test_drv:
-		python -m pytest tests/test_1.py tests/test_2.py tests/test_3.py
+		python -m pytest tests/test_1.py tests/test_2.py tests/test_3.py tests/test_8.py
 test_cli:
-		python -m pytest tests/test_4.py tests/test_5.py tests/test_6.py tests/test_7.py
+		python -m pytest tests/test_4.py tests/test_5.py tests/test_6.py tests/test_7.py pytest tests/test_9.py
 test:
-		python -m pytest tests/test_1.py \
+		python -m pytest \
+		tests/test_1.py \
 		tests/test_2.py \
 		tests/test_3.py \
 		tests/test_4.py \
 		tests/test_5.py \
 		tests/test_6.py \
 		tests/test_7.py \
+		tests/test_8.py \
+		tests/test_9.py \
 		tests/test_kvdb.py

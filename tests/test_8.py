@@ -4,7 +4,7 @@ import os
 import sys
 import logging
 import warnings
-import unittest
+import pytest
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger()
@@ -46,11 +46,16 @@ class CustomFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-class TestMainDocker(unittest.TestCase):
+@pytest.mark.serial
+class TestMainDocker(object):
+    parameters = {}
+    project = None
+    image = None
 
-    def setUp(self):
+    @classmethod
+    def setup_class(cls):
         warnings.filterwarnings("ignore")
-        self.parameters = {
+        cls.parameters = {
               "debug": 0,
               "verbose": 0,
               "command": "create",
@@ -72,11 +77,8 @@ class TestMainDocker(unittest.TestCase):
               "volume_iops": None,
               "volume_size": None
             }
-        self.project = self.parameters.get('project')
-        self.image = self.parameters.get('image')
-
-    def tearDown(self):
-        pass
+        cls.project = cls.parameters.get('project')
+        cls.image = cls.parameters.get('image')
 
     def test_1(self):
         cidr_util = NetworkDriver()
