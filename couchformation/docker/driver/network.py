@@ -54,6 +54,8 @@ class Network(CloudBase):
         return next((n for n in self.client.networks.list() if n.name == name), None)
 
     def create(self, name: str, cidr: str) -> NetworkClass:
+        if self.get_network(name):
+            return self.get_network(name)
         try:
             net = ipaddress.IPv4Network(cidr)
             ipam_pool = IPAMPool(

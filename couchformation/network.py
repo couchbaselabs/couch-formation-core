@@ -1,6 +1,7 @@
 ##
 ##
 
+import socket
 import ipaddress
 from ipaddress import IPv4Network
 import logging
@@ -47,3 +48,18 @@ class NetworkDriver(object):
         self.active_network = candidates[0]
         self.ip_space.append(self.active_network)
         return self.active_network.exploded
+
+
+class NetworkUtil(object):
+
+    @staticmethod
+    def local_ip_address():
+        try:
+            socket.setdefaulttimeout(2)
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+            s.close()
+            return local_ip
+        except TimeoutError:
+            return None

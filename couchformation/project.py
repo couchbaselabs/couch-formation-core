@@ -5,7 +5,7 @@ import logging
 from couchformation.exception import FatalError
 from couchformation.config import get_project_dir
 from couchformation.deployment import NodeGroup
-from couchformation.executor.targets import TargetProfile, ProvisionerProfile, BuildProfile, DeployStrategy, DeployMode
+from couchformation.executor.targets import TargetProfile, ProvisionerProfile, BuildProfile, DeployStrategy, DeployMode, CloudConfig
 from couchformation.executor.dispatch import JobDispatch
 
 logger = logging.getLogger('couchformation.exec.process')
@@ -112,7 +112,8 @@ class Project(object):
             module = profile.node.driver
             instance = profile.node.module
             method = profile.node.deploy
-            for n in range(int(db['quantity'])):
+            quantity = db['quantity'] if db['quantity'] else 1
+            for n in range(int(quantity)):
                 number += 1
                 logger.info(f"Deploying service {db.get('name')} node group {db.get('group')} node {number}")
                 parameters = db.as_dict
@@ -135,9 +136,10 @@ class Project(object):
             private_connect_list = [d['private_ip'] for d in connect_list]
             result_list = [dict(item, connect=private_connect_list) for item in result_list]
 
+        cloud_config = CloudConfig().get(group[0].get('cloud'))
         default_seq = BuildProfile().get('default')
 
-        for build_config in default_seq.get():
+        for build_config in default_seq.get(cloud_config.provisioner):
             provisioner = ProvisionerProfile().get(build_config.provisioner)
             p_module = provisioner.driver
             p_instance = provisioner.module
@@ -153,7 +155,7 @@ class Project(object):
 
         build_seq = BuildProfile().get(group[0].get('build'))
 
-        for build_config in build_seq.get():
+        for build_config in build_seq.get(cloud_config.provisioner):
             provisioner = ProvisionerProfile().get(build_config.provisioner)
             p_module = provisioner.driver
             p_instance = provisioner.module
@@ -176,7 +178,8 @@ class Project(object):
             instance = profile.node.module
             method = profile.node.destroy
             self.runner.foreground(profile.base.driver, profile.base.module, profile.base.test, db.as_dict)
-            for n in range(int(db['quantity'])):
+            quantity = db['quantity'] if db['quantity'] else 1
+            for n in range(int(quantity)):
                 number += 1
                 logger.info(f"Removing service {db.get('name')} node group {db.get('group')} node {number}")
                 parameters = db.as_dict
@@ -219,7 +222,8 @@ class Project(object):
             module = profile.node.driver
             instance = profile.node.module
             method = profile.node.info
-            for n in range(int(db['quantity'])):
+            quantity = db['quantity'] if db['quantity'] else 1
+            for n in range(int(quantity)):
                 number += 1
                 parameters = db.as_dict
                 parameters['number'] = number

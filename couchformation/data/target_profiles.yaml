@@ -125,3 +125,32 @@ capella:
     - allow
     - username
     - password
+docker:
+  base:
+    couchformation.docker.driver.base:
+      module: CloudBase
+      test: test_session
+  network:
+    couchformation.docker.network:
+      module: DockerNetwork
+      deploy: create_vpc
+      destroy: destroy_vpc
+      info: info
+      compose: null
+  node:
+    couchformation.docker.node:
+      module: DockerDeployment
+      deploy: deploy
+      destroy: destroy
+      info: info
+      compose: null
+  parameters:
+    - cidr
+    - image
+    - quantity
+    - services
+    - volume_size
+    - dir_mount
+    - ports
+    - username
+    - password

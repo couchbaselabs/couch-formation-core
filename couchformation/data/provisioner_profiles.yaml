@@ -25,6 +25,8 @@ docker:
     - name
     - service
     - project
+    - public_ip
     - private_ip
     - services
     - private_ip_list
+    - use_private_ip

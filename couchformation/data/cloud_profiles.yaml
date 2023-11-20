@@ -1,0 +1,11 @@
+---
+aws:
+  provisioner: remote
+gcp:
+  provisioner: remote
+azure:
+  provisioner: remote
+docker:
+  provisioner: docker
+capella:
+  provisioner: null

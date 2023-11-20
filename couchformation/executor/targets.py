@@ -72,8 +72,8 @@ class BuildConfigSequence:
     def add(self, b: BuildConfig):
         self.sequence.append(b)
 
-    def get(self) -> List[BuildConfig]:
-        return self.sequence
+    def get(self, provisioner) -> List[BuildConfig]:
+        return list(s for s in self.sequence if s.provisioner == provisioner)
 
 
 @attr.s
@@ -127,7 +127,6 @@ class ProvisionerSet:
 class Strategy:
     name: str = attr.ib()
     deployer: str = attr.ib()
-    provisioner: str = attr.ib()
 
 
 @attr.s
@@ -139,6 +138,24 @@ class StrategySet:
 
     def get(self, name):
         return next((p for p in self.strategies if p.name == name), None)
+
+
+##
+@attr.s
+class CloudType:
+    cloud: str = attr.ib()
+    provisioner: str = attr.ib()
+
+
+@attr.s
+class CloudTypeSet:
+    clouds: List[CloudType] = attr.ib(default=[])
+
+    def add(self, c: CloudType):
+        self.clouds.append(c)
+
+    def get(self, name):
+        return next((c for c in self.clouds if c.cloud == name), None)
 
 
 class TargetProfile(object):
@@ -281,5 +298,32 @@ class DeployStrategy(object):
     @staticmethod
     def construct_strategy(name, settings):
         deployer = settings.get('deployer')
+        return name, deployer
+
+
+class CloudConfig(object):
+
+    def __init__(self):
+        self.cfg_file = C.CLOUD_PROFILES
+        self.config = CloudTypeSet()
+        self.load_config()
+
+    def get(self, name) -> CloudType:
+        cloud = self.config.get(name)
+        if not cloud:
+            raise ValueError(f"Cloud type {name} is not supported")
+        return cloud
+
+    def load_config(self):
+        with open(self.cfg_file, "r") as f:
+            try:
+                for name, settings in yaml.safe_load(f).items():
+                    cloud = CloudType(*self.construct_strategy(name, settings))
+                    self.config.add(cloud)
+            except yaml.YAMLError as err:
+                RuntimeError(f"Can not open strategy config file {self.cfg_file}: {err}")
+
+    @staticmethod
+    def construct_strategy(name, settings):
         provisioner = settings.get('provisioner')
-        return name, deployer, provisioner
+        return name, provisioner

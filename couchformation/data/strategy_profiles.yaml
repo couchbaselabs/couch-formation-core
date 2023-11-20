@@ -1,13 +1,11 @@
 ---
 cbs:
   deployer: node
-  provisioner: remote
 sgw:
   deployer: node
-  provisioner: remote
 generic:
   deployer: node
-  provisioner: remote
+container:
+  deployer: node
 capella:
   deployer: saas
-  provisioner: null

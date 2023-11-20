@@ -14,7 +14,6 @@ sys.path.append(parent)
 sys.path.append(current)
 
 from couchformation.network import NetworkDriver
-from couchformation.docker.driver.base import CloudBase
 from couchformation.docker.driver.network import Network
 from couchformation.docker.driver.container import Container
 
@@ -81,7 +80,6 @@ class TestMainDocker(unittest.TestCase):
 
     def test_1(self):
         cidr_util = NetworkDriver()
-        base = CloudBase(self.parameters)
 
         Network(self.parameters).list()
 
@@ -100,7 +98,7 @@ class TestMainDocker(unittest.TestCase):
         net_id = Network(self.parameters).create(net_name, subnet_list[1])
 
         print("Creating CBS container")
-        container_cbs = Container(self.parameters).run("couchbase/server", cbs_node_name, network=net_id.name)
+        Container(self.parameters).run("cbs", cbs_node_name, network=net_id.name)
 
         print("Configuring CBS container")
         run_cmd = 'curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | bash -s - -s -g https://github.com/mminichino/host-prep-lib'
@@ -112,4 +110,11 @@ class TestMainDocker(unittest.TestCase):
         assert exit_code == 0
 
         print("Creating SGW container")
-        container_sgw = Container(self.parameters).run("couchbase/sync-gateway", sgw_node_name, network=net_id.name)
+        Container(self.parameters).run("sgw", sgw_node_name, network=net_id.name)
+
+        print("Removing containers")
+        Container(self.parameters).terminate(sgw_node_name)
+        Container(self.parameters).terminate(cbs_node_name)
+
+        print("Removing network")
+        Network(self.parameters).delete(net_name)

@@ -12,10 +12,11 @@ from docker.models.containers import Container as ContainerClass
 from typing import Union, List, Set
 from couchformation.docker.driver.base import CloudBase, DockerDriverError
 from couchformation.docker.util import ContainerProfile, ContainerSpec
+from couchformation.docker.driver.constants import ContainerBuildMap
 from couchformation.util import FileManager
 from couchformation.config import get_project_dir
 
-logger = logging.getLogger('couchformation.docker.driver.network')
+logger = logging.getLogger('couchformation.docker.driver.container')
 logger.addHandler(logging.NullHandler())
 logging.getLogger("docker").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
@@ -79,6 +80,8 @@ class Container(CloudBase):
             ports: Union[str, None] = None,
             network: Union[str, None] = None,
             command: Union[str, list, None] = None) -> ContainerClass:
+        if self.map(image):
+            image = self.map(image)
         cp = ContainerProfile()
         ip = cp.get(image)
         volume_map = None
@@ -131,8 +134,12 @@ class Container(CloudBase):
             else:
                 raise
 
-        print("Container started")
+        logger.debug("Container started")
         return container_id
+
+    @staticmethod
+    def map(name: str):
+        return ContainerBuildMap().image(name)
 
     @staticmethod
     def get_container_id(name: str) -> Union[ContainerClass, None]:
