@@ -225,7 +225,7 @@ class BuildProfile(object):
     def get(self, name) -> BuildConfigSequence:
         sequence = self.config.get(name)
         if not sequence:
-            raise ValueError(f"Build type {name} is not supported")
+            return BuildConfigSequence(name, [])
         return sequence
 
     def load_config(self):
