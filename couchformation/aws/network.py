@@ -1,6 +1,7 @@
 ##
 ##
 
+import os
 import logging
 from itertools import cycle
 from couchformation.network import NetworkDriver
@@ -36,11 +37,12 @@ class AWSNetwork(object):
         self.ssh_key = parameters.get('ssh_key')
         self.cloud = parameters.get('cloud')
 
-        filename = get_state_file(self.project, 'common')
+        filename = get_state_file(self.project, f"network-{self.region}")
 
         try:
-            state_dir = get_state_dir(self.project, 'common')
-            FileManager().make_dir(state_dir)
+            state_dir = get_state_dir(self.project, f"network-{self.region}")
+            if not os.path.exists(state_dir):
+                FileManager().make_dir(state_dir)
         except Exception as err:
             raise AWSNetworkError(f"can not create state dir: {err}")
 

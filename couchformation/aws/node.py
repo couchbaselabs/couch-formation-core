@@ -1,6 +1,6 @@
 ##
 ##
-
+import os.path
 import re
 import logging
 import time
@@ -9,6 +9,7 @@ from couchformation.aws.driver.image import Image
 from couchformation.aws.driver.machine import MachineType
 from couchformation.aws.driver.instance import Instance
 from couchformation.aws.driver.base import CloudBase
+from couchformation.aws.driver.constants import aws_storage_matrix
 from couchformation.aws.network import AWSNetwork
 from couchformation.config import get_state_file, get_state_dir
 from couchformation.exception import FatalError
@@ -38,8 +39,9 @@ class AWSDeployment(object):
         self.cloud = parameters.get('cloud')
         self.number = parameters.get('number')
         self.machine_type = parameters.get('machine_type')
-        self.volume_iops = parameters.get('volume_iops') if parameters.get('volume_iops') else "3000"
         self.volume_size = parameters.get('volume_size') if parameters.get('volume_size') else "256"
+        self.volume_iops = parameters.get('volume_iops') if parameters.get('volume_iops') \
+            else next((aws_storage_matrix[s] for s in aws_storage_matrix if s >= int(self.volume_size)), "3000")
         self.services = parameters.get('services') if parameters.get('services') else "default"
         self.node_name = f"{self.name}-node-{self.number:02d}"
 
@@ -47,7 +49,8 @@ class AWSDeployment(object):
 
         try:
             state_dir = get_state_dir(self.project, self.name)
-            FileManager().make_dir(state_dir)
+            if not os.path.exists(state_dir):
+                FileManager().make_dir(state_dir)
         except Exception as err:
             raise AWSNodeError(f"can not create state dir: {err}")
 

@@ -42,8 +42,9 @@ class Project(object):
         for group in NodeGroup(self.options).get_node_groups():
             strategy = self.strategy.get(group[0].get('build'))
             cloud = group[0].get('cloud')
+            region = group[0].get('region')
             if strategy.deployer == DeployMode.node.value:
-                self._deploy_network(cloud)
+                self._deploy_network(cloud, region)
                 self._deploy_node(group)
             elif strategy.deployer == DeployMode.saas.value:
                 self._deploy_saas(group)
@@ -56,9 +57,10 @@ class Project(object):
                 continue
             strategy = self.strategy.get(group[0].get('build'))
             cloud = group[0].get('cloud')
+            region = group[0].get('region')
             if strategy.deployer == DeployMode.node.value:
                 self._destroy_node(group)
-                self._destroy_network(cloud)
+                self._destroy_network(cloud, region)
             elif strategy.deployer == DeployMode.saas.value:
                 self._destroy_saas(group)
 
@@ -83,8 +85,8 @@ class Project(object):
         profile = TargetProfile(self.remainder).get(cloud)
         self.runner.foreground(profile.base.driver, profile.base.module, profile.base.test, group[0].as_dict)
 
-    def _deploy_network(self, cloud):
-        net = NodeGroup(self.options).get_network(cloud)
+    def _deploy_network(self, cloud, region):
+        net = NodeGroup(self.options).get_network(cloud, region)
         profile = TargetProfile(self.remainder).get(cloud)
         module = profile.network.driver
         instance = profile.network.module
@@ -195,8 +197,8 @@ class Project(object):
         method = profile.node.destroy
         self.runner.foreground(module, instance, method, group[0].as_dict)
 
-    def _destroy_network(self, cloud):
-        net = NodeGroup(self.options).get_network(cloud)
+    def _destroy_network(self, cloud, region):
+        net = NodeGroup(self.options).get_network(cloud, region)
         profile = TargetProfile(self.remainder).get(cloud)
         module = profile.network.driver
         instance = profile.network.module

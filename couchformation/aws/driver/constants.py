@@ -6,6 +6,20 @@ from typing import Iterable
 
 CLOUD_KEY = "aws"
 
+aws_storage_matrix = {
+    99: "3000",
+    199: "5000",
+    299: "6000",
+    399: "8000",
+    499: "9000",
+    599: "10000",
+    699: "12000",
+    799: "13000",
+    899: "14000",
+    999: "16000",
+    16384: "16000"
+}
+
 
 @attr.s
 class AWSTag(object):

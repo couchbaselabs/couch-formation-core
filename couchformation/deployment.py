@@ -74,8 +74,8 @@ class NodeGroup(object):
         self.net = KeyValueStore(network)
         self.meta = KeyValueStore(metadata)
 
-    def create_network(self, parameters: argparse.Namespace, group=1):
-        document = f"network:{self.cloud}"
+    def create_network(self, parameters: argparse.Namespace, region, group=1):
+        document = f"network:{self.cloud}:{region}"
 
         opt_dict = vars(self.options)
         parm_dict = vars(parameters)
@@ -90,6 +90,7 @@ class NodeGroup(object):
 
     def create_node_group(self, parameters: argparse.Namespace, group=1):
         document = f"{self.name}:{group:04d}"
+        region = parameters.region
 
         opt_dict = vars(self.options)
         parm_dict = vars(parameters)
@@ -102,7 +103,7 @@ class NodeGroup(object):
         self.db.update(combined)
         self.meta[self.name] = self.cloud
 
-        self.create_network(parameters, group)
+        self.create_network(parameters, region, group)
 
     def add_to_node_group(self, parameters: argparse.Namespace):
         count = len(self.db.doc_id_startswith(self.name))
@@ -134,9 +135,9 @@ class NodeGroup(object):
         doc_list = self.net.doc_id_startswith('network')
         return [KeyValueStore(self.net.file_name, doc) for doc in doc_list]
 
-    def get_network(self, cloud):
+    def get_network(self, cloud, region):
         doc_list = self.net.doc_id_startswith('network')
-        return next((KeyValueStore(self.net.file_name, doc) for doc in doc_list if doc.endswith(cloud)), None)
+        return next((KeyValueStore(self.net.file_name, doc) for doc in doc_list if doc.endswith(f"{cloud}:{region}")), None)
 
 
 class Deployment(object):
