@@ -24,7 +24,7 @@ class CloudMgrCLI(CLI):
         opt_parser.add_argument('-b', '--build', action='store', help="Build Type", default="cbs")
         opt_parser.add_argument('-c', '--cloud', action='store', help="Infrastructure", default="aws")
         opt_parser.add_argument('-p', '--project', action='store', help="Project Name", default="resources")
-        opt_parser.add_argument('-n', '--name', action='store', help="Deployment Name", default="nodes")
+        opt_parser.add_argument('-n', '--name', action='store', help="Deployment Name")
         opt_parser.add_argument('-x', '--connect', action='store', help="Connection Name", default=None)
         opt_parser.add_argument('-g', '--group', action='store', help="Group Number", default=1, type=int)
         opt_parser.add_argument('-P', '--provisioner', action='store', help="Provisioner Name", default="remote")
@@ -47,9 +47,9 @@ class CloudMgrCLI(CLI):
         elif self.options.command == "add":
             project.add()
         elif self.options.command == "deploy":
-            project.deploy()
+            project.deploy(self.options.name)
         elif self.options.command == "destroy":
-            project.destroy()
+            project.destroy(self.options.name)
         elif self.options.command == "remove":
             project.remove()
         elif self.options.command == "list":

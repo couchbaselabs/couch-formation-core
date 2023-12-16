@@ -36,10 +36,12 @@ class Project(object):
         profile = TargetProfile(self.remainder).get(self.cloud)
         NodeGroup(self.options).add_to_node_group(profile.options)
 
-    def deploy(self):
+    def deploy(self, service=None):
         for group in NodeGroup(self.options).get_node_groups():
             self._test_cloud(group)
         for group in NodeGroup(self.options).get_node_groups():
+            if service and group[0].get('name') != service:
+                continue
             strategy = self.strategy.get(group[0].get('build'))
             cloud = group[0].get('cloud')
             region = group[0].get('region')
