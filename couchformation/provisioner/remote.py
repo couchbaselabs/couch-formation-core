@@ -160,6 +160,7 @@ class RemoteProvisioner(object):
         env = jinja2.Environment(undefined=jinja2.DebugUndefined)
         raw_template = env.from_string(line)
         formatted_value = raw_template.render(
+            SERVICE_NAME=self.service,
             PRIVATE_IP_LIST=self.private_ip_list,
             NODE_ZONE=self.zone,
             SERVICES=self.services,

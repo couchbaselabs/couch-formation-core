@@ -80,7 +80,7 @@ class CapellaDeployment(object):
             logger.info(f"Database {self.db_name} already exists")
             cluster_id = self.state['instance_id']
         else:
-            logger.info("Creating cluster")
+            logger.info(f"Creating cluster {self.name}")
             cluster_id = Capella(project_id=self.project_id).create_cluster(cluster)
             self.state['instance_id'] = cluster_id
             self.state['provider'] = self.provider

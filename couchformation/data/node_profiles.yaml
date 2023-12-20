@@ -14,13 +14,13 @@ cbs:
     root: true
     commands:
       - bundlemgr -b CBS
-      - swmgr cluster create -n testdb -s {{ SERVICES }} -g {{ NODE_ZONE }} -D /cbdata -l {{ PRIVATE_IP_LIST }}
+      - swmgr cluster create -n {{ SERVICE_NAME }} -s {{ SERVICES }} -g {{ NODE_ZONE }} -D /cbdata -l {{ PRIVATE_IP_LIST }}
       - swmgr cluster rebalance -l {{ PRIVATE_IP_LIST }}
   - provisioner: docker
     root: true
     commands:
       - curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | bash -s - -s -g https://github.com/mminichino/host-prep-lib
-      - swmgr cluster create -n testdb -s {{ SERVICES }}
+      - swmgr cluster create -n {{ SERVICE_NAME }} -s {{ SERVICES }}
 sgw:
   - provisioner: remote
     root: true
