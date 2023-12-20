@@ -22,10 +22,15 @@ class CloudBase(object):
         self.cm = Capella()
         try:
             self.capella_project = self.cm.get_project(self.project)
+            self.capella_project_id = self.capella_project.get('id')
+        except AttributeError:
+            try:
+                self.capella_project_id = self.cm.create_project(self.project)
+                logger.info(f"Created Capella project {self.project}")
+            except Exception as err:
+                raise CapellaDriverError(f"can not create Capella project {self.project}: {err}")
         except Exception as err:
             raise CapellaDriverError(f"can not get Capella project ID: {err}")
-        else:
-            self.capella_project_id = self.capella_project.get('id')
 
     def test_session(self):
         try:
