@@ -35,6 +35,7 @@ class CloudMgrCLI(CLI):
         command_subparser.add_parser('deploy', help="Deploy Project", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('destroy', help="Destroy Services", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('remove', help="Remove Services", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('clean', help="Clean Project", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('list', help="Display Information", parents=[opt_parser], add_help=False)
 
     def run(self):
@@ -52,6 +53,8 @@ class CloudMgrCLI(CLI):
             project.destroy(self.options.name)
         elif self.options.command == "remove":
             project.remove()
+        elif self.options.command == "clean":
+            project.clean()
         elif self.options.command == "list":
             project.list()
 

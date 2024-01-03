@@ -29,6 +29,8 @@ class DBDumpCLI(CLI):
                 else:
                     print(f"Document: {doc.document_id}")
                     for key, value in doc.items():
+                        if not key:
+                            key = ""
                         print(f"{key:<12} = {value}")
 
 

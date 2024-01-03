@@ -1,6 +1,7 @@
 ##
 ##
 
+import logging
 import attr
 import os
 import json
@@ -14,6 +15,8 @@ from couchformation.util import FileManager, dict_merge
 from couchformation.kvdb import KeyValueStore
 
 DEPLOYMENT = "deployment.db"
+logger = logging.getLogger('couchformation.deployment')
+logger.addHandler(logging.NullHandler())
 
 
 class DeploymentError(FatalError):
@@ -92,6 +95,9 @@ class NodeGroup(object):
         document = f"{self.name}:{group:04d}"
         region = parameters.region
 
+        if not self.name:
+            raise DeploymentError(f"name is required")
+
         opt_dict = vars(self.options)
         parm_dict = vars(parameters)
         combined = dict_merge(opt_dict, parm_dict)
@@ -114,6 +120,8 @@ class NodeGroup(object):
     def get_node_groups(self) -> List[KeyValueStore]:
         self.meta.document('resources')
         for resource in self.meta.keys():
+            if not resource:
+                continue
             filename = os.path.join(get_project_dir(self.project), f"{resource}.db")
             db = KeyValueStore(filename)
             doc_list = db.doc_id_startswith(resource)
@@ -124,12 +132,30 @@ class NodeGroup(object):
         for resource in self.meta.keys():
             if name and resource != name:
                 continue
+            if not resource:
+                continue
             filename = os.path.join(get_project_dir(self.project), f"{resource}.db")
             db = KeyValueStore(filename)
             doc_list = db.doc_id_startswith(resource)
             for doc in doc_list:
                 db.remove(doc)
             del self.meta[resource]
+
+    def clean_node_groups(self, name=None):
+        self.meta.document('resources')
+        for resource in self.meta.keys():
+            if name and resource != name:
+                continue
+            filename = os.path.join(get_project_dir(self.project), f"{resource}.db")
+            logger.info(f"Removing {resource} database")
+            os.remove(filename)
+
+    def clean_base(self):
+        logger.info("Removing project core databases")
+        network = os.path.join(self.project_dir, C.NETWORK)
+        os.remove(network)
+        metadata = os.path.join(self.project_dir, C.METADATA)
+        os.remove(metadata)
 
     def get_networks(self) -> List[KeyValueStore]:
         doc_list = self.net.doc_id_startswith('network')

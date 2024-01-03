@@ -23,7 +23,6 @@ class Project(object):
         self.remainder = remainder
         self.cloud = self.options.cloud
         self.provisioner = self.options.provisioner
-        self.runner = JobDispatch()
         self.strategy = DeployStrategy()
 
     def create(self):
@@ -83,19 +82,22 @@ class Project(object):
         return return_list
 
     def _test_cloud(self, group):
+        runner = JobDispatch()
         cloud = group[0].get('cloud')
         profile = TargetProfile(self.remainder).get(cloud)
-        self.runner.foreground(profile.base.driver, profile.base.module, profile.base.test, group[0].as_dict)
+        runner.foreground(profile.base.driver, profile.base.module, profile.base.test, group[0].as_dict)
 
     def _deploy_network(self, cloud, region):
+        runner = JobDispatch()
         net = NodeGroup(self.options).get_network(cloud, region)
         profile = TargetProfile(self.remainder).get(cloud)
         module = profile.network.driver
         instance = profile.network.module
         method = profile.network.deploy
-        self.runner.foreground(module, instance, method, net.as_dict)
+        runner.foreground(module, instance, method, net.as_dict)
 
     def _deploy_saas(self, group):
+        runner = JobDispatch()
         cloud = group[0].get('cloud')
         profile = TargetProfile(self.remainder).get(cloud)
         module = profile.node.driver
@@ -105,11 +107,13 @@ class Project(object):
         for n, db in enumerate(group):
             parameters = db.as_dict
             parameters['number'] = n + 1
-            self.runner.foreground(module, instance, compose, parameters)
-        self.runner.foreground(module, instance, deploy, group[0].as_dict)
+            runner.foreground(module, instance, compose, parameters)
+        runner.foreground(module, instance, deploy, group[0].as_dict)
 
     def _deploy_node(self, group):
         number = 0
+        runner = JobDispatch()
+
         for db in group:
             cloud = db.get('cloud')
             profile = TargetProfile(self.remainder).get(cloud)
@@ -122,8 +126,8 @@ class Project(object):
                 logger.info(f"Deploying service {db.get('name')} node group {db.get('group')} node {number}")
                 parameters = db.as_dict
                 parameters['number'] = number
-                self.runner.dispatch(module, instance, method, parameters)
-        result_list = list(self.runner.join())
+                runner.dispatch(module, instance, method, parameters)
+        result_list = list(runner.join())
         if len(result_list) != number:
             raise ProjectError(f"Partial deployment: deployed {len(result_list)} expected {number}")
         result_list = sorted(result_list, key=lambda d: d['name'])
@@ -152,8 +156,8 @@ class Project(object):
             for step, command in enumerate(build_config.commands):
                 for p_set in p_list:
                     logger.info(f"Provisioning node {p_set.get('name')} - default step #{step + 1}")
-                    self.runner.dispatch(p_module, p_instance, p_method, p_set, command, build_config.root)
-                exit_codes = list(self.runner.join())
+                    runner.dispatch(p_module, p_instance, p_method, p_set, command, build_config.root)
+                exit_codes = list(runner.join())
                 if any(n != 0 for n in exit_codes):
                     raise ProjectError(f"Provisioning step failed")
 
@@ -168,44 +172,48 @@ class Project(object):
             for step, command in enumerate(build_config.commands):
                 for p_set in p_list:
                     logger.info(f"Provisioning node {p_set.get('name')} - build step #{step + 1}")
-                    self.runner.dispatch(p_module, p_instance, p_method, p_set, command, build_config.root)
-                exit_codes = list(self.runner.join())
+                    runner.dispatch(p_module, p_instance, p_method, p_set, command, build_config.root)
+                exit_codes = list(runner.join())
                 if any(n != 0 for n in exit_codes):
                     raise ProjectError(f"Provisioning step failed")
 
     def _destroy_node(self, group):
         number = 0
+        runner = JobDispatch()
+
         for db in group:
             cloud = db.get('cloud')
             profile = TargetProfile(self.remainder).get(cloud)
             module = profile.node.driver
             instance = profile.node.module
             method = profile.node.destroy
-            self.runner.foreground(profile.base.driver, profile.base.module, profile.base.test, db.as_dict)
+            runner.foreground(profile.base.driver, profile.base.module, profile.base.test, db.as_dict)
             quantity = db['quantity'] if db['quantity'] else 1
             for n in range(int(quantity)):
                 number += 1
                 logger.info(f"Removing service {db.get('name')} node group {db.get('group')} node {number}")
                 parameters = db.as_dict
                 parameters['number'] = number
-                self.runner.dispatch(module, instance, method, parameters)
-        list(self.runner.join())
+                runner.dispatch(module, instance, method, parameters)
+        list(runner.join())
 
     def _destroy_saas(self, group):
+        runner = JobDispatch()
         cloud = group[0].get('cloud')
         profile = TargetProfile(self.remainder).get(cloud)
         module = profile.node.driver
         instance = profile.node.module
         method = profile.node.destroy
-        self.runner.foreground(module, instance, method, group[0].as_dict)
+        runner.foreground(module, instance, method, group[0].as_dict)
 
     def _destroy_network(self, cloud, region):
+        runner = JobDispatch()
         net = NodeGroup(self.options).get_network(cloud, region)
         profile = TargetProfile(self.remainder).get(cloud)
         module = profile.network.driver
         instance = profile.network.module
         method = profile.network.destroy
-        self.runner.dispatch(module, instance, method, net.as_dict)
+        runner.dispatch(module, instance, method, net.as_dict)
 
     def remove(self):
         if self.options.name:
@@ -216,9 +224,16 @@ class Project(object):
         self.destroy(service=service)
         NodeGroup(self.options).remove_node_groups(service)
 
+    def clean(self):
+        logger.info("Cleaning project")
+        self.destroy()
+        NodeGroup(self.options).clean_node_groups()
+        NodeGroup(self.options).clean_base()
+
     def _list_node(self, group, api=False):
         return_list = []
         number = 0
+        runner = JobDispatch()
 
         for db in group:
             cloud = db.get('cloud')
@@ -231,8 +246,8 @@ class Project(object):
                 number += 1
                 parameters = db.as_dict
                 parameters['number'] = number
-                self.runner.dispatch(module, instance, method, parameters)
-        result_list = list(self.runner.join())
+                runner.dispatch(module, instance, method, parameters)
+        result_list = list(runner.join())
 
         if any(d.get('name') is None for d in result_list):
             return return_list
@@ -253,6 +268,7 @@ class Project(object):
 
     def _list_saas(self, group, api=False):
         return_list = []
+        runner = JobDispatch()
 
         cloud = group[0].get('cloud')
         profile = TargetProfile(self.remainder).get(cloud)
@@ -260,7 +276,7 @@ class Project(object):
         instance = profile.node.module
         method = profile.node.info
 
-        result = self.runner.foreground(module, instance, method, group[0].as_dict)
+        result = runner.foreground(module, instance, method, group[0].as_dict)
         return_list.append(result)
 
         if not api:
