@@ -228,6 +228,14 @@ class AWSImageOwners(object):
             "pattern": r"Rocky-?-EC2-?.?-*.0*",
             "version": r"Rocky-(.+?)-EC2-[0-9].[0-9]-[0-9]*.0.*"
         },
+        {
+            "owner_id": "801119661308",
+            "description": "Windows",
+            "os_id": "windows",
+            "user": "Administrator",
+            "pattern": r"Windows_Server-*-English-Full-Base-*.*.*",
+            "version": r"Windows_Server-(.+?)-English-Full-Base-[0-9]*.[0-9]*.[0-9]*"
+        },
     ]
 
 

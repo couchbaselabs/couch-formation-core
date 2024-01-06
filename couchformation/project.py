@@ -148,6 +148,8 @@ class Project(object):
         default_seq = BuildProfile().get('default')
 
         for build_config in default_seq.get(cloud_config.provisioner):
+            if group[0].get('os_id') in build_config.exclude:
+                continue
             provisioner = ProvisionerProfile().get(build_config.provisioner)
             p_module = provisioner.driver
             p_instance = provisioner.module
@@ -164,6 +166,8 @@ class Project(object):
         build_seq = BuildProfile().get(group[0].get('build'))
 
         for build_config in build_seq.get(cloud_config.provisioner):
+            if group[0].get('os_id') in build_config.exclude:
+                continue
             provisioner = ProvisionerProfile().get(build_config.provisioner)
             p_module = provisioner.driver
             p_instance = provisioner.module
@@ -262,6 +266,8 @@ class Project(object):
                             f"Private IP: {result.get('private_ip'):<15} "
                             f"Public IP: {result.get('public_ip'):<15} "
                             f"Services: {result.get('services')}")
+                if result.get('password'):
+                    logger.info(f"Password: {result.get('password')} ")
             return_list.append(result)
 
         return return_list

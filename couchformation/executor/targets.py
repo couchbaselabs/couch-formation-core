@@ -62,6 +62,7 @@ class BuildConfig:
     provisioner: str = attr.ib()
     root: bool = attr.ib()
     commands: List[str] = attr.ib()
+    exclude: Optional[List[str]] = attr.ib(default=[])
 
 
 @attr.s
@@ -234,7 +235,8 @@ class BuildProfile(object):
                 for name, settings in yaml.safe_load(f).items():
                     sequence = BuildConfigSequence(name, [])
                     for element in settings:
-                        profile = BuildConfig(element.get('provisioner'), element.get('root'), element.get('commands'))
+                        profile = BuildConfig(element.get('provisioner'), element.get('root'),
+                                              element.get('commands'), element.get('exclude', []))
                         sequence.add(profile)
                     self.config.add(sequence)
             except yaml.YAMLError as err:

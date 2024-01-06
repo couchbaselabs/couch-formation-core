@@ -83,7 +83,7 @@ class AWSNetwork(object):
             subnet_cycle = cycle(subnet_list[1:])
 
             if not self.state.get('security_group_id'):
-                sg_id = SecurityGroup(self.parameters).create(sg_name, f"Couch Formation project {self.profile}", vpc_id)
+                sg_id = SecurityGroup(self.parameters).create(sg_name, f"Couch Formation project {self.project}", vpc_id)
                 SecurityGroup(self.parameters).add_ingress(sg_id, "-1", 0, 0, vpc_cidr)
                 SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 22, 22, "0.0.0.0/0")
                 SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 8091, 8097, "0.0.0.0/0")
@@ -94,6 +94,7 @@ class AWSNetwork(object):
                 SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 11207, 11207, "0.0.0.0/0")
                 SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 18091, 18097, "0.0.0.0/0")
                 SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 4984, 4986, "0.0.0.0/0")
+                SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 3389, 3389, "0.0.0.0/0")
                 self.state['security_group_id'] = sg_id
                 logger.info(f"Created security group {sg_id}")
 

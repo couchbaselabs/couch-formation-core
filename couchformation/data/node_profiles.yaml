@@ -2,11 +2,15 @@
 default:
   - provisioner: remote
     root: false
+    exclude:
+      - windows
     commands:
       - curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | sudo -E bash -s - -s -g https://github.com/mminichino/host-prep-lib
 generic:
   - provisioner: remote
     root: true
+    exclude:
+      - windows
     commands:
       - bundlemgr -b Base
 cbs:

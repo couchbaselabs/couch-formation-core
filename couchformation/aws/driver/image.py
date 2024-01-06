@@ -61,6 +61,8 @@ class Image(CloudBase):
                 }
             ]
 
+        logger.debug(f"Searching images by owner {owner_id} and name {name}")
+
         try:
             images = self.ec2_client.describe_images(Filters=ami_filter, Owners=owner_filter)
         except Exception as err:
@@ -93,10 +95,12 @@ class Image(CloudBase):
                 continue
             image_list = self.list(is_public=True, owner_id=image_type['owner_id'], name=image_type['pattern'])
             for version in C.OS_VERSION_LIST[image_type['os_id']]:
+                logger.debug(f"Checking image {version}")
                 if os_version and version != os_version:
                     continue
                 filtered_images = []
                 for image in image_list:
+                    logger.debug(f"Found image {image}")
                     if image['arch'] != architecture:
                         continue
                     match = re.search(image_type['version'], image['description'])

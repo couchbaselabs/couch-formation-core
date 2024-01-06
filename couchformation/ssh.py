@@ -3,6 +3,7 @@
 
 import logging
 import os
+import rsa
 from enum import Enum
 from typing import Union, List
 from Crypto.PublicKey import RSA
@@ -50,6 +51,17 @@ class SSHUtil(object):
                 if file_found == name or next((f"{name}{e.value}" for e in SSHExtensions if f"{name}{e.value}" == file_found), None):
                     return location + '/' + file_found
         return None
+
+    @staticmethod
+    def decrypt_with_key(encrypted_data: bytes, key_file: str) -> str:
+        try:
+            with open(key_file, 'r') as file_handle:
+                blob = file_handle.read()
+                private_key = rsa.PrivateKey.load_pkcs1(blob.encode('latin-1'))
+                decrypted = rsa.decrypt(encrypted_data, private_key)
+                return decrypted.decode('utf-8')
+        except OSError as err:
+            raise SSHError(f"can not read key file {key_file}: {err}.")
 
     @staticmethod
     def list_private_key_files() -> Union[List[dict], None]:

@@ -1,10 +1,14 @@
 ##
 ##
 
+import base64
 import logging
 import re
+import time
+
 from couchformation.aws.driver.base import CloudBase, AWSDriverError
 from couchformation.aws.driver.constants import AWSEbsDisk, AWSTagStruct, EbsVolume, AWSTag
+from couchformation.ssh import SSHUtil
 
 logger = logging.getLogger('couchformation.aws.driver.instance')
 logger.addHandler(logging.NullHandler())
@@ -100,3 +104,17 @@ class Instance(CloudBase):
             raise AWSDriverError(f"error getting AMI details: {err}")
 
         return result['Images'][0]
+
+    def get_password(self, instance_id: str, ssh_key: str) -> str:
+        try:
+            logger.info(f"Waiting for instance {instance_id} password")
+            while True:
+                result = self.ec2_client.get_password_data(InstanceId=instance_id)
+                encrypted_password = result.get('PasswordData')
+                if not encrypted_password:
+                    time.sleep(5)
+                    continue
+                password_data = base64.b64decode(encrypted_password)
+                return SSHUtil().decrypt_with_key(password_data, ssh_key)
+        except Exception as err:
+            raise AWSDriverError(f"error getting instance password: {err}")

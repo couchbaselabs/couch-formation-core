@@ -44,6 +44,7 @@ OS_VERSION_LIST = {
     'opensuse-leap': ['15'],
     'ubuntu': ['20.04', '22.04'],
     'debian': ['10', '11'],
+    'windows': ['2019', '2022'],
     'arch': []
 }
 

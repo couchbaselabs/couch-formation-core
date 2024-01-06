@@ -132,6 +132,10 @@ class AWSDeployment(object):
             except KeyError:
                 time.sleep(1)
 
+        if image['os_id'] == 'windows':
+            password = Instance(self.parameters).get_password(instance_id, self.ssh_key)
+            self.state['password'] = password
+
         logger.info(f"Created instance {instance_id}")
         return self.state.as_dict
 

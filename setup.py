@@ -22,9 +22,9 @@ setup(
     package_data={'couchformation': ['data/*']},
     install_requires=[
         "attrs==23.1.0",
-        "boto3==1.28.11",
+        "boto3==1.28.42",
         "botocore==1.31.11",
-        "cryptography>=36.0.1",
+        "cryptography>=41.0.7",
         "dnspython>=2.1.0",
         "google-api-core>=2.4.0",
         "google-api-python-client>=2.34.0",
@@ -41,7 +41,7 @@ setup(
         "pytz>=2021.3",
         "pyvmomi>=8.0.0.1.1",
         "requests>=2.31.0",
-        "urllib3>=1.26.7",
+        "urllib3>=1.26.18",
         "azure-common>=1.1.28",
         "azure-core>=1.26.1",
         "azure-mgmt-resource>=22.0.0",
@@ -62,7 +62,8 @@ setup(
         "bumpversion>=0.6.0",
         "PyYAML>=5.1",
         "cbcmgr>=2.1.8",
-        "pyhostprep>=0.1.52"
+        "pyhostprep>=0.1.52",
+        "rsa>=4.9"
     ],
     author_email='info@unix.us.com',
     description='Couchbase Cloud Automation',
