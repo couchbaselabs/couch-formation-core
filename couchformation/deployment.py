@@ -93,7 +93,7 @@ class NodeGroup(object):
 
     def create_node_group(self, parameters: argparse.Namespace, group=1):
         document = f"{self.name}:{group:04d}"
-        region = parameters.region
+        region = parameters.region if 'region' in parameters else "local"
 
         if not self.name:
             raise DeploymentError(f"name is required")

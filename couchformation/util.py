@@ -39,7 +39,7 @@ def dict_merge_list(*dicts):
 class FileManager(object):
 
     def __init__(self):
-        self.lock = Lock()
+        pass
 
     def make_dir(self, name: str, owner: str = None, group: str = None, mode: int = 0o775):
         owner_id = getpwnam(owner).pw_uid if owner else None
@@ -51,15 +51,12 @@ class FileManager(object):
             try:
                 uid = os.stat(path_dir).st_uid if not owner_id else owner_id
                 gid = os.stat(path_dir).st_gid if not group_id else group_id
-                self.lock.acquire()
                 if not os.path.exists(name):
                     os.mkdir(name)
                     os.chown(name, uid, gid)
                     os.chmod(name, mode)
             except OSError:
                 raise
-            finally:
-                self.lock.release()
 
     def set_perms(self, name: str, owner: str, group: str, mode: int = 0o775):
         if os.path.exists(name):
@@ -98,3 +95,15 @@ class UUIDGen(object):
     @property
     def uuid(self):
         return self._uuid
+
+
+class Synchronize(object):
+
+    def __init__(self, lock: Lock):
+        self._lock = lock
+
+    def __enter__(self):
+        self._lock.acquire()
+
+    def __exit__(self, *args):
+        self._lock.release()

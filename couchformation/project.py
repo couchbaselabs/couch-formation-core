@@ -43,7 +43,7 @@ class Project(object):
                 continue
             strategy = self.strategy.get(group[0].get('build'))
             cloud = group[0].get('cloud')
-            region = group[0].get('region')
+            region = group[0].get('region') if group[0].get('region') else "local"
             if strategy.deployer == DeployMode.node.value:
                 self._deploy_network(cloud, region)
                 self._deploy_node(group)
@@ -58,7 +58,7 @@ class Project(object):
                 continue
             strategy = self.strategy.get(group[0].get('build'))
             cloud = group[0].get('cloud')
-            region = group[0].get('region')
+            region = group[0].get('region') if group[0].get('region') else "local"
             if strategy.deployer == DeployMode.node.value:
                 self._destroy_node(group)
                 self._destroy_network(cloud, region)

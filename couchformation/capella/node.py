@@ -6,8 +6,9 @@ from couchformation.exception import FatalError
 from couchformation.capella.driver.base import CloudBase
 from couchformation.config import get_state_file, get_state_dir
 from couchformation.kvdb import KeyValueStore
-from couchformation.util import FileManager
+from couchformation.util import FileManager, Synchronize
 from cbcmgr.cb_capella import Capella, CapellaCluster, AllowedCIDR, Credentials
+import couchformation.constants as C
 
 
 logger = logging.getLogger('couchformation.capella.node')
@@ -36,10 +37,11 @@ class CapellaDeployment(object):
         self.state_file = get_state_file(self.project, self.name)
         self.state_dir = get_state_dir(self.project, self.name)
 
-        try:
-            FileManager().make_dir(self.state_dir)
-        except Exception as err:
-            raise CapellaNodeError(f"can not create state dir: {err}")
+        with Synchronize(C.GLOBAL_LOCK):
+            try:
+                FileManager().make_dir(self.state_dir)
+            except Exception as err:
+                raise CapellaNodeError(f"can not create state dir: {err}")
 
         document = self.db_name
         self.state = KeyValueStore(self.state_file, document)
