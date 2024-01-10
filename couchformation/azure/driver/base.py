@@ -1,10 +1,12 @@
 ##
 ##
 
+import time
 import logging
 import os
 import configparser
-from typing import Union, List
+from functools import wraps
+from typing import Union, List, Callable
 from azure.identity import AzureCliCredential
 from azure.mgmt.compute import ComputeManagementClient
 from azure.mgmt.network import NetworkManagementClient
@@ -14,11 +16,34 @@ from couchformation.config import AuthMode
 from couchformation.exception import FatalError, NonFatalError
 from couchformation.azure.driver.constants import get_auth_directory, get_config_default, get_config_main
 from couchformation.azure.driver.constants import AzureDiskTiers
+from couchformation.exec.process import cmd_exec
 
 logger = logging.getLogger('couchformation.azure.driver.base')
 logger.addHandler(logging.NullHandler())
 logging.getLogger("azure").setLevel(logging.ERROR)
 logging.getLogger("urllib3").setLevel(logging.ERROR)
+
+
+def auth_retry(retry_count=10,
+               factor=0.01
+               ) -> Callable:
+    def retry_handler(func):
+        @wraps(func)
+        def f_wrapper(*args, **kwargs):
+            for retry_number in range(retry_count + 1):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as err:
+                    if retry_number == retry_count:
+                        logger.debug(f"{func.__name__} retry limit exceeded: {err}")
+                        raise
+                    login_cmd = ['az', 'login']
+                    cmd_exec(login_cmd)
+                    wait = factor
+                    wait *= (2 ** (retry_number + 1))
+                    time.sleep(wait)
+        return f_wrapper
+    return retry_handler
 
 
 class AzureDriverError(FatalError):
@@ -62,8 +87,8 @@ class CloudBase(object):
 
         self.zones()
 
-    @staticmethod
-    def default_auth():
+    @auth_retry()
+    def default_auth(self):
         try:
             credential = AzureCliCredential()
             subscription_client = SubscriptionClient(credential)
