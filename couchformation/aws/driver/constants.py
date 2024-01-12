@@ -1,8 +1,10 @@
 ##
 ##
+
 import attr
 from attr.validators import instance_of as io
 from typing import Iterable
+from enum import Enum
 
 CLOUD_KEY = "aws"
 
@@ -19,6 +21,18 @@ aws_storage_matrix = {
     999: "16000",
     16384: "16000"
 }
+
+
+aws_arch_matrix = {
+    'x86_64': 'zone',
+    'arm64': 'zone',
+    'arm64_mac': 'host'
+}
+
+
+class PlacementType(Enum):
+    ZONE = "zone"
+    HOST = "host"
 
 
 @attr.s
@@ -236,12 +250,20 @@ class AWSImageOwners(object):
             "pattern": r"Windows_Server-*-English-Full-Base-*.*.*",
             "version": r"Windows_Server-(.+?)-English-Full-Base-[0-9]*.[0-9]*.[0-9]*"
         },
+        {
+            "owner_id": "634519214787",
+            "description": "macOS",
+            "os_id": "macos",
+            "user": "ec2-user",
+            "pattern": r"amzn-ec2-macos-*.*.*-*-*-arm64",
+            "version": r"amzn-ec2-macos-(.+?).[0-9]*.[0-9]*-[0-9]*-[0-9]*-arm64"
+        },
     ]
 
 
 @attr.s
 class ComputeTypes(object):
-    general_purpose = ['m5', 'm5a', 'm7g']
+    general_purpose = ['m5', 'm5a', 'm7g', "mac2", "mac2-m2", "mac2-m2pro"]
     compute_optimized = ['c5', 'c5a', 'c7g']
     memory_optimized = ['r5', 'r5a', 'r7g']
 

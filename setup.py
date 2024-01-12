@@ -73,13 +73,14 @@ setup(
     long_description_content_type='text/markdown',
     keywords=["couchbase", "devops", "automation"],
     classifiers=[
-          "Development Status :: 4 - Beta",
-          "License :: OSI Approved :: Apache Software License",
-          "Intended Audience :: Developers",
-          "Operating System :: OS Independent",
-          "Programming Language :: Python",
-          "Programming Language :: Python :: 3",
-          "Topic :: Database",
-          "Topic :: Software Development :: Libraries",
-          "Topic :: Software Development :: Libraries :: Python Modules"],
+        "Development Status :: 4 - Beta",
+        "License :: OSI Approved :: Apache Software License",
+        "Intended Audience :: Developers",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Topic :: Database",
+        "Topic :: Software Development :: Libraries",
+        "Topic :: Software Development :: Libraries :: Python Modules"
+    ],
 )

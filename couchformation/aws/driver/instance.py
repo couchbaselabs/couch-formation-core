@@ -5,9 +5,10 @@ import base64
 import logging
 import re
 import time
+from datetime import datetime
 
-from couchformation.aws.driver.base import CloudBase, AWSDriverError
-from couchformation.aws.driver.constants import AWSEbsDisk, AWSTagStruct, EbsVolume, AWSTag
+from couchformation.aws.driver.base import CloudBase, AWSDriverError, EmptyResultSet
+from couchformation.aws.driver.constants import AWSEbsDisk, AWSTagStruct, EbsVolume, AWSTag, PlacementType
 from couchformation.ssh import SSHUtil
 
 logger = logging.getLogger('couchformation.aws.driver.instance')
@@ -33,7 +34,8 @@ class Instance(CloudBase):
             swap_iops=3000,
             data_size=256,
             data_iops=3000,
-            instance_type="t2.micro"):
+            instance_type="t2.micro",
+            placement: PlacementType = PlacementType.ZONE):
         volume_type = "gp3"
         try:
             ami_details = self.image_details(ami)
@@ -52,7 +54,10 @@ class Instance(CloudBase):
         ]
         instance_tag = [AWSTagStruct.build("instance").add(AWSTag("Name", name)).as_dict]
 
-        placement = {"AvailabilityZone": zone}
+        if placement == PlacementType.ZONE:
+            placement = {"AvailabilityZone": zone}
+        else:
+            placement = {"Tenancy": "host"}
 
         try:
             result = self.ec2_client.run_instances(BlockDeviceMappings=disk_list,
@@ -73,6 +78,79 @@ class Instance(CloudBase):
         waiter.wait(InstanceIds=[instance_id])
 
         return instance_id
+
+    def allocate_host(self, name: str, zone: str, instance_type: str):
+        host_tag = [AWSTagStruct.build("dedicated-host").add(AWSTag("Name", name)).as_dict]
+
+        try:
+            result = self.ec2_client.allocate_hosts(AvailabilityZone=zone,
+                                                    InstanceType=instance_type,
+                                                    AutoPlacement='on',
+                                                    Quantity=1,
+                                                    TagSpecifications=host_tag)
+            return result['HostIds'][0]
+        except Exception as err:
+            raise AWSDriverError(f"error getting instance details: {err}")
+
+    def list_hosts(self, instance_type: str = None):
+        hosts = []
+        host_list = []
+        extra_args = {}
+        machine_filter = []
+
+        if instance_type:
+            machine_filter = [
+                {
+                    'Name': 'instance-type',
+                    'Values': [
+                        instance_type,
+                    ]
+                }
+            ]
+
+        try:
+            while True:
+                result = self.ec2_client.describe_hosts(**extra_args, Filters=machine_filter)
+                hosts.extend(result['Hosts'])
+                if 'NextToken' not in result:
+                    break
+                extra_args['NextToken'] = result['NextToken']
+        except Exception as err:
+            raise AWSDriverError(f"error getting instance details: {err}")
+
+        for host in hosts:
+            difference = datetime.now() - host['AllocationTime']
+            age = int(difference.total_seconds() / 3600)
+            host_block = {'id': host['HostId'],
+                          'state': host['State'],
+                          'created': host['AllocationTime'],
+                          'age': age,
+                          'zone': host['AvailabilityZone'],
+                          'capacity': host['AvailableCapacity']['AvailableVCpus'],
+                          'instances': [i['InstanceId'] for i in host['Instances']],
+                          'machine': host['HostProperties']['InstanceType']}
+            host_list.append(host_block)
+
+        if len(host_list) == 0:
+            raise EmptyResultSet(f"no hosts found")
+
+        return host_list
+
+    def get_host_by_instance(self, instance_id: str):
+        host_list = self.list_hosts()
+        return next((h for h in host_list if instance_id in h['instances']), None)
+
+    def get_host_by_id(self, host_id: str):
+        host_list = self.list_hosts()
+        return next((h for h in host_list if h['id'] == host_id), None)
+
+    def release_host(self, host_id: str):
+        try:
+            result = self.ec2_client.allocate_hosts(HostIds=[host_id])
+            if 'Unsuccessful' in result:
+                raise AWSDriverError(f"Can not release host {host_id}: {result['Unsuccessful'][0]['Error']['Message']}")
+        except Exception as err:
+            raise AWSDriverError(f"error getting instance details: {err}")
 
     def details(self, instance_id: str) -> dict:
         try:

@@ -20,12 +20,14 @@ aws:
       compose: null
   parameters:
     - region
+    - zone
     - auth_mode
     - profile
     - ssh_key
     - cidr
     - os_id
     - os_version
+    - os_arch
     - machine_type
     - quantity
     - services

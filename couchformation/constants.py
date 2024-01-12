@@ -48,6 +48,7 @@ OS_VERSION_LIST = {
     'ubuntu': ['20.04', '22.04'],
     'debian': ['10', '11'],
     'windows': ['2019', '2022'],
+    'macos': ['13', '14'],
     'arch': []
 }
 
@@ -76,6 +77,11 @@ MACHINE_TYPES = [
             "name": "8x16",
             "cpu": 8,
             "memory": 16384
+        },
+        {
+            "name": "8x24",
+            "cpu": 8,
+            "memory": 24576
         },
         {
             "name": "8x32",

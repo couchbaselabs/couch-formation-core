@@ -32,7 +32,8 @@ class Image(CloudBase):
                     'Name': 'architecture',
                     'Values': [
                         "x86_64",
-                        "arm64"
+                        "arm64",
+                        "arm64_mac"
                     ]
                 },
                 {
@@ -137,7 +138,7 @@ class Image(CloudBase):
 
         return result['Images'][0]
 
-    def create(self, name: str, instance: str, description=None, root_type="gp3", root_size=100) -> str:
+    def create(self, name: str, instance: str, description=None, root_type="gp3", root_size=100, root_iops=3000) -> str:
         try:
             instance_details = self.instance_details(instance)
         except Exception as err:
@@ -146,7 +147,7 @@ class Image(CloudBase):
             raise AWSDriverError(f"can not get details for instance {instance}")
 
         root_dev = instance_details['BlockDeviceMappings'][0]['DeviceName']
-        root_disk = [AWSEbsDisk.build(root_dev, EbsVolume(root_type, root_size)).as_dict]
+        root_disk = [AWSEbsDisk.build(root_dev, EbsVolume(root_type, root_size, root_iops)).as_dict]
         ami_tag = [AWSTagStruct.build("image").add(AWSTag("Name", name)).as_dict]
 
         if not description:

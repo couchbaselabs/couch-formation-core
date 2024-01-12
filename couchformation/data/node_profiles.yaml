@@ -4,6 +4,7 @@ default:
     root: false
     exclude:
       - windows
+      - macos
     commands:
       - curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | sudo -E bash -s - -s -g https://github.com/mminichino/host-prep-lib
 generic:
@@ -11,6 +12,7 @@ generic:
     root: true
     exclude:
       - windows
+      - macos
     commands:
       - bundlemgr -b Base
 cbs:

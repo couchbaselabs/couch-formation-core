@@ -66,6 +66,21 @@ class MachineType(CloudBase):
 
         return type_list
 
+    def get_machine_zones(self, instance_type: str):
+        machine_filter = [
+            {
+                'Name': 'instance-type',
+                'Values': [
+                    instance_type,
+                ]
+            }
+        ]
+        try:
+            result = self.ec2_client.describe_instance_type_offerings(LocationType='availability-zone', Filters=machine_filter)
+            return list(loc['Location'] for loc in result.get('InstanceTypeOfferings', []))
+        except Exception as err:
+            raise AWSDriverError(f"error getting instance type details: {err}")
+
     def get_machine_types(self, architecture: str = 'x86_64'):
         result_list = []
         machine_list = self.list(architecture)
