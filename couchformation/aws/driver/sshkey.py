@@ -3,6 +3,7 @@
 
 import logging
 from typing import Union, List
+from botocore.exceptions import ClientError
 from couchformation.aws.driver.base import CloudBase, AWSDriverError, EmptyResultSet
 from couchformation.aws.driver.constants import AWSTagStruct, AWSTag
 
@@ -59,7 +60,9 @@ class SSHKey(CloudBase):
             key_block = {'name': result['KeyName'],
                          'id': result['KeyPairId'],
                          'fingerprint': result['KeyFingerprint']}
-
+        except ClientError as err:
+            print(err.response['Error'])
+            raise
         except Exception as err:
             AWSDriverError(f"error importing key pair: {err}")
 
