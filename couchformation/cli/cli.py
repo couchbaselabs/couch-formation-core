@@ -112,10 +112,9 @@ class CLI(object):
         except Exception as err:
             raise CloudMgrError(f"can not create working dir: {err}")
 
-        if sys.stdin and sys.stdin.isatty():
-            screen_handler = logging.StreamHandler()
-            screen_handler.setFormatter(CustomDisplayFormatter())
-            logger.addHandler(screen_handler)
+        screen_handler = logging.StreamHandler()
+        screen_handler.setFormatter(CustomDisplayFormatter())
+        logger.addHandler(screen_handler)
 
         file_handler = logging.FileHandler(debug_file)
         file_handler.setFormatter(CustomLogFormatter())
