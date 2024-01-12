@@ -61,8 +61,10 @@ class SSHKey(CloudBase):
                          'id': result['KeyPairId'],
                          'fingerprint': result['KeyFingerprint']}
         except ClientError as err:
-            print(err.response['Error'])
-            raise
+            if err.response['Error']['Code'] == 'InvalidKeyPair.Duplicate':
+                key_block = self.details(name)
+            else:
+                raise
         except Exception as err:
             AWSDriverError(f"error importing key pair: {err}")
 
