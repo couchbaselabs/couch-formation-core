@@ -19,7 +19,7 @@ class JobDispatch(object):
 
     def __init__(self):
         context = get_context('fork')
-        self.executor = concurrent.futures.ProcessPoolExecutor(mp_context=context)
+        self.executor = concurrent.futures.ProcessPoolExecutor(mp_context=context, max_workers=1)
         self.tasks = set()
 
     def dispatch(self, *args, **kwargs):
