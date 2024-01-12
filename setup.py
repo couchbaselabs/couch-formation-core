@@ -22,8 +22,8 @@ setup(
     package_data={'couchformation': ['data/*']},
     install_requires=[
         "attrs==23.1.0",
-        "boto3==1.28.42",
-        "botocore==1.31.11",
+        "boto3>=1.28.42",
+        "botocore>=1.31.42",
         "cryptography>=41.0.7",
         "dnspython>=2.1.0",
         "google-api-core>=2.4.0",
