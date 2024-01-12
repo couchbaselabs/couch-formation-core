@@ -18,7 +18,7 @@ class TaskError(NonFatalLogError):
 class JobDispatch(object):
 
     def __init__(self):
-        context = get_context('spawn')
+        context = get_context('fork')
         self.executor = concurrent.futures.ProcessPoolExecutor(mp_context=context)
         self.tasks = set()
 
