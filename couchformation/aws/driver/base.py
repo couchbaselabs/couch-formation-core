@@ -194,10 +194,8 @@ class CloudBase(object):
         interval = device_authorization['interval']
 
         try:
-            webbrowser.get()
-            webbrowser.open(url, autoraise=True)
-        except Exception as err:
-            logger.warning(f"Can not find web browser: {err}")
+            webbrowser.open_new_tab(url)
+        except webbrowser.Error:
             logger.info(f"Open the following URL to continue: {url}")
 
         for n in range(1, expires_in // interval + 1):
