@@ -59,8 +59,7 @@ class SSHKey(CloudBase):
             key_block = {'name': result['KeyName'],
                          'id': result['KeyPairId'],
                          'fingerprint': result['KeyFingerprint']}
-        except self.ec2_client.meta.client.exceptions.InvalidKeyPair.Duplicate:
-            key_block = self.details(name)
+
         except Exception as err:
             AWSDriverError(f"error importing key pair: {err}")
 
