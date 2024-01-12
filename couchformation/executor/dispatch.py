@@ -5,7 +5,6 @@ import logging
 import concurrent.futures
 import couchformation.executor.worker as worker
 from couchformation.exception import NonFatalLogError
-from multiprocessing import get_context
 
 logger = logging.getLogger('couchformation.executor.dispatch')
 logger.addHandler(logging.NullHandler())
@@ -18,8 +17,7 @@ class TaskError(NonFatalLogError):
 class JobDispatch(object):
 
     def __init__(self):
-        context = get_context('fork')
-        self.executor = concurrent.futures.ProcessPoolExecutor(mp_context=context, max_workers=1)
+        self.executor = concurrent.futures.ThreadPoolExecutor()
         self.tasks = set()
 
     def dispatch(self, *args, **kwargs):
