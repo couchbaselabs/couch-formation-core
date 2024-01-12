@@ -193,10 +193,8 @@ class CloudBase(object):
         expires_in = device_authorization['expiresIn']
         interval = device_authorization['interval']
 
-        try:
-            webbrowser.open_new_tab(url)
-        except webbrowser.Error:
-            logger.info(f"Open the following URL to continue: {url}")
+        logger.info(f"If a browser window does not open, follow this URL to continue: {url}")
+        webbrowser.open_new_tab(url)
 
         for n in range(1, expires_in // interval + 1):
             time.sleep(interval)
