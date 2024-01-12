@@ -172,7 +172,7 @@ class CloudBase(object):
             return
 
         if not self.sso_account_id or not self.sso_start_url or not self.sso_region:
-            AWSDriverError("Please run aws configure sso to setup SSO")
+            AWSDriverError("Please run \"aws configure sso\" to setup SSO")
 
         session = boto3.Session()
         account_id = self.sso_account_id
@@ -192,7 +192,12 @@ class CloudBase(object):
         device_code = device_authorization['deviceCode']
         expires_in = device_authorization['expiresIn']
         interval = device_authorization['interval']
-        webbrowser.open(url, autoraise=True)
+
+        try:
+            webbrowser.open(url, autoraise=True)
+        except webbrowser.Error:
+            logger.info(f"Open the following URL to continue: {url}")
+
         for n in range(1, expires_in // interval + 1):
             time.sleep(interval)
             try:
