@@ -21,10 +21,13 @@ setup(
     },
     package_data={'couchformation': ['data/*']},
     install_requires=[
+        "applicationinsights==0.11.10",
         "argcomplete==3.1.6",
         "attrs==23.1.0",
+        "bcrypt==4.0.1",
         "boto3==1.34.17",
         "botocore==1.34.17",
+        "cachetools==5.3.1",
         "cryptography>=41.0.7",
         "dnspython>=2.1.0",
         "google-api-core==2.11.1",
