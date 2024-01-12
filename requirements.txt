@@ -21,8 +21,6 @@ requests>=2.31.0
 urllib3==1.26.18
 azure-common>=1.1.28
 azure-core>=1.29.6
-azure-cli-core>=2.56.0
-azure-cli-command-modules-nspkg>=2.0.3
 azure-mgmt-resource>=22.0.0
 azure-identity>=1.12.0
 azure.mgmt.network>=25.1.0

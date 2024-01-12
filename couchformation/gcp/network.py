@@ -104,7 +104,8 @@ class GCPNetwork(object):
                     "11280",
                     "11207",
                     "18091-18097",
-                    "4984-4986"
+                    "4984-4986",
+                    "3389"
                 ])
                 self.state['firewall_cbs'] = firewall_cbs
                 logger.info(f"Created firewall rule {firewall_cbs}")

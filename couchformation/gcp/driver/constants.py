@@ -98,6 +98,13 @@ class GCPImageProjects(object):
             "os_id": "ubuntu",
             "user": "ubuntu",
             "pattern": r"ubuntu-pro-(.+?)-*-v*"
+        },
+        {
+            "project": 'windows-cloud',
+            "description": "Windows Server",
+            "os_id": "windows",
+            "user": "Administrator",
+            "pattern": r"windows-server-(.+?)-dc-v*"
         }
     ]
 

@@ -7,6 +7,7 @@ import rsa
 from enum import Enum
 from typing import Union, List
 from Crypto.PublicKey import RSA
+from Crypto.Util.number import long_to_bytes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 import hashlib
@@ -143,6 +144,18 @@ class SSHUtil(object):
         public_key = private_key.public_key().exportKey('OpenSSH')
         ssh_public_key = public_key.decode('utf-8')
         return ssh_public_key
+
+    @staticmethod
+    def get_mod_exp(key_file: str):
+        if not os.path.isabs(key_file):
+            key_file = SSHUtil.ssh_key_absolute_path(key_file)
+        fh = open(key_file, 'r')
+        key_pem = fh.read()
+        fh.close()
+        rsa_key = RSA.importKey(key_pem)
+        modulus = long_to_bytes(rsa_key.n)
+        exponent = long_to_bytes(rsa_key.e)
+        return modulus, exponent
 
     @staticmethod
     def write_file(file_name: str, data: str) -> bool:

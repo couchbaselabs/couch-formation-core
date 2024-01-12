@@ -2,8 +2,13 @@
 ##
 
 import logging
+import base64
 import googleapiclient.errors
+import datetime
+import copy
+import json
 from couchformation.gcp.driver.base import CloudBase, GCPDriverError
+from couchformation.ssh import SSHUtil
 
 logger = logging.getLogger('couchformation.gcp.driver.instance')
 logger.addHandler(logging.NullHandler())
@@ -116,3 +121,53 @@ class Instance(CloudBase):
                 raise GCPDriverError(f"can not terminate instance: {err}")
         except Exception as err:
             raise GCPDriverError(f"error terminating instance: {err}")
+
+    def gen_password(self, user: str, instance: str, zone: str, sa_email: str, ssh_key: str):
+        instance_ref = self.details(instance, zone)
+        old_metadata = instance_ref['metadata']
+
+        mod, exp = SSHUtil().get_mod_exp(ssh_key)
+        modulus = base64.b64encode(mod)
+        exponent = base64.b64encode(exp)
+
+        utc_now = datetime.datetime.utcnow()
+        expire_time = utc_now + datetime.timedelta(minutes=5)
+        expire = expire_time.strftime('%Y-%m-%dT%H:%M:%SZ')
+
+        metadata_entry = {'userName': user,
+                          'modulus': modulus.decode('utf-8'),
+                          'exponent': exponent.decode('utf-8'),
+                          'email': sa_email,
+                          'expireOn': expire}
+
+        new_metadata = copy.deepcopy(old_metadata)
+        new_metadata['items'] = [{
+            'key': "windows-keys",
+            'value': json.dumps(metadata_entry)
+        }]
+
+        request = self.gcp_client.instances().setMetadata(project=self.gcp_project,
+                                                          zone=zone,
+                                                          instance=instance,
+                                                          body=new_metadata)
+        operation = request.execute()
+        self.wait_for_zone_operation(operation['name'], zone)
+        request = self.gcp_client.instances().getSerialPortOutput(project=self.gcp_project,
+                                                                  zone=zone,
+                                                                  instance=instance,
+                                                                  port=4)
+        operation = request.execute()
+        serial_port_output = operation['contents']
+
+        output = serial_port_output.split('\n')
+        for data in output:
+            try:
+                entry = json.loads(data)
+                print(entry)
+                if modulus.decode('utf-8') == entry['modulus']:
+                    enc_password = entry['encryptedPassword']
+                    decoded_password = base64.b64decode(enc_password)
+                    password = SSHUtil().decrypt_with_key(decoded_password, ssh_key)
+                    return password
+            except ValueError:
+                pass
