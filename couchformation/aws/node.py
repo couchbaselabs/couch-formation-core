@@ -124,10 +124,16 @@ class AWSDeployment(object):
                 host_id = next((h['id'] for h in host_list if h['capacity'] == machine['cpu']), None)
                 if host_id:
                     logger.info(f"Using dedicated host {host_id}")
-        #         logger.info(f"Allocating dedicated host for machine type {machine_name}")
-        #         host_id = Instance(self.parameters).allocate_host(subnet['zone'], machine_name)
-        #         logger.info(f"Allocated host {host_id}")
+                else:
+                    host_name = f"{self.project}-host"
+                    logger.info(f"Allocating dedicated host for machine type {machine_name}")
+                    host_id = Instance(self.parameters).allocate_host(host_name, subnet['zone'], machine_name)
+                    logger.info(f"Allocated host {host_id}")
                 self.state['host_id'] = host_id
+            else:
+                host_id = self.state.get('host_id')
+        else:
+            host_id = None
 
         logger.info(f"Creating node {self.node_name}")
         instance_id = Instance(self.parameters).run(self.node_name,
@@ -140,7 +146,8 @@ class AWSDeployment(object):
                                                     data_size=volume_size,
                                                     data_iops=volume_iops,
                                                     instance_type=machine_name,
-                                                    placement=placement)
+                                                    placement=placement,
+                                                    host_id=host_id)
 
         self.state['instance_id'] = instance_id
         self.state['name'] = self.node_name

@@ -5,7 +5,7 @@ import base64
 import logging
 import re
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from couchformation.aws.driver.base import CloudBase, AWSDriverError, EmptyResultSet
 from couchformation.aws.driver.constants import AWSEbsDisk, AWSTagStruct, EbsVolume, AWSTag, PlacementType
@@ -35,7 +35,8 @@ class Instance(CloudBase):
             data_size=256,
             data_iops=3000,
             instance_type="t2.micro",
-            placement: PlacementType = PlacementType.ZONE):
+            placement: PlacementType = PlacementType.ZONE,
+            host_id: str = None):
         volume_type = "gp3"
         try:
             ami_details = self.image_details(ami)
@@ -58,6 +59,8 @@ class Instance(CloudBase):
             placement = {"AvailabilityZone": zone}
         else:
             placement = {"Tenancy": "host"}
+            if host_id:
+                placement.update({"HostId": host_id})
 
         try:
             result = self.ec2_client.run_instances(BlockDeviceMappings=disk_list,
@@ -119,14 +122,14 @@ class Instance(CloudBase):
             raise AWSDriverError(f"error getting instance details: {err}")
 
         for host in hosts:
-            difference = datetime.now() - host['AllocationTime']
+            difference = datetime.now(timezone.utc) - host['AllocationTime']
             age = int(difference.total_seconds() / 3600)
             host_block = {'id': host['HostId'],
                           'state': host['State'],
                           'created': host['AllocationTime'],
                           'age': age,
                           'zone': host['AvailabilityZone'],
-                          'capacity': host['AvailableCapacity']['AvailableVCpus'],
+                          'capacity': host.get('AvailableCapacity', {}).get('AvailableVCpus', 0),
                           'instances': [i['InstanceId'] for i in host['Instances']],
                           'machine': host['HostProperties']['InstanceType']}
             host_list.append(host_block)
