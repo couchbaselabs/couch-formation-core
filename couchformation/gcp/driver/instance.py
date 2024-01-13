@@ -167,7 +167,7 @@ class Instance(CloudBase):
                 if modulus.decode('utf-8') == entry['modulus']:
                     enc_password = entry['encryptedPassword']
                     decoded_password = base64.b64decode(enc_password)
-                    password = SSHUtil().decrypt_with_key(decoded_password, ssh_key)
+                    password = SSHUtil().decrypt_with_rsa(decoded_password, ssh_key)
                     return password
             except ValueError:
                 pass
