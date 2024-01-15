@@ -34,6 +34,7 @@ class GCPDeployment(object):
         self.name = parameters.get('name')
         self.project = parameters.get('project')
         self.region = parameters.get('region')
+        self.zone = parameters.get('zone')
         self.auth_mode = parameters.get('auth_mode')
         self.profile = parameters.get('profile')
         self.ssh_key = parameters.get('ssh_key')
@@ -87,8 +88,14 @@ class GCPDeployment(object):
         if len(subnet_list) == 0:
             raise GCPNodeError(f"can not get subnet list, check project settings")
 
-        subnet_cycle = cycle(subnet_list)
-        subnet = next(islice(subnet_cycle, self.number - 1, None))
+        if not self.zone:
+            subnet_cycle = cycle(subnet_list)
+            subnet = next(islice(subnet_cycle, self.number - 1, None))
+        else:
+            subnet = next((z for z in subnet_list if z['zone'] == self.zone), None)
+
+        if not subnet:
+            raise GCPNodeError(f"Can not determine availability zone (check project settings)")
 
         image = Image(self.parameters).list_standard(os_id=self.os_id, os_version=self.os_version)
         if not image:
@@ -143,6 +150,14 @@ class GCPDeployment(object):
                 break
             except KeyError:
                 time.sleep(1)
+
+        if image['os_id'] == 'windows':
+            password = Instance(self.parameters).gen_password(image['os_user'],
+                                                              self.node_name,
+                                                              subnet['zone'],
+                                                              self.gcp_base.gcp_account_email,
+                                                              self.ssh_key)
+            self.state['password'] = password
 
         logger.info(f"Created instance {self.node_name}")
         return self.state.as_dict

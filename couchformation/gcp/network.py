@@ -57,6 +57,7 @@ class GCPNetwork(object):
         firewall_default = f"{vpc_name}-fw-default"
         firewall_cbs = f"{vpc_name}-fw-cbs"
         firewall_ssh = f"{vpc_name}-fw-ssh"
+        firewall_rdp = f"{vpc_name}-fw-rdp"
 
         for net in self.gcp_network.cidr_list:
             cidr_util.add_network(net)
@@ -104,8 +105,7 @@ class GCPNetwork(object):
                     "11280",
                     "11207",
                     "18091-18097",
-                    "4984-4986",
-                    "3389"
+                    "4984-4986"
                 ])
                 self.state['firewall_cbs'] = firewall_cbs
                 logger.info(f"Created firewall rule {firewall_cbs}")
@@ -114,6 +114,11 @@ class GCPNetwork(object):
                 Firewall(self.parameters).create_ingress(firewall_ssh, vpc_name, "0.0.0.0/0", "tcp", ["22"])
                 self.state['firewall_ssh'] = firewall_ssh
                 logger.info(f"Created firewall rule {firewall_ssh}")
+
+            if not self.state.get('firewall_rdp'):
+                Firewall(self.parameters).create_ingress(firewall_rdp, vpc_name, "0.0.0.0/0", "tcp", ["3389"])
+                self.state['firewall_rdp'] = firewall_rdp
+                logger.info(f"Created firewall rule {firewall_rdp}")
 
             for n, zone in enumerate(zone_list):
                 if self.state.list_exists('zone', zone):
@@ -130,6 +135,12 @@ class GCPNetwork(object):
             return
 
         try:
+
+            if self.state.get('firewall_rdp'):
+                firewall_rdp = self.state.get('firewall_rdp')
+                Firewall(self.parameters).delete(firewall_rdp)
+                del self.state['firewall_rdp']
+                logger.info(f"Removed firewall rule {firewall_rdp}")
 
             if self.state.get('firewall_ssh'):
                 firewall_ssh = self.state.get('firewall_ssh')

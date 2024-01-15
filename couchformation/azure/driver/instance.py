@@ -4,6 +4,7 @@
 import logging
 from azure.core.exceptions import ResourceNotFoundError
 from couchformation.azure.driver.base import CloudBase, AzureDriverError
+from couchformation.azure.driver.constants import AzureImagePublishers
 
 logger = logging.getLogger('couchformation.azure.driver.instance')
 logger.addHandler(logging.NullHandler())
@@ -30,7 +31,8 @@ class Instance(CloudBase):
             root_disk_name: str,
             root_type="Premium_LRS",
             root_size=256,
-            machine_type="Standard_D4_v3"):
+            machine_type="Standard_D4_v3",
+            password="Passw0rd!"):
         if not resource_group:
             resource_group = self.azure_resource_group
 
@@ -39,6 +41,8 @@ class Instance(CloudBase):
             return instance_info
         except ResourceNotFoundError:
             pass
+
+        image_os = next((o['os_id'] for o in AzureImagePublishers.publishers if o['name'] == image_publisher), None)
 
         image_block = {
             'publisher': image_publisher,
@@ -52,17 +56,7 @@ class Instance(CloudBase):
             'zones': [zone],
             'os_profile': {
                 'computer_name': name,
-                'admin_username': username,
-                'linux_configuration': {
-                    'ssh': {
-                        'public_keys': [
-                            {
-                                'path': f"/home/{username}/.ssh/authorized_keys",
-                                'key_data': public_key
-                            }
-                        ]
-                    }
-                }
+                'admin_username': username
             },
             'hardware_profile': {
                 'vm_size': machine_type
@@ -84,6 +78,29 @@ class Instance(CloudBase):
                 }]
             },
         }
+
+        if image_os == 'windows':
+            os_config_block = {
+                'admin_password': password,
+                'windows_configuration': {
+                    'enable_automatic_updates': False
+                }
+            }
+        else:
+            os_config_block = {
+                'linux_configuration': {
+                    'ssh': {
+                        'public_keys': [
+                            {
+                                'path': f"/home/{username}/.ssh/authorized_keys",
+                                'key_data': public_key
+                            }
+                        ]
+                    }
+                }
+            }
+
+        parameters['os_profile'].update(os_config_block)
 
         try:
             request = self.compute_client.virtual_machines.begin_create_or_update(resource_group, name, parameters)

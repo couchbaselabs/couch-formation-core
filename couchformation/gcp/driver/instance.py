@@ -3,6 +3,8 @@
 
 import logging
 import base64
+import time
+
 import googleapiclient.errors
 import datetime
 import copy
@@ -152,22 +154,28 @@ class Instance(CloudBase):
                                                           body=new_metadata)
         operation = request.execute()
         self.wait_for_zone_operation(operation['name'], zone)
-        request = self.gcp_client.instances().getSerialPortOutput(project=self.gcp_project,
-                                                                  zone=zone,
-                                                                  instance=instance,
-                                                                  port=4)
-        operation = request.execute()
-        serial_port_output = operation['contents']
+
+        logger.info(f"Waiting for instance {instance} password")
+        while True:
+            request = self.gcp_client.instances().getSerialPortOutput(project=self.gcp_project,
+                                                                      zone=zone,
+                                                                      instance=instance,
+                                                                      port=4)
+            operation = request.execute()
+            serial_port_output = operation['contents']
+            if len(serial_port_output) != 0:
+                break
+            else:
+                time.sleep(2)
 
         output = serial_port_output.split('\n')
         for data in output:
             try:
                 entry = json.loads(data)
-                print(entry)
                 if modulus.decode('utf-8') == entry['modulus']:
                     enc_password = entry['encryptedPassword']
                     decoded_password = base64.b64decode(enc_password)
                     password = SSHUtil().decrypt_with_rsa(decoded_password, ssh_key)
-                    return password
+                    return password.decode('utf-8')
             except ValueError:
                 pass

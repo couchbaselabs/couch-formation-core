@@ -153,6 +153,14 @@ class AzureImagePublishers(object):
             "user": "debian",
             "sku_match": "^(.+?)-gen2$"
         },
+        {
+            "name": "MicrosoftWindowsServer",
+            "offer_match": r"^WindowsServer$",
+            "description": "Windows Server",
+            "os_id": "windows",
+            "user": "adminuser",
+            "sku_match": "^(.+?)-datacenter-g[2e].*$"
+        },
     ]
 
 

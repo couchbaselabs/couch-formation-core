@@ -17,6 +17,7 @@ from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import FileManager, Synchronize
 import couchformation.constants as C
+from cbcmgr.cb_capella import Capella
 
 logger = logging.getLogger('couchformation.azure.node')
 logger.addHandler(logging.NullHandler())
@@ -33,6 +34,7 @@ class AzureDeployment(object):
         self.name = parameters.get('name')
         self.project = parameters.get('project')
         self.region = parameters.get('region')
+        self.zone = parameters.get('zone')
         self.auth_mode = parameters.get('auth_mode')
         self.profile = parameters.get('profile')
         self.ssh_key = parameters.get('ssh_key')
@@ -41,6 +43,7 @@ class AzureDeployment(object):
         self.cloud = parameters.get('cloud')
         self.number = parameters.get('number')
         self.machine_type = parameters.get('machine_type')
+        self.password = parameters.get('password') if parameters.get('password') else Capella().generate_password()
         self.volume_size = parameters.get('volume_size') if parameters.get('volume_size') else "256"
         self.services = parameters.get('services') if parameters.get('services') else "default"
         self.node_name = f"{self.name}-node-{self.number:02d}"
@@ -86,8 +89,14 @@ class AzureDeployment(object):
         if len(subnet_list) == 0:
             raise AzureNodeError(f"can not get subnet list, check project settings")
 
-        subnet_cycle = cycle(subnet_list)
-        subnet = next(islice(subnet_cycle, self.number - 1, None))
+        if not self.zone:
+            subnet_cycle = cycle(subnet_list)
+            subnet = next(islice(subnet_cycle, self.number - 1, None))
+        else:
+            subnet = next((z for z in subnet_list if z['zone'] == self.zone), None)
+
+        if not subnet:
+            raise AzureNodeError(f"Can not determine availability zone (check project settings)")
 
         image = Image(self.parameters).list_standard(os_id=self.os_id, os_version=self.os_version)
         if not image:
@@ -139,7 +148,8 @@ class AzureDeployment(object):
                                       ssh_pub_key_text,
                                       rg_name,
                                       self.boot_disk,
-                                      machine_type=machine_name)
+                                      machine_type=machine_name,
+                                      password=self.password)
 
         logger.info(f"Attaching disk {self.swap_disk}")
         Instance(self.parameters).attach_disk(self.node_name, self.az_base.disk_caching(swap_tier['disk_size']), "1", swap_resource.id, rg_name)
@@ -158,6 +168,9 @@ class AzureDeployment(object):
         pub_ip_details = Network(self.parameters).describe_pub_ip(self.node_pub_ip, rg_name)
         self.state['public_ip'] = pub_ip_details.ip_address
         self.state['private_ip'] = nic_details.ip_configurations[0].private_ip_address
+
+        if image['os_id'] == 'windows':
+            self.state['password'] = self.password
 
         logger.info(f"Created instance {self.node_name}")
         return self.state.as_dict

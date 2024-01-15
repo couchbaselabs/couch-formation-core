@@ -88,6 +88,7 @@ class AzureNetwork(object):
                 nsg_resource = SecurityGroup(self.parameters).create(nsg_name, rg_name)
                 nsg_resource_id = nsg_resource.id
                 SecurityGroup(self.parameters).add_rule("AllowSSH", nsg_name, ["22"], 100, rg_name)
+                SecurityGroup(self.parameters).add_rule("AllowRDP", nsg_name, ["3389"], 101, rg_name)
                 SecurityGroup(self.parameters).add_rule("AllowCB", nsg_name, [
                     "8091-8097",
                     "9123",
@@ -97,7 +98,7 @@ class AzureNetwork(object):
                     "11207",
                     "18091-18097",
                     "4984-4986"
-                ], 101, rg_name)
+                ], 102, rg_name)
                 self.state['network_security_group'] = nsg_name
                 self.state['network_security_group_id'] = nsg_resource_id
             else:
