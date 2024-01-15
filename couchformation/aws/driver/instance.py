@@ -7,7 +7,7 @@ import re
 import time
 from datetime import datetime, timezone
 
-from couchformation.aws.driver.base import CloudBase, AWSDriverError, EmptyResultSet
+from couchformation.aws.driver.base import CloudBase, AWSDriverError
 from couchformation.aws.driver.constants import AWSEbsDisk, AWSTagStruct, EbsVolume, AWSTag, PlacementType
 from couchformation.ssh import SSHUtil
 
@@ -133,9 +133,6 @@ class Instance(CloudBase):
                           'instances': [i['InstanceId'] for i in host['Instances']],
                           'machine': host['HostProperties']['InstanceType']}
             host_list.append(host_block)
-
-        if len(host_list) == 0:
-            raise EmptyResultSet(f"no hosts found")
 
         return host_list
 
