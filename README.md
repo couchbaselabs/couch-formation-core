@@ -37,7 +37,12 @@ cd couchformation
 ````
 pip3 install couchformation
 ````
+### Install directly from GitHub repo:
+````
+pip3 install --user git+https://github.com/couchbaselabs/couch-formation-core
+````
 
+## Basic example
 ### Configure and deploy a Couchbase Server cluster:
 ````
 cloudmgr create --build cbs --cloud gcp --project test-gcp --name test-cluster --region us-central1 --quantity 3 --os_id ubuntu --os_version 22.04 --ssh_key /Users/jdoe/.ssh/jdoe-default-key-pair.pem --machine_type 4x16
