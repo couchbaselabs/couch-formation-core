@@ -17,20 +17,14 @@ class CloudBase(object):
 
     def __init__(self, parameters: dict):
         self.parameters = parameters
-        self.project = parameters.get('project')
+        self.profile = parameters.get('profile') if parameters.get('profile') else 'default'
 
-        self.cm = Capella()
         try:
-            self.capella_project = self.cm.get_project(self.project)
-            self.capella_project_id = self.capella_project.get('id')
-        except AttributeError:
-            try:
-                self.capella_project_id = self.cm.create_project(self.project)
-                logger.info(f"Created Capella project {self.project}")
-            except Exception as err:
-                raise CapellaDriverError(f"can not create Capella project {self.project}: {err}")
+            self.cm = Capella(profile=self.profile)
+            self._organization_id = self.cm.organization_id
+            self._project_id = self.cm.project_id
         except Exception as err:
-            raise CapellaDriverError(f"can not get Capella project ID: {err}")
+            raise CapellaDriverError(f"can not get Capella organization ID: {err}")
 
     def test_session(self):
         try:
@@ -40,4 +34,8 @@ class CloudBase(object):
 
     @property
     def project_id(self):
-        return self.capella_project_id
+        return self._project_id
+
+    @property
+    def organization_id(self):
+        return self._organization_id

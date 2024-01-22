@@ -41,7 +41,7 @@ setup(
         "pytz>=2021.3",
         "pyvmomi>=8.0.0.1.1",
         "requests>=2.31.0",
-        "urllib3>=1.26.7",
+        "urllib3>=1.26.18",
         "azure-common>=1.1.28",
         "azure-core>=1.26.1",
         "azure-mgmt-resource>=22.0.0",
@@ -61,7 +61,7 @@ setup(
         "overrides>=7.4.0",
         "bumpversion>=0.6.0",
         "PyYAML>=5.1",
-        "cbcmgr>=2.1.8",
+        "cbcmgr>=2.2.1",
         "pyhostprep>=0.1.52",
         "rsa>=4.9"
     ],

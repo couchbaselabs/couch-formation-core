@@ -1,4 +1,4 @@
-# Couch Formation 4.0.0a25
+# Couch Formation 4.0.0a26
 
 ![Logo](https://raw.githubusercontent.com/mminichino/couch-formation-core/main/doc/couch-formation-1.png)
 
@@ -118,3 +118,7 @@ Use the auth_mode option to enable SSO integration. Couch Formation will open a 
 ```
 cloudmgr create --build cbs --cloud aws --project dev01 --name testdb01 --auth_mode sso --region us-east-2 --quantity 3 --os_id ubuntu --os_version 22.04 --ssh_key /Users/jdoe/.ssh/jdoe-default-key-pair.pem --machine_type 8x32
 ```
+
+## Capella Support
+### Credentials Directory
+The automation for Capella uses the v4 public API. To use the automation, create an API key in the Capella UI and save it to a file named ```default-api-key-token.txt``` in a directory named ```.capella``` in your home directory.

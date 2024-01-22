@@ -127,6 +127,7 @@ capella:
     - allow
     - username
     - password
+    - account_email
 docker:
   base:
     couchformation.docker.driver.base:

@@ -30,6 +30,7 @@ class CapellaDeployment(object):
         self.provider = parameters.get('provider')
         self.username = parameters.get('username') if parameters.get('username') else "Administrator"
         self.password = parameters.get('password')
+        self.account_email = parameters.get('account_email')
         self.cidr = parameters.get('cidr') if parameters.get('cidr') else "10.0.0.0/23"
         self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
         self.db_name = f"{self.name}-database"
@@ -47,8 +48,6 @@ class CapellaDeployment(object):
         self.state = KeyValueStore(self.state_file, document)
 
         CloudBase(self.parameters).test_session()
-
-        self.project_id = CloudBase(self.parameters).project_id
 
     def compose(self):
         number = self.parameters.get('number') if self.parameters.get('number') else 1
@@ -78,12 +77,25 @@ class CapellaDeployment(object):
                                       int(group_db.get('quantity')),
                                       group_db.get('services').split(','))
 
+        if self.state.get('project_id'):
+            project_id = self.state.get('project_id')
+        else:
+            project_data = Capella().get_project(self.project)
+            if not project_data:
+                logger.info(f"Creating project {self.project}")
+                project_id = Capella().create_project(self.project, self.account_email)
+                self.state['project_id'] = project_id
+            else:
+                project_id = project_data.get('id')
+
+        self.state['project'] = self.project
+
         if self.state.get('instance_id'):
             logger.info(f"Database {self.db_name} already exists")
             cluster_id = self.state['instance_id']
         else:
             logger.info(f"Creating cluster {self.name}")
-            cluster_id = Capella(project_id=self.project_id).create_cluster(cluster)
+            cluster_id = Capella(project_id=project_id).create_cluster(cluster)
             self.state['instance_id'] = cluster_id
             self.state['provider'] = self.provider
             self.state['region'] = self.region
@@ -91,7 +103,7 @@ class CapellaDeployment(object):
             self.state['name'] = self.name
             self.state['cloud'] = self.cloud
             logger.info("Waiting for cluster creation to complete")
-            Capella(project_id=self.project_id).wait_for_cluster(self.name)
+            Capella(project_id=project_id).wait_for_cluster(self.name)
 
         logger.info(f"Cluster ID: {cluster_id}")
 
@@ -100,7 +112,7 @@ class CapellaDeployment(object):
         else:
             allow_cidr = AllowedCIDR().create(self.allow)
             logger.info(f"Configuring allowed CIDR {self.allow}")
-            Capella(project_id=self.project_id).allow_cidr(cluster_id, allow_cidr)
+            Capella(project_id=project_id).allow_cidr(cluster_id, allow_cidr)
             self.state['allow'] = self.allow
 
         if self.state.get('username'):
@@ -113,7 +125,7 @@ class CapellaDeployment(object):
                 logger.info(f"Password: {password}")
             credentials = Credentials().create(self.username, password)
             logger.info(f"Creating database user {self.username}")
-            Capella(project_id=self.project_id).add_db_user(cluster_id, credentials)
+            Capella(project_id=project_id).add_db_user(cluster_id, credentials)
             self.state['username'] = self.username
 
         logger.info("Capella database successfully created")
@@ -121,11 +133,25 @@ class CapellaDeployment(object):
         return self.state.as_dict
 
     def destroy(self):
+        project = self.state.get('project')
+        project_data = Capella().get_project(project)
+        project_id = project_data.get('id')
+        logger.info(f"Project {project} ID {project_id}")
+
         cluster_name = self.state['name'] = self.name
         logger.info(f"Destroying cluster {cluster_name}")
-        Capella(project_id=self.project_id).delete_cluster(cluster_name)
+        Capella(project_id=project_id).delete_cluster(cluster_name)
         logger.info("Waiting for cluster deletion to complete")
-        Capella(project_id=self.project_id).wait_for_cluster_delete(cluster_name)
+        Capella(project_id=project_id).wait_for_cluster_delete(cluster_name)
+
+        if self.state.get('project_id'):
+            cluster_list = Capella(project_id=project_id).list_clusters()
+            if len(cluster_list) == 0:
+                logger.info(f"Removing project {project}")
+                Capella().delete_project(project)
+            else:
+                logger.warning(f"Project {project} has active clusters, it will not be removed")
+
         self.state.clear()
 
     def info(self):
