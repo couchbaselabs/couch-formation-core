@@ -41,7 +41,7 @@ setup(
         "pytz>=2021.3",
         "pyvmomi>=8.0.0.1.1",
         "requests>=2.31.0",
-        "urllib3>=1.26.18",
+        "urllib3>=1.26.16",
         "azure-common>=1.1.28",
         "azure-core>=1.26.1",
         "azure-mgmt-resource>=22.0.0",
