@@ -102,6 +102,11 @@ class CLI(object):
         self.options = None
         self.remainder = None
 
+        if os.name == 'nt':
+            from ctypes import windll
+            k = windll.kernel32
+            k.SetConsoleMode(k.GetStdHandle(-11), 7)
+
         if self.args is None:
             self.args = sys.argv[1:]
 
