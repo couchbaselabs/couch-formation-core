@@ -3,12 +3,13 @@
 
 import attr
 import os
+from pathlib import Path
 
 CLOUD_KEY = "azure"
 
 
 def get_auth_directory():
-    return os.path.join(os.environ['HOME'], '.azure')
+    return os.path.join(Path.home(), '.azure')
 
 
 def get_config_default():

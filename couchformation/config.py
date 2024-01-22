@@ -4,6 +4,7 @@
 import os
 from typing import Optional, Union, List
 from enum import Enum
+from pathlib import Path
 import attr
 import argparse
 import couchformation.constants as C
@@ -120,7 +121,7 @@ class Parameters:
 @attr.s
 class BaseConfig:
     project: Optional[str] = attr.ib(default="resources")
-    ssh_key: Optional[str] = attr.ib(default=os.path.join(os.environ['HOME'], '.ssh', 'couch-formation-key.pem'))
+    ssh_key: Optional[str] = attr.ib(default=os.path.join(Path.home(), '.ssh', 'couch-formation-key.pem'))
     base_dir: Optional[str] = attr.ib(default=get_base_dir())
     private_ip: Optional[bool] = attr.ib(default=False)
 

@@ -4,10 +4,11 @@
 import multiprocessing
 import os
 from couchformation import get_data_dir
+from pathlib import Path
 
 GLOBAL_LOCK = multiprocessing.Lock()
 
-ROOT_DIRECTORY = os.path.join(os.environ.get('HOME'), '.config', 'couch-formation')
+ROOT_DIRECTORY = os.path.join(Path.home(), '.config', 'couch-formation')
 STATE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'state')
 LOG_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'log')
 DATA_DIRECTORY = get_data_dir()

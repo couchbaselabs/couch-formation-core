@@ -3,12 +3,13 @@
 
 import attr
 import os
+from pathlib import Path
 
 CLOUD_KEY = "gcp"
 
 
 def get_auth_directory():
-    return os.path.join(os.environ['HOME'], '.config', 'gcloud')
+    return os.path.join(Path.home(), '.config', 'gcloud')
 
 
 def get_default_credentials():

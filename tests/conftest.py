@@ -4,11 +4,12 @@
 import logging
 import warnings
 import os
+from pathlib import Path
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger()
 
-ROOT_DIRECTORY = os.path.join(os.environ.get('HOME'), '.config', 'couch-formation')
+ROOT_DIRECTORY = os.path.join(Path.home(), '.config', 'couch-formation')
 STATE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'state')
 LOG_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'log')
 

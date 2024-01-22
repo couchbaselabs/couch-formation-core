@@ -10,6 +10,7 @@ import os
 import webbrowser
 import time
 import configparser
+from pathlib import Path
 from datetime import datetime
 from couchformation.exception import FatalError, NonFatalError
 from couchformation.config import AuthMode
@@ -32,7 +33,7 @@ class CloudBase(object):
 
     def __init__(self, parameters: dict):
         self.parameters = parameters
-        self.config_directory = os.path.join(os.environ['HOME'], '.aws')
+        self.config_directory = os.path.join(Path.home(), '.aws')
         self.config_file = os.path.join(self.config_directory, 'config')
         self.credential_file = os.path.join(self.config_directory, 'credentials')
         self.config_data = configparser.ConfigParser()
