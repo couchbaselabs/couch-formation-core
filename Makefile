@@ -73,7 +73,7 @@ test:
 		tests/test_kvdb.py
 test_win:
 		python -m pytest \
-		tests/test_1.py \
+		tests/test_1w.py \
 		tests/test_2.py \
 		tests/test_3.py \
 		tests/test_4.py \
