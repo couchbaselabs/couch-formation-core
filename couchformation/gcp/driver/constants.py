@@ -9,7 +9,10 @@ CLOUD_KEY = "gcp"
 
 
 def get_auth_directory():
-    return os.path.join(Path.home(), '.config', 'gcloud')
+    if os.name == 'nt':
+        return os.path.join(os.environ['APPDATA'], 'gcloud')
+    else:
+        return os.path.join(Path.home(), '.config', 'gcloud')
 
 
 def get_default_credentials():

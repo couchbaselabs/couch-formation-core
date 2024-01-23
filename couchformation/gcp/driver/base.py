@@ -1,12 +1,14 @@
 ##
 ##
-
+import os.path
 import socket
 import logging
 import json
 import time
 import googleapiclient.discovery
 import googleapiclient.errors
+import google.oauth2.credentials
+import google.auth
 from google.cloud import storage
 from google.oauth2 import service_account
 from couchformation.config import AuthMode
@@ -43,25 +45,23 @@ class CloudBase(object):
         self.gcp_account_email = None
         self.gcp_zone_list = []
         self.gcp_zone = None
-        self.auth_file = get_default_credentials()
 
         socket.setdefaulttimeout(120)
 
         if not parameters.get('auth_mode') or AuthMode[parameters.get('auth_mode')] == AuthMode.default:
-            self.gcp_client = self.default_auth()
+            self.credentials, self.gcp_project, self.gcp_account_email = self.default_auth()
+        elif AuthMode[parameters.get('auth_mode')] == AuthMode.file:
+            self.credentials, self.gcp_project, self.gcp_account_email = self.file_auth()
         else:
             raise GCPDriverError(f"Unsupported auth mode {parameters.get('auth_mode')}")
 
-        self.auth_data = self.read_auth_file()
-
-        self.gcp_project = self.auth_data.get('project_id')
-        self.gcp_account_email = self.auth_data.get('client_email')
+        self.gcp_client = googleapiclient.discovery.build('compute', 'v1', credentials=self.credentials)
 
         if not self.gcp_account_email:
-            raise GCPDriverError(f"can not get account email from auth file {self.gcp_account_file}")
+            raise GCPDriverError(f"can not determine account email")
 
         if not self.gcp_project:
-            raise GCPDriverError(f"can not get GCP project from auth file {self.gcp_account_file}")
+            raise GCPDriverError(f"can not determine GCP project")
 
         self.gcp_region = parameters.get('region')
 
@@ -72,21 +72,37 @@ class CloudBase(object):
 
     def test_session(self):
         try:
-            credentials = service_account.Credentials.from_service_account_file(self.auth_file)
-            storage_client = storage.Client(project=self.gcp_project, credentials=credentials)
+            storage_client = storage.Client(project=self.gcp_project, credentials=self.credentials)
             storage_client.list_buckets()
         except Exception as err:
             raise GCPDriverError(f"not authorized: {err}")
 
-    def default_auth(self):
+    @staticmethod
+    def default_auth():
         try:
-            credentials = service_account.Credentials.from_service_account_file(self.auth_file)
-            return googleapiclient.discovery.build('compute', 'v1', credentials=credentials)
+            credentials, project_id = google.auth.default()
+            if hasattr(credentials, "service_account_email"):
+                account_email = credentials.service_account_email
+            else:
+                account_email = credentials.signer_email
+            return credentials, project_id, account_email
         except Exception as err:
             raise GCPDriverError(f"error connecting to GCP: {err}")
 
-    def read_auth_file(self):
-        file_handle = open(self.auth_file, 'r')
+    def file_auth(self):
+        auth_file = get_default_credentials()
+        if os.path.exists(auth_file):
+            credentials = service_account.Credentials.from_service_account_file(auth_file)
+            auth_data = self.read_auth_file(auth_file)
+            project_id = auth_data.get('project_id')
+            account_email = auth_data.get('client_email')
+            return credentials, project_id, account_email
+        else:
+            raise GCPDriverError(f"file auth selected: can not find application_default_credentials.json")
+
+    @staticmethod
+    def read_auth_file(auth_file: str):
+        file_handle = open(auth_file, 'r')
         auth_data = json.load(file_handle)
         file_handle.close()
         return auth_data

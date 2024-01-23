@@ -47,6 +47,7 @@ def str_to_int(value: Union[str, int]) -> int:
 class AuthMode(Enum):
     default = 0
     sso = 1
+    file = 2
 
 
 class PathMode(Enum):
