@@ -89,10 +89,10 @@ class Image(CloudBase):
 
         return image_list
 
-    def list_standard(self, architecture: str = 'x86_64', os_id: str = None, os_version: str = None):
+    def list_standard(self, architecture: str = 'x86_64', os_id: str = None, os_version: str = None, feature: str = None):
         result_list = []
         for image_type in AWSImageOwners.image_owner_list:
-            if os_id and image_type['os_id'] != os_id:
+            if os_id and (image_type['os_id'] != os_id or image_type['feature'] != feature):
                 continue
             image_list = self.list(is_public=True, owner_id=image_type['owner_id'], name=image_type['pattern'])
             for version in C.OS_VERSION_LIST[image_type['os_id']]:

@@ -122,3 +122,12 @@ cloudmgr create --build cbs --cloud aws --project dev01 --name testdb01 --auth_m
 ## Capella Support
 ### Credentials Directory
 The automation for Capella uses the v4 public API. To use the automation, create an API key in the Capella UI and save it to a file named ```default-api-key-token.txt``` in a directory named ```.capella``` in your home directory.
+
+## Windows
+If you install python for your user (as opposed to all users) which is the default installation type, then you don't need to do a user scoped installation with ```pip```. You should install the ```wheel``` pacakge before you install Couch Formation.
+```
+pip3 install wheel
+```
+```
+pip3 install couchformation
+```

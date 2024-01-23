@@ -28,6 +28,7 @@ aws:
     - os_id
     - os_version
     - os_arch
+    - feature
     - machine_type
     - quantity
     - services

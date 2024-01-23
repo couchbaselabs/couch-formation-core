@@ -40,6 +40,7 @@ class AWSDeployment(object):
         self.os_id = parameters.get('os_id')
         self.os_version = parameters.get('os_version')
         self.os_arch = parameters.get('os_arch') if parameters.get('os_arch') else 'x86_64'
+        self.feature = parameters.get('feature')
         self.cloud = parameters.get('cloud')
         self.number = parameters.get('number')
         self.machine_type = parameters.get('machine_type')
@@ -95,7 +96,7 @@ class AWSDeployment(object):
         if not subnet:
             raise AWSNodeError(f"Can not determine availability zone (check project settings)")
 
-        image = Image(self.parameters).list_standard(os_id=self.os_id, os_version=self.os_version, architecture=self.os_arch)
+        image = Image(self.parameters).list_standard(os_id=self.os_id, os_version=self.os_version, architecture=self.os_arch, feature=self.feature)
         if not image:
             raise AWSNodeError(f"can not find image for type {self.os_id} {self.os_version}")
 

@@ -151,6 +151,7 @@ class AWSImageOwners(object):
             "description": "Ubuntu Linux",
             "os_id": "ubuntu",
             "user": "ubuntu",
+            "feature": None,
             "pattern": r"ubuntu/images/hvm-ssd/ubuntu-*-server-*",
             "version": r"ubuntu/images/hvm-ssd/ubuntu-.*-(.+?)-.*-server-.*"
         },
@@ -159,6 +160,7 @@ class AWSImageOwners(object):
             "description": "CentOS Linux",
             "os_id": "centos",
             "user": "centos",
+            "feature": None,
             "pattern": r"CentOS Stream * * *",
             "version": r"CentOS Stream (.+?) .* .*",
         },
@@ -167,6 +169,7 @@ class AWSImageOwners(object):
             "description": "RedHat Linux",
             "os_id": "rhel",
             "user": "ec2-user",
+            "feature": None,
             "pattern": r"RHEL-?.?.?_HVM-*-*-*",
             "version": r"RHEL-(.+?).[0-9].[0-9]_HVM-[0-9]*-.*-.*"
         },
@@ -175,6 +178,7 @@ class AWSImageOwners(object):
             "description": "Suse Linux",
             "os_id": "sles",
             "user": "ec2-user",
+            "feature": None,
             "pattern": r"suse-sles-*-sp?-v*-hvm-ssd-*",
             "version": r"suse-sles-(.+?)-sp[0-9]-v[0-9]*-hvm-ssd-.*"
         },
@@ -183,6 +187,7 @@ class AWSImageOwners(object):
             "description": "openSUSE Leap",
             "os_id": "opensuse-leap",
             "user": "ec2-user",
+            "feature": None,
             "pattern": r"openSUSE-Leap-*-?-v*-hvm-ssd-*-*",
             "version": r"openSUSE-Leap-(.+?)-[0-9]-v[0-9]*-hvm-ssd-.*-.*"
         },
@@ -191,6 +196,7 @@ class AWSImageOwners(object):
             "description": "Debian 9 and earlier",
             "os_id": "debian",
             "user": "admin",
+            "feature": None,
             "pattern": r"debian-*-*-*-*",
             "version": r"debian-(.+?)-.*-[0-9]*-[0-9]*"
         },
@@ -199,6 +205,7 @@ class AWSImageOwners(object):
             "description": "Debian 10 and later",
             "os_id": "debian",
             "user": "admin",
+            "feature": None,
             "pattern": r"debian-*-*-*-*",
             "version": r"debian-(.+?)-.*-[0-9]*-[0-9]*"
         },
@@ -207,6 +214,7 @@ class AWSImageOwners(object):
             "description": "Oracle Linux",
             "os_id": "ol",
             "user": "ec2-user",
+            "feature": None,
             "pattern": r"OL?.?-*-HVM-*-*-*",
             "version": r"OL(.+?).[0-9]-.*-HVM-[0-9]*-[0-9]*-[0-9]*"
         },
@@ -215,6 +223,7 @@ class AWSImageOwners(object):
             "description": "Fedora CoreOS Linux",
             "os_id": "fedora",
             "user": "core",
+            "feature": None,
             "pattern": r"fedora-coreos-*.*.?.?-*",
             "version": r"fedora-coreos-(.+?).[0-9]*.[0-9].[0-9]-.*"
         },
@@ -223,6 +232,7 @@ class AWSImageOwners(object):
             "description": "Amazon Linux",
             "os_id": "amzn",
             "user": "ec2-user",
+            "feature": None,
             "pattern": r"*-ami-*.*.0-*",
             "version": r"[a-z]*(.+?)-ami-.*.[0-9]*.0-.*"
         },
@@ -231,6 +241,7 @@ class AWSImageOwners(object):
             "description": "Arch Linux",
             "os_id": "arch",
             "user": "arch",
+            "feature": None,
             "pattern": r"arch-linux-*-hvm-*.*.*.*-*",
             "version": r"none"
         },
@@ -239,6 +250,7 @@ class AWSImageOwners(object):
             "description": "Rocky Linux",
             "os_id": "rocky",
             "user": "rocky",
+            "feature": None,
             "pattern": r"Rocky-?-EC2-?.?-*.0*",
             "version": r"Rocky-(.+?)-EC2-[0-9].[0-9]-[0-9]*.0.*"
         },
@@ -247,14 +259,25 @@ class AWSImageOwners(object):
             "description": "Windows",
             "os_id": "windows",
             "user": "Administrator",
+            "feature": None,
             "pattern": r"Windows_Server-*-English-Full-Base-*.*.*",
             "version": r"Windows_Server-(.+?)-English-Full-Base-[0-9]*.[0-9]*.[0-9]*"
+        },
+        {
+            "owner_id": "801119661308",
+            "description": "Windows",
+            "os_id": "windows",
+            "user": "Administrator",
+            "feature": "hyperv",
+            "pattern": r"Windows_Server-*-English-Full-HyperV-*.*.*",
+            "version": r"Windows_Server-(.+?)-English-Full-HyperV-[0-9]*.[0-9]*.[0-9]*"
         },
         {
             "owner_id": "634519214787",
             "description": "macOS",
             "os_id": "macos",
             "user": "ec2-user",
+            "feature": None,
             "pattern": r"amzn-ec2-macos-*.*.*-*-*-arm64",
             "version": r"amzn-ec2-macos-(.+?).[0-9]*.[0-9]*-[0-9]*-[0-9]*-arm64"
         },
