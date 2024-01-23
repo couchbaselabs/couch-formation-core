@@ -40,6 +40,7 @@ class GCPDeployment(object):
         self.ssh_key = parameters.get('ssh_key')
         self.os_id = parameters.get('os_id')
         self.os_version = parameters.get('os_version')
+        self.feature = parameters.get('feature')
         self.cloud = parameters.get('cloud')
         self.number = parameters.get('number')
         self.machine_type = parameters.get('machine_type')
@@ -117,6 +118,12 @@ class GCPDeployment(object):
         machine_ram = str(machine['memory'] / 1024)
         logger.info(f"Selecting machine type {machine_name}")
 
+        if self.feature == "vmp":
+            logger.info(f"Enabling nested virtualization")
+            virtualization = True
+        else:
+            virtualization = False
+
         Disk(self.parameters).create(self.swap_disk, subnet['zone'], machine_ram)
         self.state['swap_disk'] = self.swap_disk
         Disk(self.parameters).create(self.data_disk, subnet['zone'], volume_size)
@@ -134,7 +141,8 @@ class GCPDeployment(object):
                                       ssh_pub_key_text,
                                       self.swap_disk,
                                       self.data_disk,
-                                      machine_type=machine_name)
+                                      machine_type=machine_name,
+                                      virtualization=virtualization)
 
         self.state['instance_id'] = self.node_name
         self.state['name'] = self.node_name

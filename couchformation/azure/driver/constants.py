@@ -169,8 +169,10 @@ class AzureImagePublishers(object):
 class ComputeTypes(object):
     size_family = set('DEFL')
     size_features = set('tlmsa')
+    vmp_features = set('tlms')
     size_storage = set('s')
     size_versions = set('2345')
+    vmp_versions = set('345')
 
 
 @attr.s

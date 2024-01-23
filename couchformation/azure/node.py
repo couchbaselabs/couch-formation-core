@@ -40,6 +40,7 @@ class AzureDeployment(object):
         self.ssh_key = parameters.get('ssh_key')
         self.os_id = parameters.get('os_id')
         self.os_version = parameters.get('os_version')
+        self.feature = parameters.get('feature')
         self.cloud = parameters.get('cloud')
         self.number = parameters.get('number')
         self.machine_type = parameters.get('machine_type')
@@ -111,7 +112,13 @@ class AzureDeployment(object):
         volume_size = self.volume_size
         services = self.services
 
-        machine = MachineType(self.parameters).get_machine(self.machine_type, azure_location)
+        if self.feature == "vmp":
+            logger.info(f"Enabling nested virtualization")
+            virtualization = True
+        else:
+            virtualization = False
+
+        machine = MachineType(self.parameters).get_machine(self.machine_type, azure_location, virtualization)
         if not machine:
             raise AzureNodeError(f"can not find machine for type {machine_type}")
         machine_name = machine['name']

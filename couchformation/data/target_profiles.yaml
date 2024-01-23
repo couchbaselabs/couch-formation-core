@@ -61,6 +61,7 @@ gcp:
     - cidr
     - os_id
     - os_version
+    - feature
     - machine_type
     - quantity
     - services
@@ -92,6 +93,7 @@ azure:
     - cidr
     - os_id
     - os_version
+    - feature
     - machine_type
     - quantity
     - services

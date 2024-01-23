@@ -268,7 +268,7 @@ class AWSImageOwners(object):
             "description": "Windows",
             "os_id": "windows",
             "user": "Administrator",
-            "feature": "hyperv",
+            "feature": "vmp",
             "pattern": r"Windows_Server-*-English-Full-HyperV-*.*.*",
             "version": r"Windows_Server-(.+?)-English-Full-HyperV-[0-9]*.[0-9]*.[0-9]*"
         },

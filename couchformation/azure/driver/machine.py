@@ -19,7 +19,7 @@ class MachineType(CloudBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def list(self, location: str) -> list:
+    def list(self, location: str, virtualization: bool = False) -> list:
         machine_type_list = []
 
         try:
@@ -41,6 +41,10 @@ class MachineType(CloudBase):
                 continue
             if not set(match.group(4)).issubset(ComputeTypes.size_versions):
                 continue
+            if virtualization and not set(match.group(3)).issubset(ComputeTypes.vmp_features):
+                continue
+            if virtualization and not set(match.group(4)).issubset(ComputeTypes.vmp_versions):
+                continue
             config_block = {'name': machine.name,
                             'cpu': machine.number_of_cores,
                             'memory': machine.memory_in_mb}
@@ -56,9 +60,9 @@ class MachineType(CloudBase):
         resource_list = [r for r in result_list if location in r.locations]
         return resource_list
 
-    def get_machine_types(self, location: str):
+    def get_machine_types(self, location: str, virtualization: bool = False):
         result_list = []
-        machine_list = self.list(location)
+        machine_list = self.list(location, virtualization)
         machine_list = sorted(machine_list, key=lambda m: m['name'][-1], reverse=True)
 
         for machine_type in C.MACHINE_TYPES:
@@ -70,8 +74,8 @@ class MachineType(CloudBase):
 
         return result_list
 
-    def get_machine(self, name: str, location: str):
-        machine_list = self.get_machine_types(location)
+    def get_machine(self, name: str, location: str, virtualization: bool = False):
+        machine_list = self.get_machine_types(location, virtualization)
         return next((m for m in machine_list if m['machine_type'] == name), None)
 
     def check_capacity(self, resource_list: List, machine_size: str, location: str):

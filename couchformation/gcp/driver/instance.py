@@ -37,7 +37,8 @@ class Instance(CloudBase):
             data_disk,
             root_size="256",
             disk_type: str = "pd-ssd",
-            machine_type="n2-standard-2"):
+            machine_type="n2-standard-2",
+            virtualization: bool = False):
         operation = {}
         instance_body = {
             "name": name,
@@ -90,6 +91,13 @@ class Instance(CloudBase):
             ],
             "machineType": f"zones/{zone}/machineTypes/{machine_type}"
         }
+
+        if virtualization:
+            instance_body.update({
+                "advancedMachineFeatures": {
+                    "enableNestedVirtualization": True
+                }
+            })
 
         try:
             request = self.gcp_client.instances().insert(project=self.gcp_project, zone=zone, body=instance_body)
