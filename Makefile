@@ -71,3 +71,13 @@ test:
 		tests/test_8.py \
 		tests/test_9.py \
 		tests/test_kvdb.py
+test_win:
+		python -m pytest \
+		tests/test_1.py \
+		tests/test_2.py \
+		tests/test_3.py \
+		tests/test_4.py \
+		tests/test_5.py \
+		tests/test_6.py \
+		tests/test_7.py
+		tests/test_kvdb.py
