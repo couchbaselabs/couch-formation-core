@@ -24,6 +24,7 @@ from couchformation.aws.driver.route import RouteTable
 from couchformation.aws.driver.sshkey import SSHKey
 from couchformation.aws.driver.image import Image
 from couchformation.ssh import SSHUtil
+from tests.common import ssh_key_path
 
 
 class CustomFormatter(logging.Formatter):
@@ -72,7 +73,7 @@ class TestMainAWS(unittest.TestCase):
               "region": "us-east-2",
               "auth_mode": "sso",
               "profile": None,
-              "ssh_key": "/Users/michael/.ssh/mminichino-default-key-pair.pem",
+              "ssh_key": ssh_key_path,
               "cidr": None,
               "os_id": "ubuntu",
               "os_version": "22.04",

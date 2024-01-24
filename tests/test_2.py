@@ -22,6 +22,7 @@ from couchformation.gcp.driver.firewall import Firewall
 from couchformation.gcp.driver.disk import Disk
 from couchformation.gcp.driver.image import Image
 from couchformation.ssh import SSHUtil
+from tests.common import ssh_key_path
 
 
 class CustomFormatter(logging.Formatter):
@@ -70,7 +71,7 @@ class TestMainGCP(unittest.TestCase):
               "region": "us-central1",
               "auth_mode": None,
               "profile": None,
-              "ssh_key": "/Users/michael/.ssh/mminichino-default-key-pair.pem",
+              "ssh_key": ssh_key_path,
               "cidr": None,
               "os_id": "ubuntu",
               "os_version": "22.04",

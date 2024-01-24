@@ -19,6 +19,11 @@ parent = os.path.dirname(current)
 logging.getLogger("docker").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
+if os.name == 'nt':
+    ssh_key_path = r"C:\Users\adminuser\.ssh\mminichino-default-key-pair.pem"
+else:
+    ssh_key_path = r"/Users/michael/.ssh/mminichino-default-key-pair.pem"
+
 
 def make_local_dir(name: str):
     if not os.path.exists(name):

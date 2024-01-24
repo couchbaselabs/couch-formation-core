@@ -21,6 +21,7 @@ from couchformation.azure.driver.machine import MachineType
 from couchformation.azure.driver.disk import Disk
 from couchformation.azure.driver.image import Image
 from couchformation.ssh import SSHUtil
+from tests.common import ssh_key_path
 
 
 class CustomFormatter(logging.Formatter):
@@ -69,7 +70,7 @@ class TestMainAzure(unittest.TestCase):
               "region": "eastus",
               "auth_mode": None,
               "profile": None,
-              "ssh_key": "/Users/michael/.ssh/mminichino-default-key-pair.pem",
+              "ssh_key": ssh_key_path,
               "cidr": None,
               "os_id": "ubuntu",
               "os_version": "22.04",
