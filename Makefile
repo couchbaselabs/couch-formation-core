@@ -79,5 +79,5 @@ test_win:
 		tests/test_4.py \
 		tests/test_5.py \
 		tests/test_6.py \
-		tests/test_7.py
+		tests/test_7.py \
 		tests/test_kvdb.py
