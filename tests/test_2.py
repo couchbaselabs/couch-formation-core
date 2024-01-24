@@ -5,6 +5,7 @@ import sys
 import unittest
 import logging
 import warnings
+import pytest
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger()
@@ -53,6 +54,7 @@ class CustomFormatter(logging.Formatter):
         return formatter.format(record)
 
 
+@pytest.mark.serial
 class TestMainGCP(unittest.TestCase):
 
     def setUp(self):
@@ -102,6 +104,7 @@ class TestMainGCP(unittest.TestCase):
         firewall_default = f"{vpc_name}-fw-default"
         firewall_cbs = f"{vpc_name}-fw-cbs"
         firewall_ssh = f"{vpc_name}-fw-ssh"
+        firewall_rdp = f"{vpc_name}-fw-rdp"
         node_name = f"{self.project}-node-01"
         swap_disk = f"{self.project}-swap-01"
         data_disk = f"{self.project}-data-01"
@@ -132,6 +135,7 @@ class TestMainGCP(unittest.TestCase):
                     "4984-4986"
                   ])
         Firewall(self.parameters).create_ingress(firewall_ssh, vpc_name, "0.0.0.0/0", "tcp", ["22"])
+        Firewall(self.parameters).create_ingress(firewall_rdp, vpc_name, "0.0.0.0/0", "tcp", ["3389"])
 
         image = Image(self.parameters).list_standard(os_id=self.os_id, os_version=self.os_version)
         assert image is not None
@@ -171,6 +175,7 @@ class TestMainGCP(unittest.TestCase):
         Instance(self.parameters).terminate(node_name, zone_list[0])
         Disk(self.parameters).delete(swap_disk, zone_list[0])
         Disk(self.parameters).delete(data_disk, zone_list[0])
+        Firewall(self.parameters).delete(firewall_rdp)
         Firewall(self.parameters).delete(firewall_ssh)
         Firewall(self.parameters).delete(firewall_cbs)
         Firewall(self.parameters).delete(firewall_default)

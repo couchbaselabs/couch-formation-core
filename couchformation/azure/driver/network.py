@@ -208,24 +208,27 @@ class Subnet(CloudBase):
 
     def delete(self, network: str, subnet: str, resource_group: str) -> None:
         try:
-            request = self.network_client.subnets.begin_delete(resource_group, network, subnet)
-            request.wait()
+            subnet_info = self.details(network, subnet, resource_group)
+            if subnet_info:
+                request = self.network_client.subnets.begin_delete(resource_group, network, subnet)
+                request.wait()
         except Exception as err:
             raise AzureDriverError(f"error deleting subnet: {err}")
 
-    def details(self, network: str, subnet: str, resource_group: str) -> dict:
+    def details(self, network: str, subnet: str, resource_group: str) -> Union[dict, None]:
         try:
             info = self.network_client.subnets.get(resource_group, network, subnet)
+            subnet_block = {'cidr': info.address_prefix,
+                            'name': info.name,
+                            'routes': info.route_table.routes if info.route_table else None,
+                            'nsg': info.network_security_group.id.rsplit('/', 1)[-1] if info.network_security_group else None,
+                            'id': info.id}
+
+            return subnet_block
+        except ResourceNotFoundError:
+            return None
         except Exception as err:
             raise AzureDriverError(f"error getting subnet: {err}")
-
-        subnet_block = {'cidr': info.address_prefix,
-                        'name': info.name,
-                        'routes': info.route_table.routes if info.route_table else None,
-                        'nsg': info.network_security_group.id.rsplit('/', 1)[-1] if info.network_security_group else None,
-                        'id': info.id}
-
-        return subnet_block
 
 
 class SecurityGroup(CloudBase):

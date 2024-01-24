@@ -67,7 +67,6 @@ class GCPDeployment(object):
 
         self.gcp_project = self.gcp_base.gcp_project
         self.gcp_account_email = self.gcp_base.gcp_account_email
-        self.gcp_auth_file = self.gcp_base.auth_file
 
     def deploy(self):
         subnet_list = []

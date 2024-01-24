@@ -5,6 +5,7 @@ import sys
 import logging
 import warnings
 import unittest
+import pytest
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger()
@@ -55,6 +56,7 @@ class CustomFormatter(logging.Formatter):
         return formatter.format(record)
 
 
+@pytest.mark.serial
 class TestMainAWS(unittest.TestCase):
 
     def setUp(self):

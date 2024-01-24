@@ -26,7 +26,7 @@ class Network(CloudBase):
 
                 for network in response['items']:
                     subnet_list = []
-                    for subnet in network['subnetworks']:
+                    for subnet in network.get('subnetworks', []):
                         subnet_name = subnet.rsplit('/', 4)[-1]
                         region_name = subnet.rsplit('/', 4)[-3]
                         if region_name != self.region:

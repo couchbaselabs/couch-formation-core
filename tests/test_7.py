@@ -5,6 +5,7 @@ import sys
 import logging
 import warnings
 import unittest
+import pytest
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger()
@@ -17,6 +18,7 @@ from couchformation.project import Project
 from couchformation.cli.cloudmgr import CloudMgrCLI
 
 
+@pytest.mark.serial
 class TestMainCapella(unittest.TestCase):
 
     def setUp(self):

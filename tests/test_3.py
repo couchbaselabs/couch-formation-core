@@ -5,6 +5,7 @@ import sys
 import unittest
 import logging
 import warnings
+import pytest
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger()
@@ -52,6 +53,7 @@ class CustomFormatter(logging.Formatter):
         return formatter.format(record)
 
 
+@pytest.mark.serial
 class TestMainAzure(unittest.TestCase):
 
     def setUp(self):

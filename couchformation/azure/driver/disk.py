@@ -36,7 +36,7 @@ class Disk(CloudBase):
             request.wait()
             return request.result()
         except Exception as err:
-            raise AzureDriverError(f"error creating instance: {err}")
+            raise AzureDriverError(f"error creating disk: {err}")
 
     def details(self, name: str, resource_group: str) -> dict:
         try:

@@ -7,6 +7,7 @@ import warnings
 import requests
 import base64
 import unittest
+import pytest
 from requests.auth import AuthBase
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
@@ -40,6 +41,7 @@ class BasicAuth(AuthBase):
         return r
 
 
+@pytest.mark.serial
 class TestMainAzure(unittest.TestCase):
 
     def setUp(self):
