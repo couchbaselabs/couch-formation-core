@@ -34,6 +34,12 @@ aws:
     - services
     - volume_iops
     - volume_size
+  required:
+    - region
+    - ssh_key
+    - os_id
+    - os_version
+    - quantity
 gcp:
   base:
     couchformation.gcp.driver.base:
@@ -66,6 +72,12 @@ gcp:
     - quantity
     - services
     - volume_size
+  required:
+    - region
+    - ssh_key
+    - os_id
+    - os_version
+    - quantity
 azure:
   base:
     couchformation.azure.driver.base:
@@ -100,6 +112,12 @@ azure:
     - volume_iops
     - volume_size
     - volume_tier
+  required:
+    - region
+    - ssh_key
+    - os_id
+    - os_version
+    - quantity
 capella:
   base:
     couchformation.capella.driver.base:
@@ -131,6 +149,10 @@ capella:
     - username
     - password
     - account_email
+  required:
+    - provider
+    - region
+    - quantity
 docker:
   base:
     couchformation.docker.driver.base:
@@ -160,3 +182,4 @@ docker:
     - ports
     - username
     - password
+  required: []

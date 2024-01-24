@@ -20,11 +20,13 @@ class CloudMgrCLI(CLI):
 
     @override()
     def local_args(self):
+        self.parser.add_argument('-V', action='store_true', dest='show_version', help="Display version information")
+
         opt_parser = argparse.ArgumentParser(parents=[self.parser], add_help=False)
         opt_parser.add_argument('-b', '--build', action='store', help="Build Type", default="cbs")
         opt_parser.add_argument('-c', '--cloud', action='store', help="Infrastructure", default="aws")
-        opt_parser.add_argument('-p', '--project', action='store', help="Project Name", default="resources")
-        opt_parser.add_argument('-n', '--name', action='store', help="Deployment Name")
+        opt_parser.add_argument('-p', '--project', action='store', help="Project Name")
+        opt_parser.add_argument('-n', '--name', action='store', help="Service Name")
         opt_parser.add_argument('-x', '--connect', action='store', help="Connection Name", default=None)
         opt_parser.add_argument('-g', '--group', action='store', help="Group Number", default=1, type=int)
         opt_parser.add_argument('-P', '--provisioner', action='store', help="Provisioner Name", default="remote")
@@ -41,11 +43,25 @@ class CloudMgrCLI(CLI):
     def run(self):
         logger.info(f"Couch Formation v{couchformation.__version__}")
 
+        if self.options.show_version:
+            return
+
+        if not self.options.command or not self.options.project:
+            logger.error("Missing required arguments")
+            self.parser.print_help()
+            return
+
         project = Project(self.options, self.remainder)
 
         if self.options.command == "create":
+            if self.options.name is None:
+                logger.error("Missing required parameter: name")
+                return
             project.create()
         elif self.options.command == "add":
+            if self.options.name is None:
+                logger.error("Missing required parameter: name")
+                return
             project.add()
         elif self.options.command == "deploy":
             project.deploy(self.options.name)

@@ -28,11 +28,17 @@ class Project(object):
     def create(self):
         logger.info(f"Creating new service")
         profile = TargetProfile(self.remainder).get(self.cloud)
+        missing = profile.check_required_options()
+        if missing:
+            raise ProjectError(f"Missing required parameters: {','.join(missing)}")
         NodeGroup(self.options).create_node_group(profile.options)
 
     def add(self):
         logger.info(f"Adding node group to service")
         profile = TargetProfile(self.remainder).get(self.cloud)
+        missing = profile.check_required_options()
+        if missing:
+            raise ProjectError(f"Missing required parameters: {','.join(missing)}")
         NodeGroup(self.options).add_to_node_group(profile.options)
 
     def deploy(self, service=None):

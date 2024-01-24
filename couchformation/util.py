@@ -5,6 +5,8 @@ import os
 import logging
 import uuid
 import collections
+import string
+import random
 from typing import Union
 from uuid import UUID
 from shutil import copyfile
@@ -89,3 +91,38 @@ class Synchronize(object):
 
     def __exit__(self, *args):
         self._lock.release()
+
+
+class PasswordUtility(object):
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def valid_password(password: str, min_length: int = 8, max_length: int = 64) -> bool:
+        lower = 0
+        upper = 0
+        digit = 0
+        special = 0
+        if min_length <= len(password) <= max_length:
+            for i in password:
+                if i.islower():
+                    lower += 1
+                if i.isupper():
+                    upper += 1
+                if i.isdigit():
+                    digit += 1
+                if not i.isalnum():
+                    special += 1
+
+        if lower >= 1 and upper >= 1 and digit >= 1 and special >= 1:
+            return True
+        else:
+            return False
+
+    def generate(self, length: int = 8):
+        while True:
+            text = ''.join(random.choices(string.ascii_lowercase + string.ascii_uppercase + string.digits + '%@#', k=length))
+            password = str(text)
+            if self.valid_password(password, min_length=length):
+                return password

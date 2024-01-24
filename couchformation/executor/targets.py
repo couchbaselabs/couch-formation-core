@@ -27,6 +27,7 @@ class Profile:
 @attr.s
 class Parameters:
     options: List[str] = attr.ib()
+    required: Optional[List[str]] = attr.ib(default=[])
 
 
 @attr.s
@@ -43,7 +44,14 @@ class CloudProfile:
     network: Profile = attr.ib()
     node: Profile = attr.ib()
     parameters: Parameters = attr.ib()
-    options: Optional[argparse.Namespace] = attr.ib(default=None)
+    options: Optional[argparse.Namespace] = attr.ib(default=argparse.Namespace())
+
+    def check_required_options(self):
+        missing = []
+        for opt in self.parameters.required:
+            if opt not in self.options or getattr(self.options, opt) is None:
+                missing.append(opt)
+        return missing
 
 
 @attr.s
@@ -181,7 +189,7 @@ class TargetProfile(object):
                     base = CloudDriverBase(*self.construct_driver(settings, 'base'))
                     network = Profile(*self.construct_profile(settings, 'network'))
                     node = Profile(*self.construct_profile(settings, 'node'))
-                    profile = CloudProfile(cloud, base, network, node, Parameters(settings.get('parameters')))
+                    profile = CloudProfile(cloud, base, network, node, Parameters(settings.get('parameters'), settings.get('required', [])))
                     self.config.add(profile)
             except yaml.YAMLError as err:
                 RuntimeError(f"Can not open target config file {self.cfg_file}: {err}")

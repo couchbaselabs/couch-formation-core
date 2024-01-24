@@ -17,7 +17,7 @@ from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import FileManager, Synchronize
 import couchformation.constants as C
-from cbcmgr.cb_capella import Capella
+from couchformation.util import PasswordUtility
 
 logger = logging.getLogger('couchformation.azure.node')
 logger.addHandler(logging.NullHandler())
@@ -44,7 +44,7 @@ class AzureDeployment(object):
         self.cloud = parameters.get('cloud')
         self.number = parameters.get('number')
         self.machine_type = parameters.get('machine_type')
-        self.password = parameters.get('password') if parameters.get('password') else Capella().generate_password()
+        self.password = parameters.get('password') if parameters.get('password') else PasswordUtility().generate(16)
         self.volume_size = parameters.get('volume_size') if parameters.get('volume_size') else "256"
         self.services = parameters.get('services') if parameters.get('services') else "default"
         self.node_name = f"{self.name}-node-{self.number:02d}"
