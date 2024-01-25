@@ -63,7 +63,7 @@ class Disk(CloudBase):
         except googleapiclient.errors.HttpError as err:
             error_details = err.error_details[0].get('reason')
             if error_details != "notFound":
-                raise GCPDriverError(f"can not terminate instance: {err}")
+                raise GCPDriverError(f"can not delete disk: {err}")
         except Exception as err:
             raise GCPDriverError(f"error deleting disk: {err}")
 

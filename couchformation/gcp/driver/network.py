@@ -81,6 +81,10 @@ class Network(CloudBase):
             request = self.gcp_client.networks().delete(project=self.gcp_project, network=network)
             operation = request.execute()
             self.wait_for_global_operation(operation['name'])
+        except googleapiclient.errors.HttpError as err:
+            error_details = err.error_details[0].get('reason')
+            if error_details != "notFound":
+                raise GCPDriverError(f"can not delete network: {err}")
         except Exception as err:
             raise GCPDriverError(f"error deleting network: {err}")
 
@@ -162,8 +166,12 @@ class Subnet(CloudBase):
             request = self.gcp_client.subnetworks().delete(project=self.gcp_project, region=self.gcp_region, subnetwork=subnet)
             operation = request.execute()
             self.wait_for_regional_operation(operation['name'])
+        except googleapiclient.errors.HttpError as err:
+            error_details = err.error_details[0].get('reason')
+            if error_details != "notFound":
+                raise GCPDriverError(f"can not delete subnet: {err}")
         except Exception as err:
-            raise GCPDriverError(f"error deleting network: {err}")
+            raise GCPDriverError(f"error deleting subnet: {err}")
 
     def details(self, region: str, subnet: str) -> Union[dict, None]:
         try:

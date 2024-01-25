@@ -71,6 +71,10 @@ class Firewall(CloudBase):
             request = self.gcp_client.firewalls().delete(project=self.gcp_project, firewall=firewall)
             operation = request.execute()
             self.wait_for_global_operation(operation['name'])
+        except googleapiclient.errors.HttpError as err:
+            error_details = err.error_details[0].get('reason')
+            if error_details != "notFound":
+                raise GCPDriverError(f"can not delete firewall rule: {err}")
         except Exception as err:
             raise GCPDriverError(f"error deleting firewall rule: {err}")
 
