@@ -13,7 +13,6 @@ from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 
 warnings.filterwarnings("ignore")
-logger = logging.getLogger()
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
@@ -48,7 +47,11 @@ class TestMainAzure(unittest.TestCase):
         pass
 
     def tearDown(self):
-        pass
+        loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
+        for logger in loggers:
+            handlers = getattr(logger, 'handlers', [])
+            for handler in handlers:
+                logger.removeHandler(handler)
 
     def test_1(self):
         args = ["create", "--build", "cbs", "--cloud", "azure", "--project", "pytest-azure", "--name", "test-cluster",
