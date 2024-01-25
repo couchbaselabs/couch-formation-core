@@ -114,6 +114,7 @@ class AzureNetwork(object):
             if not self.state.get('network'):
                 vpc_cidr = cidr_util.get_next_network()
                 net_resource = Network(self.parameters).create(self.vpc_name, vpc_cidr, self.rg_name)
+                print(net_resource)
                 net_resource_id = net_resource.id
                 self.state['network'] = self.vpc_name
                 self.state['network_cidr'] = vpc_cidr
