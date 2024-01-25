@@ -6,9 +6,9 @@ import logging
 import warnings
 import unittest
 import pytest
+import time
 
 warnings.filterwarnings("ignore")
-logger = logging.getLogger()
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
@@ -25,7 +25,12 @@ class TestMainCapella(unittest.TestCase):
         pass
 
     def tearDown(self):
-        pass
+        time.sleep(1)
+        loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
+        for logger in loggers:
+            handlers = getattr(logger, 'handlers', [])
+            for handler in handlers:
+                logger.removeHandler(handler)
 
     def test_1(self):
         args = ["create", "--build", "capella", "--cloud", "capella", "--project", "pytest-project", "--name", "test-cluster",

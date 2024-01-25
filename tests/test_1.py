@@ -6,9 +6,9 @@ import logging
 import warnings
 import unittest
 import pytest
+import time
 
 warnings.filterwarnings("ignore")
-logger = logging.getLogger()
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 sys.path.append(parent)
@@ -26,34 +26,6 @@ from couchformation.aws.driver.sshkey import SSHKey
 from couchformation.aws.driver.image import Image
 from couchformation.ssh import SSHUtil
 from tests.common import ssh_key_path
-
-
-class CustomFormatter(logging.Formatter):
-    grey = "\x1b[38;20m"
-    yellow = "\x1b[33;20m"
-    red = "\x1b[31;20m"
-    bold_red = "\x1b[31;1m"
-    green = "\x1b[32;20m"
-    reset = "\x1b[0m"
-    format_level = "%(levelname)s"
-    format_name = "%(name)s"
-    format_message = "%(message)s"
-    format_line = "(%(filename)s:%(lineno)d)"
-    format_extra = " [%(name)s](%(filename)s:%(lineno)d)"
-    FORMATS = {
-        logging.DEBUG: f"{grey}{format_level}{reset} - {format_message}",
-        logging.INFO: f"{green}{format_level}{reset} - {format_message}",
-        logging.WARNING: f"{yellow}{format_level}{reset} - {format_message}",
-        logging.ERROR: f"{red}{format_level}{reset} - {format_message}",
-        logging.CRITICAL: f"{red}{format_level}{reset} - {format_message}"
-    }
-
-    def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
-        if logging.DEBUG >= logging.root.level:
-            log_fmt += self.format_extra
-        formatter = logging.Formatter(log_fmt)
-        return formatter.format(record)
 
 
 @pytest.mark.serial
@@ -92,7 +64,12 @@ class TestMainAWS(unittest.TestCase):
         self.machine_type = self.parameters.get('machine_type')
 
     def tearDown(self):
-        pass
+        time.sleep(1)
+        loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
+        for logger in loggers:
+            handlers = getattr(logger, 'handlers', [])
+            for handler in handlers:
+                logger.removeHandler(handler)
 
     def test_1(self):
         cidr_util = NetworkDriver()

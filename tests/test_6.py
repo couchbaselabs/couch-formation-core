@@ -8,6 +8,7 @@ import requests
 import base64
 import unittest
 import pytest
+import time
 from requests.auth import AuthBase
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
@@ -47,6 +48,7 @@ class TestMainAzure(unittest.TestCase):
         pass
 
     def tearDown(self):
+        time.sleep(1)
         loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
         for logger in loggers:
             handlers = getattr(logger, 'handlers', [])
