@@ -36,11 +36,9 @@ class Instance(CloudBase):
         if not resource_group:
             resource_group = self.azure_resource_group
 
-        try:
-            instance_info = self.details(name, resource_group)
+        instance_info = self.details(name, resource_group)
+        if instance_info:
             return instance_info
-        except ResourceNotFoundError:
-            pass
 
         image_os = next((o['os_id'] for o in AzureImagePublishers.publishers if o['name'] == image_publisher), None)
 
