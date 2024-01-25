@@ -18,7 +18,12 @@ class FatalError(Exception):
         (filename, line, function, lines, index) = inspect.getframeinfo(frame)
         filename = os.path.basename(filename)
         logging.debug(f"Error: {type(self).__name__} in {filename} {function} at line {line}: {message}")
-        logging.debug(''.join(traceback.format_stack(frame)))
+        loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
+        for log in loggers:
+            handlers = getattr(log, 'handlers', [])
+            for handler in handlers:
+                if isinstance(handler, logging.FileHandler):
+                    log.error(''.join(traceback.format_stack(frame)))
         logging.error(f"{message} [{filename}:{line}]")
         sys.exit(1)
 
