@@ -73,6 +73,8 @@ class Network(CloudBase):
         try:
             request = self.network_client.virtual_networks.begin_create_or_update(resource_group, name, parameters)
             request.wait()
+            print(request)
+            print(request.result())
             return request.result()
         except Exception as err:
             raise AzureDriverError(f"error creating network: {err}")
