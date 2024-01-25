@@ -2,6 +2,7 @@
 ##
 
 import logging
+from typing import Union
 from azure.core.exceptions import ResourceNotFoundError
 from azure.mgmt.compute.models import DiskCreateOption
 from couchformation.azure.driver.base import CloudBase, AzureDriverError
@@ -38,25 +39,25 @@ class Disk(CloudBase):
         except Exception as err:
             raise AzureDriverError(f"error creating disk: {err}")
 
-    def details(self, name: str, resource_group: str) -> dict:
+    def details(self, name: str, resource_group: str) -> Union[dict, None]:
         try:
             disk = self.compute_client.disks.get(resource_group, name)
+            disk_info = {'name': disk.name,
+                         'id': disk.id,
+                         'zones': disk.zones,
+                         'disk_size_gb': disk.disk_size_gb,
+                         'sku': disk.sku.__dict__}
+            return disk_info
         except ResourceNotFoundError:
-            raise
+            return None
         except Exception as err:
             raise AzureDriverError(f"error getting disk {name}: {err}")
-
-        disk_info = {'name': disk.name,
-                     'id': disk.id,
-                     'zones': disk.zones,
-                     'disk_size_gb': disk.disk_size_gb,
-                     'sku': disk.sku.__dict__}
-
-        return disk_info
 
     def delete(self, name: str, resource_group: str) -> None:
         try:
             request = self.compute_client.disks.begin_delete(resource_group, name)
             request.wait()
+        except ResourceNotFoundError:
+            return None
         except Exception as err:
             raise AzureDriverError(f"error deleting instance: {err}")

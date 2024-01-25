@@ -49,12 +49,52 @@ class AzureNetwork(object):
         self.az_network = Network(self.parameters)
         self.az_base = CloudBase(self.parameters)
 
+        self.rg_name = f"{self.project}-rg"
+        self.vpc_name = f"{self.project}-vpc"
+        self.nsg_name = f"{self.project}-nsg"
+        self.subnet_name = f"{self.project}-subnet-01"
+
+    def check_state(self):
+        if self.state.get('resource_group'):
+            rg_name = self.state.get('resource_group')
+        else:
+            rg_name = self.rg_name
+
+        if self.state.get('network'):
+            vpc_name = self.state.get('network')
+        else:
+            vpc_name = self.vpc_name
+
+        if self.state.get('subnet'):
+            result = Subnet(self.parameters).details(vpc_name, self.state['subnet'], rg_name)
+            if result is None:
+                logger.warning(f"Removing stale state entry for subnet {self.state['subnet']}")
+                del self.state['subnet']
+                del self.state['subnet_id']
+                del self.state['subnet_cidr']
+        if self.state.get('network_security_group'):
+            result = SecurityGroup(self.parameters).details(self.state['network_security_group'], rg_name)
+            if result is None:
+                logger.warning(f"Removing stale state entry for security group {self.state['network_security_group']}")
+                del self.state['network_security_group']
+                del self.state['network_security_group_id']
+        if self.state.get('network'):
+            result = Network(self.parameters).details(self.state['network'], rg_name)
+            if result is None:
+                logger.warning(f"Removing stale state entry for network {self.state['network']}")
+                del self.state['network']
+                del self.state['network_cidr']
+                del self.state['network_id']
+        if self.state.get('resource_group'):
+            result = self.az_base.get_rg(self.state['resource_group'], self.az_base.region)
+            if result is None:
+                logger.warning(f"Removing stale state entry for resource group {self.state['resource_group']}")
+                del self.state['resource_group']
+                del self.state['zone']
+
     def create_vpc(self):
+        self.check_state()
         cidr_util = NetworkDriver()
-        rg_name = f"{self.project}-rg"
-        vpc_name = f"{self.project}-vpc"
-        nsg_name = f"{self.project}-nsg"
-        subnet_name = f"{self.project}-subnet-01"
 
         for net in self.az_network.cidr_list:
             cidr_util.add_network(net)
@@ -65,31 +105,31 @@ class AzureNetwork(object):
         try:
 
             if not self.state.get('resource_group'):
-                self.az_base.create_rg(rg_name, azure_location)
-                self.state['resource_group'] = rg_name
-                logger.info(f"Created resource group {rg_name}")
+                self.az_base.create_rg(self.rg_name, azure_location)
+                self.state['resource_group'] = self.rg_name
+                logger.info(f"Created resource group {self.rg_name}")
             else:
-                rg_name = self.state['resource_group']
+                self.rg_name = self.state['resource_group']
 
             if not self.state.get('network'):
                 vpc_cidr = cidr_util.get_next_network()
-                net_resource = Network(self.parameters).create(vpc_name, vpc_cidr, rg_name)
+                net_resource = Network(self.parameters).create(self.vpc_name, vpc_cidr, self.rg_name)
                 net_resource_id = net_resource.id
-                self.state['network'] = vpc_name
+                self.state['network'] = self.vpc_name
                 self.state['network_cidr'] = vpc_cidr
                 self.state['network_id'] = net_resource_id
-                logger.info(f"Created network {vpc_name}")
+                logger.info(f"Created network {self.vpc_name}")
             else:
-                vpc_name = self.state['network']
+                self.vpc_name = self.state['network']
                 vpc_cidr = self.state['network_cidr']
                 cidr_util.set_active_network(vpc_cidr)
 
             if not self.state.get('network_security_group'):
-                nsg_resource = SecurityGroup(self.parameters).create(nsg_name, rg_name)
+                nsg_resource = SecurityGroup(self.parameters).create(self.nsg_name, self.rg_name)
                 nsg_resource_id = nsg_resource.id
-                SecurityGroup(self.parameters).add_rule("AllowSSH", nsg_name, ["22"], 100, rg_name)
-                SecurityGroup(self.parameters).add_rule("AllowRDP", nsg_name, ["3389"], 101, rg_name)
-                SecurityGroup(self.parameters).add_rule("AllowCB", nsg_name, [
+                SecurityGroup(self.parameters).add_rule("AllowSSH", self.nsg_name, ["22"], 100, self.rg_name)
+                SecurityGroup(self.parameters).add_rule("AllowRDP", self.nsg_name, ["3389"], 101, self.rg_name)
+                SecurityGroup(self.parameters).add_rule("AllowCB", self.nsg_name, [
                     "8091-8097",
                     "9123",
                     "9140",
@@ -98,8 +138,8 @@ class AzureNetwork(object):
                     "11207",
                     "18091-18097",
                     "4984-4986"
-                ], 102, rg_name)
-                self.state['network_security_group'] = nsg_name
+                ], 102, self.rg_name)
+                self.state['network_security_group'] = self.nsg_name
                 self.state['network_security_group_id'] = nsg_resource_id
             else:
                 nsg_resource_id = self.state['network_security_group_id']
@@ -114,18 +154,18 @@ class AzureNetwork(object):
                 subnet_cidr = self.state['subnet_cidr']
 
             if not self.state.get('subnet'):
-                subnet_resource = Subnet(self.parameters).create(subnet_name, vpc_name, subnet_cidr, nsg_resource_id, rg_name)
+                subnet_resource = Subnet(self.parameters).create(self.subnet_name, self.vpc_name, subnet_cidr, nsg_resource_id, self.rg_name)
                 subnet_id = subnet_resource.id
-                self.state['subnet'] = subnet_name
+                self.state['subnet'] = self.subnet_name
                 self.state['subnet_id'] = subnet_id
             else:
                 subnet_id = self.state['subnet_id']
-                subnet_name = self.state['subnet']
+                self.subnet_name = self.state['subnet']
 
             for n, zone in enumerate(zone_list):
                 if self.state.list_exists('zone', zone):
                     continue
-                self.state.list_add('zone', zone, subnet_name, subnet_id)
+                self.state.list_add('zone', zone, self.subnet_name, subnet_id)
                 logger.info(f"Added zone {zone}")
 
         except Exception as err:

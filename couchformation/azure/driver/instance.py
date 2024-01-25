@@ -133,7 +133,7 @@ class Instance(CloudBase):
             machine = self.compute_client.virtual_machines.get(resource_group, instance)
             return machine
         except ResourceNotFoundError:
-            raise
+            return None
         except Exception as err:
             raise AzureDriverError(f"error getting instance {instance}: {err}")
 
@@ -141,5 +141,7 @@ class Instance(CloudBase):
         try:
             request = self.compute_client.virtual_machines.begin_delete(resource_group, instance)
             request.wait()
+        except ResourceNotFoundError:
+            return None
         except Exception as err:
             raise AzureDriverError(f"error deleting instance: {err}")

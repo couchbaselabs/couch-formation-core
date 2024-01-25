@@ -81,15 +81,17 @@ class Network(CloudBase):
         try:
             request = self.network_client.virtual_networks.begin_delete(resource_group, network)
             request.wait()
+        except ResourceNotFoundError:
+            return None
         except Exception as err:
             raise AzureDriverError(f"error getting vnet: {err}")
 
-    def details(self, network: str, resource_group: str) -> dict:
+    def details(self, network: str, resource_group: str) -> Union[dict, None]:
         try:
             info = self.network_client.virtual_networks.get(resource_group, network)
             return info
         except ResourceNotFoundError:
-            raise
+            return None
         except Exception as err:
             raise AzureDriverError(f"error getting vnet: {err}")
 
@@ -138,6 +140,8 @@ class Network(CloudBase):
         try:
             nic = self.network_client.network_interfaces.get(resource_group, name)
             return nic
+        except ResourceNotFoundError:
+            return None
         except Exception as err:
             raise AzureDriverError(f"error getting nic details: {err}")
 
@@ -145,6 +149,8 @@ class Network(CloudBase):
         try:
             ip = self.network_client.public_ip_addresses.get(resource_group, name)
             return ip
+        except ResourceNotFoundError:
+            return None
         except Exception as err:
             raise AzureDriverError(f"error getting public IP: {err}")
 
@@ -152,6 +158,8 @@ class Network(CloudBase):
         try:
             request = self.network_client.public_ip_addresses.begin_delete(resource_group, name)
             request.wait()
+        except ResourceNotFoundError:
+            return None
         except Exception as err:
             raise AzureDriverError(f"error deleting public IP: {err}")
 
@@ -159,6 +167,8 @@ class Network(CloudBase):
         try:
             request = self.network_client.network_interfaces.begin_delete(resource_group, name)
             request.wait()
+        except ResourceNotFoundError:
+            return None
         except Exception as err:
             raise AzureDriverError(f"error deleting nic: {err}")
 
@@ -212,6 +222,8 @@ class Subnet(CloudBase):
             if subnet_info:
                 request = self.network_client.subnets.begin_delete(resource_group, network, subnet)
                 request.wait()
+        except ResourceNotFoundError:
+            return None
         except Exception as err:
             raise AzureDriverError(f"error deleting subnet: {err}")
 
@@ -311,20 +323,22 @@ class SecurityGroup(CloudBase):
         try:
             request = self.network_client.network_security_groups.begin_delete(resource_group, name)
             request.wait()
+        except ResourceNotFoundError:
+            return None
         except Exception as err:
             raise AzureDriverError(f"error getting network security group: {err}")
 
-    def details(self, name: str, resource_group: str) -> dict:
+    def details(self, name: str, resource_group: str) -> Union[dict, None]:
         try:
             info = self.network_client.network_security_groups.get(resource_group, name)
+            nsg_block = {'location': info.location,
+                         'name': info.name,
+                         'rules': [r.__dict__ for r in info.security_rules] if info.security_rules else [],
+                         'subnets': [s.__dict__ for s in info.subnets] if info.subnets else [],
+                         'id': info.id}
+            nsg_block.update(self.process_tags(info.tags))
+            return nsg_block
+        except ResourceNotFoundError:
+            return None
         except Exception as err:
             raise AzureDriverError(f"error getting network security group: {err}")
-
-        nsg_block = {'location': info.location,
-                     'name': info.name,
-                     'rules': [r.__dict__ for r in info.security_rules] if info.security_rules else [],
-                     'subnets': [s.__dict__ for s in info.subnets] if info.subnets else [],
-                     'id': info.id}
-        nsg_block.update(self.process_tags(info.tags))
-
-        return nsg_block

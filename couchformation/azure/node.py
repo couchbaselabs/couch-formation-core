@@ -69,7 +69,45 @@ class AzureDeployment(object):
         self.az_network = AzureNetwork(self.parameters)
         self.az_base = CloudBase(self.parameters)
 
+    def check_state(self):
+        if self.state.get('resource_group'):
+            rg_name = self.state.get('resource_group')
+        else:
+            rg_name = f"{self.project}-rg"
+
+        if self.state.get('instance_id'):
+            result = Instance(self.parameters).details(self.state['instance_id'], rg_name)
+            if result is None:
+                logger.warning(f"Removing stale state entry for instance {self.state['instance_id']}")
+                del self.state['instance_id']
+        if self.state.get('node_nic'):
+            result = Network(self.parameters).describe_nic(self.state['node_nic'], rg_name)
+            if result is None:
+                logger.warning(f"Removing stale state entry for NIC {self.state['node_nic']}")
+                del self.state['node_nic']
+        if self.state.get('node_pub_ip'):
+            result = Network(self.parameters).describe_pub_ip(self.state['node_pub_ip'], rg_name)
+            if result is None:
+                logger.warning(f"Removing stale state entry for public IP {self.state['node_pub_ip']}")
+                del self.state['node_pub_ip']
+        if self.state.get('swap_disk'):
+            result = Disk(self.parameters).details(self.state['swap_disk'], rg_name)
+            if result is None:
+                logger.warning(f"Removing stale state entry for disk {self.state['swap_disk']}")
+                del self.state['swap_disk']
+        if self.state.get('data_disk'):
+            result = Disk(self.parameters).details(self.state['data_disk'], rg_name)
+            if result is None:
+                logger.warning(f"Removing stale state entry for disk {self.state['data_disk']}")
+                del self.state['data_disk']
+        if self.state.get('boot_disk'):
+            result = Disk(self.parameters).details(self.state['boot_disk'], rg_name)
+            if result is None:
+                logger.warning(f"Removing stale state entry for disk {self.state['boot_disk']}")
+                del self.state['boot_disk']
+
     def deploy(self):
+        self.check_state()
         subnet_list = []
 
         if self.state.get('instance_id'):
