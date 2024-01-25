@@ -84,13 +84,18 @@ class Network(CloudBase):
         except Exception as err:
             raise GCPDriverError(f"error deleting network: {err}")
 
-    def details(self, network: str) -> dict:
+    def details(self, network: str) -> Union[dict, None]:
         try:
             request = self.gcp_client.networks().get(project=self.gcp_project, network=network)
             result = request.execute()
             return result
+        except googleapiclient.errors.HttpError as err:
+            error_details = err.error_details[0].get('reason')
+            if error_details != "notFound":
+                raise GCPDriverError(f"can not find network: {err}")
+            return None
         except Exception as err:
-            raise GCPDriverError(f"error getting network link: {err}")
+            raise GCPDriverError(f"error getting network: {err}")
 
 
 class Subnet(CloudBase):
@@ -160,7 +165,7 @@ class Subnet(CloudBase):
         except Exception as err:
             raise GCPDriverError(f"error deleting network: {err}")
 
-    def details(self, region: str, subnet: str) -> dict:
+    def details(self, region: str, subnet: str) -> Union[dict, None]:
         try:
             request = self.gcp_client.subnetworks().get(project=self.gcp_project, region=region, subnetwork=subnet)
             result = request.execute()
@@ -174,5 +179,10 @@ class Subnet(CloudBase):
                             'region': region_name,
                             'id': result['id']}
             return subnet_block
+        except googleapiclient.errors.HttpError as err:
+            error_details = err.error_details[0].get('reason')
+            if error_details != "notFound":
+                raise GCPDriverError(f"can not find subnet: {err}")
+            return None
         except Exception as err:
-            raise GCPDriverError(f"error getting network link: {err}")
+            raise GCPDriverError(f"error getting subnet: {err}")

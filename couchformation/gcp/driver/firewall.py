@@ -74,10 +74,15 @@ class Firewall(CloudBase):
         except Exception as err:
             raise GCPDriverError(f"error deleting firewall rule: {err}")
 
-    def details(self, firewall: str) -> dict:
+    def details(self, firewall: str) -> Union[dict, None]:
         try:
             request = self.gcp_client.firewalls().get(project=self.gcp_project, firewall=firewall)
             result = request.execute()
             return result
+        except googleapiclient.errors.HttpError as err:
+            error_details = err.error_details[0].get('reason')
+            if error_details != "notFound":
+                raise GCPDriverError(f"can not find firewall entry: {err}")
+            return None
         except Exception as err:
             raise GCPDriverError(f"error getting firewall rule: {err}")

@@ -4,11 +4,11 @@
 import logging
 import base64
 import time
-
 import googleapiclient.errors
 import datetime
 import copy
 import json
+from typing import Union
 from couchformation.gcp.driver.base import CloudBase, GCPDriverError
 from couchformation.ssh import SSHUtil
 
@@ -112,13 +112,25 @@ class Instance(CloudBase):
 
         return operation.get('targetLink')
 
-    def details(self, instance: str, zone: str) -> dict:
+    def details(self, instance: str, zone: str) -> Union[dict, None]:
         try:
             request = self.gcp_client.instances().get(project=self.gcp_project, zone=zone, instance=instance)
             response = request.execute()
             return response
+        except googleapiclient.errors.HttpError as err:
+            error_details = err.error_details[0].get('reason')
+            if error_details != "notFound":
+                raise GCPDriverError(f"can not find instance: {err}")
+            return None
         except Exception as err:
             raise GCPDriverError(f"error getting instance details: {err}")
+
+    def find(self, instance: str) -> Union[dict, None]:
+        for zone in self.gcp_zone_list:
+            result = self.details(instance, zone)
+            if result:
+                return result
+        return None
 
     def terminate(self, instance: str, zone: str) -> None:
         try:

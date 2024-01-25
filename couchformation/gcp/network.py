@@ -50,14 +50,51 @@ class GCPNetwork(object):
         self.gcp_network = Network(self.parameters)
         self.gcp_base = CloudBase(self.parameters)
 
+        self.vpc_name = f"{self.project}-vpc"
+        self.subnet_name = f"{self.project}-subnet-01"
+        self.firewall_default = f"{self.vpc_name}-fw-default"
+        self.firewall_cbs = f"{self.vpc_name}-fw-cbs"
+        self.firewall_ssh = f"{self.vpc_name}-fw-ssh"
+        self.firewall_rdp = f"{self.vpc_name}-fw-rdp"
+
+    def check_state(self):
+        if self.state.get('firewall_rdp'):
+            result = Firewall(self.parameters).details(self.state['firewall_rdp'])
+            if result is None:
+                logger.warning(f"Removing stale state entry for firewall entry {self.state['firewall_rdp']}")
+                del self.state['firewall_rdp']
+        if self.state.get('firewall_ssh'):
+            result = Firewall(self.parameters).details(self.state['firewall_ssh'])
+            if result is None:
+                logger.warning(f"Removing stale state entry for firewall entry {self.state['firewall_ssh']}")
+                del self.state['firewall_ssh']
+        if self.state.get('firewall_cbs'):
+            result = Firewall(self.parameters).details(self.state['firewall_cbs'])
+            if result is None:
+                logger.warning(f"Removing stale state entry for firewall entry {self.state['firewall_cbs']}")
+                del self.state['firewall_cbs']
+        if self.state.get('firewall_default'):
+            result = Firewall(self.parameters).details(self.state['firewall_default'])
+            if result is None:
+                logger.warning(f"Removing stale state entry for firewall entry {self.state['firewall_default']}")
+                del self.state['firewall_default']
+        if self.state.get('subnet'):
+            result = Subnet(self.parameters).details(self.region, self.state['subnet'])
+            if result is None:
+                logger.warning(f"Removing stale state entry for subnet {self.state['subnet']}")
+                del self.state['subnet']
+                del self.state['subnet_cidr']
+        if self.state.get('network'):
+            result = Network(self.parameters).details(self.state['network'])
+            if result is None:
+                logger.warning(f"Removing stale state entry for network {self.state['network']}")
+                del self.state['network']
+                del self.state['network_cidr']
+                del self.state['zone']
+
     def create_vpc(self):
+        self.check_state()
         cidr_util = NetworkDriver()
-        vpc_name = f"{self.project}-vpc"
-        subnet_name = f"{self.project}-subnet-01"
-        firewall_default = f"{vpc_name}-fw-default"
-        firewall_cbs = f"{vpc_name}-fw-cbs"
-        firewall_ssh = f"{vpc_name}-fw-ssh"
-        firewall_rdp = f"{vpc_name}-fw-rdp"
 
         for net in self.gcp_network.cidr_list:
             cidr_util.add_network(net)
@@ -68,12 +105,12 @@ class GCPNetwork(object):
 
             if not self.state.get('network'):
                 vpc_cidr = cidr_util.get_next_network()
-                Network(self.parameters).create(vpc_name)
-                self.state['network'] = vpc_name
+                Network(self.parameters).create(self.vpc_name)
+                self.state['network'] = self.vpc_name
                 self.state['network_cidr'] = vpc_cidr
-                logger.info(f"Created network {vpc_name}")
+                logger.info(f"Created network {self.vpc_name}")
             else:
-                vpc_name = self.state['network']
+                self.vpc_name = self.state['network']
                 vpc_cidr = self.state['network_cidr']
                 cidr_util.set_active_network(vpc_cidr)
 
@@ -87,17 +124,17 @@ class GCPNetwork(object):
                 subnet_cidr = self.state['subnet_cidr']
 
             if not self.state.get('subnet'):
-                Subnet(self.parameters).create(subnet_name, vpc_name, subnet_cidr)
-                self.state['subnet'] = subnet_name
-                logger.info(f"Created subnet {subnet_name}")
+                Subnet(self.parameters).create(self.subnet_name, self.vpc_name, subnet_cidr)
+                self.state['subnet'] = self.subnet_name
+                logger.info(f"Created subnet {self.subnet_name}")
 
             if not self.state.get('firewall_default'):
-                Firewall(self.parameters).create_ingress(firewall_default, vpc_name, vpc_cidr, "all")
-                self.state['firewall_default'] = firewall_default
-                logger.info(f"Created firewall rule {firewall_default}")
+                Firewall(self.parameters).create_ingress(self.firewall_default, self.vpc_name, vpc_cidr, "all")
+                self.state['firewall_default'] = self.firewall_default
+                logger.info(f"Created firewall rule {self.firewall_default}")
 
             if not self.state.get('firewall_cbs'):
-                Firewall(self.parameters).create_ingress(firewall_cbs, vpc_name, "0.0.0.0/0", "tcp", [
+                Firewall(self.parameters).create_ingress(self.firewall_cbs, self.vpc_name, "0.0.0.0/0", "tcp", [
                     "8091-8097",
                     "9123",
                     "9140",
@@ -107,23 +144,23 @@ class GCPNetwork(object):
                     "18091-18097",
                     "4984-4986"
                 ])
-                self.state['firewall_cbs'] = firewall_cbs
-                logger.info(f"Created firewall rule {firewall_cbs}")
+                self.state['firewall_cbs'] = self.firewall_cbs
+                logger.info(f"Created firewall rule {self.firewall_cbs}")
 
             if not self.state.get('firewall_ssh'):
-                Firewall(self.parameters).create_ingress(firewall_ssh, vpc_name, "0.0.0.0/0", "tcp", ["22"])
-                self.state['firewall_ssh'] = firewall_ssh
-                logger.info(f"Created firewall rule {firewall_ssh}")
+                Firewall(self.parameters).create_ingress(self.firewall_ssh, self.vpc_name, "0.0.0.0/0", "tcp", ["22"])
+                self.state['firewall_ssh'] = self.firewall_ssh
+                logger.info(f"Created firewall rule {self.firewall_ssh}")
 
             if not self.state.get('firewall_rdp'):
-                Firewall(self.parameters).create_ingress(firewall_rdp, vpc_name, "0.0.0.0/0", "tcp", ["3389"])
-                self.state['firewall_rdp'] = firewall_rdp
-                logger.info(f"Created firewall rule {firewall_rdp}")
+                Firewall(self.parameters).create_ingress(self.firewall_rdp, self.vpc_name, "0.0.0.0/0", "tcp", ["3389"])
+                self.state['firewall_rdp'] = self.firewall_rdp
+                logger.info(f"Created firewall rule {self.firewall_rdp}")
 
             for n, zone in enumerate(zone_list):
                 if self.state.list_exists('zone', zone):
                     continue
-                self.state.list_add('zone', zone, subnet_name)
+                self.state.list_add('zone', zone, self.subnet_name)
                 logger.info(f"Added zone {zone}")
 
         except Exception as err:

@@ -2,7 +2,7 @@
 ##
 
 import logging
-from typing import List
+from typing import List, Union
 import googleapiclient.errors
 from couchformation.gcp.driver.base import CloudBase, GCPDriverError, EmptyResultSet
 
@@ -67,10 +67,22 @@ class Disk(CloudBase):
         except Exception as err:
             raise GCPDriverError(f"error deleting disk: {err}")
 
-    def details(self, disk: str, zone: str) -> dict:
+    def details(self, disk: str, zone: str) -> Union[dict, None]:
         try:
             request = self.gcp_client.disks().get(project=self.gcp_project, zone=zone, disk=disk)
             result = request.execute()
             return result
+        except googleapiclient.errors.HttpError as err:
+            error_details = err.error_details[0].get('reason')
+            if error_details != "notFound":
+                raise GCPDriverError(f"can not find disk: {err}")
+            return None
         except Exception as err:
             raise GCPDriverError(f"error getting disk: {err}")
+
+    def find(self, disk: str) -> Union[dict, None]:
+        for zone in self.gcp_zone_list:
+            result = self.details(disk, zone)
+            if result:
+                return result
+        return None

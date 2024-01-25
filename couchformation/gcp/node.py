@@ -68,7 +68,25 @@ class GCPDeployment(object):
         self.gcp_project = self.gcp_base.gcp_project
         self.gcp_account_email = self.gcp_base.gcp_account_email
 
+    def check_state(self):
+        if self.state.get('instance_id'):
+            result = Instance(self.parameters).find(self.state['instance_id'])
+            if result is None:
+                logger.warning(f"Removing stale state entry for instance {self.state['instance_id']}")
+                del self.state['instance_id']
+        if self.state.get('swap_disk'):
+            result = Disk(self.parameters).find(self.state['swap_disk'])
+            if result is None:
+                logger.warning(f"Removing stale state entry for disk {self.state['swap_disk']}")
+                del self.state['swap_disk']
+        if self.state.get('data_disk'):
+            result = Disk(self.parameters).find(self.state['data_disk'])
+            if result is None:
+                logger.warning(f"Removing stale state entry for disk {self.state['data_disk']}")
+                del self.state['data_disk']
+
     def deploy(self):
+        self.check_state()
         subnet_list = []
 
         if self.state.get('instance_id'):
