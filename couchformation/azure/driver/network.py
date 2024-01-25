@@ -64,17 +64,14 @@ class Network(CloudBase):
                 'address_prefixes': [cidr]
             }
         }
-        try:
-            net_info = self.details(name, resource_group)
+
+        net_info = self.details(name, resource_group)
+        if net_info:
             return net_info
-        except ResourceNotFoundError:
-            pass
 
         try:
             request = self.network_client.virtual_networks.begin_create_or_update(resource_group, name, parameters)
             request.wait()
-            print(request)
-            print(request.result())
             return request.result()
         except Exception as err:
             raise AzureDriverError(f"error creating network: {err}")
