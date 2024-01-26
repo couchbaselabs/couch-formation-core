@@ -10,6 +10,7 @@ import signal
 import inspect
 import traceback
 import datetime
+import logging.handlers
 from datetime import datetime
 from couchformation.config import get_log_dir
 import couchformation.constants as C
@@ -95,7 +96,7 @@ class CLI(object):
     def __init__(self, args):
         self.log_dir = get_log_dir()
         signal.signal(signal.SIGINT, break_signal_handler)
-        default_debug_file = os.path.join(self.log_dir, f"{os.path.splitext(os.path.basename(sys.argv[0]))[0]}.log")
+        default_debug_file = os.path.join(self.log_dir, "formation.log")
         debug_file = os.environ.get("COUCH_FORMATION_DEBUG_FILE", default_debug_file)
         self.args = args
         self.parser = None
@@ -115,17 +116,20 @@ class CLI(object):
         try:
             FileManager().make_dir(self.log_dir)
         except Exception as err:
-            raise CloudMgrError(f"can not create working dir: {err}")
+            raise CloudMgrError(f"can not create log dir: {err}")
 
         screen_handler = logging.StreamHandler()
         screen_handler.setFormatter(CustomDisplayFormatter())
         logger.addHandler(screen_handler)
 
-        file_handler = logging.FileHandler(debug_file)
+        file_handler = logging.handlers.RotatingFileHandler(debug_file, maxBytes=10485760, backupCount=5)
         file_handler.setFormatter(CustomLogFormatter())
+        file_handler.setLevel(logging.DEBUG)
         logger.addHandler(file_handler)
 
         logger.setLevel(logging.INFO)
+
+        logger.debug(f"---- CLI Start: {self.get_timestamp()} ----")
 
         self.process_args()
 
