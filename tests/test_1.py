@@ -124,10 +124,23 @@ class TestMainAWS(unittest.TestCase):
         assert any(i['id'] == sg_id for i in sg_list) is True
 
         print("Removing instance")
+        assert Instance(self.parameters).details(instance_id) is not None
         Instance(self.parameters).terminate(instance_id)
+
+        assert RouteTable(self.parameters).details(rt_id) is not None
         RouteTable(self.parameters).delete(rt_id)
+
+        assert InternetGateway(self.parameters).details(ig_id) is not None
         InternetGateway(self.parameters).delete(ig_id)
+
+        assert SecurityGroup(self.parameters).details(sg_id) is not None
         SecurityGroup(self.parameters).delete(sg_id)
+
+        assert Subnet(self.parameters).details(subnet_id) is not None
         Subnet(self.parameters).delete(subnet_id)
+
+        assert Network(self.parameters).details(vpc_id) is not None
         Network(self.parameters).delete(vpc_id)
+
+        assert SSHKey(self.parameters).details(ssh_key_name) is not None
         SSHKey(self.parameters).delete(ssh_key_name)

@@ -149,12 +149,29 @@ class TestMainGCP(unittest.TestCase):
         assert any(i['name'] == data_disk for i in disk_list) is True
 
         print("Cleanup")
+        assert Instance(self.parameters).find(node_name) is not None
         Instance(self.parameters).terminate(node_name, zone_list[0])
+
+        assert Disk(self.parameters).find(swap_disk) is not None
         Disk(self.parameters).delete(swap_disk, zone_list[0])
+
+        assert Disk(self.parameters).find(data_disk) is not None
         Disk(self.parameters).delete(data_disk, zone_list[0])
+
+        assert Firewall(self.parameters).details(firewall_rdp) is not None
         Firewall(self.parameters).delete(firewall_rdp)
+
+        assert Firewall(self.parameters).details(firewall_ssh) is not None
         Firewall(self.parameters).delete(firewall_ssh)
+
+        assert Firewall(self.parameters).details(firewall_cbs) is not None
         Firewall(self.parameters).delete(firewall_cbs)
+
+        assert Firewall(self.parameters).details(firewall_default) is not None
         Firewall(self.parameters).delete(firewall_default)
+
+        assert Subnet(self.parameters).details(subnet_name) is not None
         Subnet(self.parameters).delete(subnet_name)
+
+        assert Network(self.parameters).details(vpc_name) is not None
         Network(self.parameters).delete(vpc_name)

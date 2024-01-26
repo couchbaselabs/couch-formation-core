@@ -166,13 +166,32 @@ class TestMainAzure(unittest.TestCase):
         assert any(i['name'] == nsg_name for i in nsg_list) is True
 
         print("Cleanup")
+        assert Instance(self.parameters).details(node_name, rg_name) is not None
         Instance(self.parameters).terminate(node_name, rg_name)
+
+        assert Network(self.parameters).describe_nic(node_nic, rg_name) is not None
         Network(self.parameters).delete_nic(node_nic, rg_name)
+
+        assert Network(self.parameters).describe_pub_ip(node_pub_ip, rg_name) is not None
         Network(self.parameters).delete_pub_ip(node_pub_ip, rg_name)
+
+        assert Disk(self.parameters).details(boot_disk, rg_name) is not None
         Disk(self.parameters).delete(boot_disk, rg_name)
+
+        assert Disk(self.parameters).details(swap_disk, rg_name) is not None
         Disk(self.parameters).delete(swap_disk, rg_name)
+
+        assert Disk(self.parameters).details(data_disk, rg_name) is not None
         Disk(self.parameters).delete(data_disk, rg_name)
+
+        assert Subnet(self.parameters).details(vpc_name, subnet_name, rg_name) is not None
         Subnet(self.parameters).delete(vpc_name, subnet_name, rg_name)
+
+        assert SecurityGroup(self.parameters).details(nsg_name, rg_name) is not None
         SecurityGroup(self.parameters).delete(nsg_name, rg_name)
+
+        assert Network(self.parameters).details(vpc_name, rg_name) is not None
         Network(self.parameters).delete(vpc_name, rg_name)
+
+        assert base.get_rg(rg_name, base.region) is not None
         base.delete_rg(rg_name)

@@ -79,7 +79,7 @@ class GCPNetwork(object):
                 logger.warning(f"Removing stale state entry for firewall entry {self.state['firewall_default']}")
                 del self.state['firewall_default']
         if self.state.get('subnet'):
-            result = Subnet(self.parameters).details(self.region, self.state['subnet'])
+            result = Subnet(self.parameters).details(self.state['subnet'])
             if result is None:
                 logger.warning(f"Removing stale state entry for subnet {self.state['subnet']}")
                 del self.state['subnet']

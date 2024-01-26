@@ -31,7 +31,7 @@ class Network(CloudBase):
                         region_name = subnet.rsplit('/', 4)[-3]
                         if region_name != self.region:
                             continue
-                        result = Subnet(self.parameters).details(self.region, subnet_name)
+                        result = Subnet(self.parameters).details(subnet_name)
                         subnet_list.append(result)
                     network_block = {'cidr': network.get('IPv4Range', None),
                                      'name': network['name'],
@@ -173,9 +173,9 @@ class Subnet(CloudBase):
         except Exception as err:
             raise GCPDriverError(f"error deleting subnet: {err}")
 
-    def details(self, region: str, subnet: str) -> Union[dict, None]:
+    def details(self, subnet: str) -> Union[dict, None]:
         try:
-            request = self.gcp_client.subnetworks().get(project=self.gcp_project, region=region, subnetwork=subnet)
+            request = self.gcp_client.subnetworks().get(project=self.gcp_project, region=self.gcp_region, subnetwork=subnet)
             result = request.execute()
             network_name = result['network'].rsplit('/', 1)[-1]
             region_name = result['region'].rsplit('/', 1)[-1]
