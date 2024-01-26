@@ -119,12 +119,37 @@ Use the auth_mode option to enable SSO integration. Couch Formation will open a 
 cloudmgr create --build cbs --cloud aws --project dev01 --name testdb01 --auth_mode sso --region us-east-2 --quantity 3 --os_id ubuntu --os_version 22.04 --ssh_key /Users/jdoe/.ssh/jdoe-default-key-pair.pem --machine_type 8x32
 ```
 
+## AWS Default Authentication
+Configure the AWS CLI via an appropriate method based on your IAM settings. For example use ```aws configure``` to configure long term credentials, or manually set the access parameters in ```.aws/credentials``` or with environment variables. Couch Formation accepts an optional ```--profile``` service configuration parameter to use a specific auth profile. Check [here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html#getting-started-quickstart-new) for more information.
+
+## GCP Default Authentication
+For Google Cloud use ```gcloud auth``` to configure CLI access.  Check [here](https://cloud.google.com/sdk/gcloud/reference/auth) for more information.
+
+## Azure Default Authentication
+For Azure use ```az login``` to configure CLI access. Check [here](https://learn.microsoft.com/en-us/cli/azure/authenticate-azure-cli-interactively) for more information.
+
 ## Capella Support
 ### Credentials Directory
 The automation for Capella uses the v4 public API. To use the automation, create an API key in the Capella UI and save it to a file named ```default-api-key-token.txt``` in a directory named ```.capella``` in your home directory.
+```
+.capella
+├── credentials
+├── default-api-key-token.txt
+├── project-api-key-token.txt
+└── test-api-key-token.txt
+```
+Credentials file format:
+```
+[default]
+api_host = cloudapi.cloud.couchbase.com
+token_file = default-api-key-token.txt
+account_email = john.doe@example.com
 
+[project]
+token_file = project-api-key-token.txt
+```
 ## Windows
-If you install python for your user (as opposed to all users) which is the default installation type, then you don't need to do a user scoped installation with ```pip```. You should install the ```wheel``` pacakge before you install Couch Formation.
+Download and install a 64-bit version of Python 3.8+ from [here](https://www.python.org/downloads/windows/). Use the ```Run as Administrator``` option to start PowerShell and then install Couch Formation with ```pip```. Once the installation is complete, it will be available for all users (launch a PowerShell window as your login user to use Couch Formation). You should install the ```wheel``` pacakge before you install Couch Formation.
 ```
 pip3 install wheel
 ```
