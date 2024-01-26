@@ -66,8 +66,8 @@ class RouteTable(CloudBase):
 
     def details(self, rt_id: str) -> Union[dict, None]:
         try:
-            result = self.ec2_client.describe_route_tables(InternetGatewayIds=[rt_id])
-            table_entry = result['InternetGateways'][0]
+            result = self.ec2_client.describe_route_tables(RouteTableIds=[rt_id])
+            table_entry = result['RouteTables'][0]
             table_block = {'owner': table_entry['OwnerId'],
                            'associations': [a for a in table_entry['Associations']],
                            'routes': [r for r in table_entry['Routes']],
