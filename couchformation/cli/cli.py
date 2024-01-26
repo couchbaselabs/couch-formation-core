@@ -47,8 +47,6 @@ class CustomDisplayFormatter(logging.Formatter):
 
     def format(self, record):
         log_fmt = self.FORMATS.get(record.levelno)
-        if logging.DEBUG >= logging.root.level:
-            log_fmt += C.FORMAT_EXTRA
         formatter = logging.Formatter(log_fmt)
         return formatter.format(record)
 
@@ -120,14 +118,14 @@ class CLI(object):
 
         screen_handler = logging.StreamHandler()
         screen_handler.setFormatter(CustomDisplayFormatter())
+        screen_handler.setLevel(logging.INFO)
         logger.addHandler(screen_handler)
 
         file_handler = logging.handlers.RotatingFileHandler(debug_file, maxBytes=10485760, backupCount=5)
         file_handler.setFormatter(CustomLogFormatter())
-        file_handler.setLevel(logging.DEBUG)
         logger.addHandler(file_handler)
 
-        logger.setLevel(logging.INFO)
+        logger.setLevel(logging.DEBUG)
 
         logger.debug(f"---- CLI Start: {self.get_timestamp()} ----")
 

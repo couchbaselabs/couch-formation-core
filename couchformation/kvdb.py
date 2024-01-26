@@ -244,7 +244,6 @@ class KeyValueStore(UserDict):
             self.conn.commit()
 
     def close(self):
-        logger.debug(f"closing {self}")
         if hasattr(self, 'conn') and self.conn is not None:
             self.conn.commit()
             self.conn.close()

@@ -44,20 +44,12 @@ class FatalError(Exception):
         crash_log_file = os.path.join(get_log_dir(), "crash.log")
         logging.debug(f"See {crash_log_file} for stack trace")
 
-        crash_handler = logging.handlers.RotatingFileHandler(crash_log_file, maxBytes=10485760, backupCount=5)
-        crash_handler.setFormatter(CustomCrashFormatter())
-        crash_handler.setLevel(logging.DEBUG)
-        crash_logger = logging.getLogger('exception')
-        crash_logger.propagate = False
-        crash_logger.addHandler(crash_handler)
-
-        now = datetime.now()
-        time_string = now.strftime("%D %I:%M:%S %p")
-        crash_logger.debug(f"---- {time_string} ----")
-        crash_logger.debug(traceback.extract_stack(self.__traceback__.tb_frame))
-        if self.__context__:
-            crash_logger.debug("The above exception was raised while handling this exception:")
-            crash_logger.debug(traceback.extract_stack(self.__context__.__traceback__.tb_frame))
+        with open(crash_log_file, 'a') as log:
+            now = datetime.now()
+            time_string = now.strftime("%D %I:%M:%S %p")
+            log.write(f"---- {time_string} ----\n")
+            log.write(traceback.format_exc())
+            log.flush()
 
         sys.exit(1)
 

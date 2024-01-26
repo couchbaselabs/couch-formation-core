@@ -77,7 +77,7 @@ class Network(CloudBase):
 
     def details(self, vpc_id: str) -> Union[dict, None]:
         try:
-            result = self.ec2_client.describe_vpcs(VpcId=[vpc_id])
+            result = self.ec2_client.describe_vpcs(VpcIds=[vpc_id])
             vpc_entry = result['Vpcs'][0]
             vpc_block = {'cidr': vpc_entry['CidrBlock'],
                          'default': vpc_entry['IsDefault'],

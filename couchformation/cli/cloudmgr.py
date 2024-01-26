@@ -74,6 +74,12 @@ class CloudMgrCLI(CLI):
         elif self.options.command == "list":
             project.list()
 
+        loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
+        for log in loggers:
+            handlers = getattr(log, 'handlers', [])
+            for handler in handlers:
+                handler.flush()
+
 
 def main(args=None):
     cli = CloudMgrCLI(args)
