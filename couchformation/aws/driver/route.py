@@ -2,6 +2,7 @@
 ##
 
 import logging
+import botocore.exceptions
 from typing import Union, List
 from couchformation.aws.driver.base import CloudBase, AWSDriverError, EmptyResultSet
 from couchformation.aws.driver.constants import AWSTagStruct, AWSTag
@@ -55,6 +56,9 @@ class RouteTable(CloudBase):
         return result['RouteTable']['RouteTableId']
 
     def delete(self, rt_id: str) -> None:
+        rt = self.details(rt_id)
+        if not rt:
+            return
         try:
             self.ec2_client.delete_route_table(RouteTableId=rt_id)
         except Exception as err:
@@ -70,8 +74,12 @@ class RouteTable(CloudBase):
                            'vpc': table_entry['VpcId'],
                            'id': table_entry['RouteTableId']}
             return table_block
-        except (KeyError, IndexError):
+        except IndexError:
             return None
+        except botocore.exceptions.ClientError as err:
+            if err.response['Error']['Code'].endswith('NotFound'):
+                return None
+            raise AWSDriverError(f"ClientError: {err}")
         except Exception as err:
             raise AWSDriverError(f"error getting Route Table details: {err}")
 

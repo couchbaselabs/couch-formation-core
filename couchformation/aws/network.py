@@ -51,13 +51,50 @@ class AWSNetwork(object):
 
         self.aws_network = Network(self.parameters)
 
+        self.vpc_name = f"{self.project}-vpc"
+        self.ig_name = f"{self.project}-gw"
+        self.rt_name = f"{self.project}-rt"
+        self.sg_name = f"{self.project}-sg"
+        self.key_name = f"{self.project}-key"
+
+    def check_state(self):
+        for n, zone_state in reversed(list(enumerate(self.state.list_get('zone')))):
+            subnet_id = zone_state[2]
+            result = Subnet(self.parameters).details(subnet_id)
+            if result is None:
+                logger.warning(f"Removing stale state entry for subnet {subnet_id}")
+                self.state.list_remove('zone', zone_state[0])
+        if self.state.get('route_table_id'):
+            result = RouteTable(self.parameters).details(self.state['route_table_id'])
+            if result is None:
+                logger.warning(f"Removing stale state entry for route table {self.state['route_table_id']}")
+                del self.state['route_table_id']
+        if self.state.get('internet_gateway_id'):
+            result = InternetGateway(self.parameters).details(self.state['internet_gateway_id'])
+            if result is None:
+                logger.warning(f"Removing stale state entry for gateway {self.state['internet_gateway_id']}")
+                del self.state['internet_gateway_id']
+        if self.state.get('security_group_id'):
+            result = SecurityGroup(self.parameters).details(self.state['security_group_id'])
+            if result is None:
+                logger.warning(f"Removing stale state entry for security group {self.state['security_group_id']}")
+                del self.state['security_group_id']
+        if self.state.get('vpc_id'):
+            result = Network(self.parameters).details(self.state['vpc_id'])
+            if result is None:
+                logger.warning(f"Removing stale state entry for network {self.state['vpc_id']}")
+                del self.state['vpc_id']
+                del self.state['vpc_cidr']
+                del self.state['zone']
+        if self.state.get('ssh_key'):
+            result = Network(self.parameters).details(self.state['ssh_key'])
+            if result is None:
+                logger.warning(f"Removing stale state entry for SSH key {self.state['ssh_key']}")
+                del self.state['ssh_key']
+
     def create_vpc(self):
+        self.check_state()
         cidr_util = NetworkDriver()
-        vpc_name = f"{self.project}-vpc"
-        ig_name = f"{self.project}-gw"
-        rt_name = f"{self.project}-rt"
-        sg_name = f"{self.project}-sg"
-        key_name = f"{self.project}-key"
 
         for net in self.aws_network.cidr_list:
             cidr_util.add_network(net)
@@ -70,7 +107,7 @@ class AWSNetwork(object):
 
             if not self.state.get('vpc_id'):
                 vpc_cidr = cidr_util.get_next_network()
-                vpc_id = Network(self.parameters).create(vpc_name, vpc_cidr)
+                vpc_id = Network(self.parameters).create(self.vpc_name, vpc_cidr)
                 self.state['vpc_id'] = vpc_id
                 self.state['vpc_cidr'] = vpc_cidr
                 logger.info(f"Created VPC {vpc_id}")
@@ -83,7 +120,7 @@ class AWSNetwork(object):
             subnet_cycle = cycle(subnet_list[1:])
 
             if not self.state.get('security_group_id'):
-                sg_id = SecurityGroup(self.parameters).create(sg_name, f"Couch Formation project {self.project}", vpc_id)
+                sg_id = SecurityGroup(self.parameters).create(self.sg_name, f"Couch Formation project {self.project}", vpc_id)
                 SecurityGroup(self.parameters).add_ingress(sg_id, "-1", 0, 0, vpc_cidr)
                 SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 22, 22, "0.0.0.0/0")
                 SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 8091, 8097, "0.0.0.0/0")
@@ -99,19 +136,19 @@ class AWSNetwork(object):
                 logger.info(f"Created security group {sg_id}")
 
             if not self.state.get('ssh_key'):
-                ssh_key_name = SSHKey(self.parameters).create(key_name, ssh_pub_key_text)
+                ssh_key_name = SSHKey(self.parameters).create(self.key_name, ssh_pub_key_text)
                 self.state['ssh_key'] = ssh_key_name
                 logger.info(f"Created SSH Key {ssh_key_name}")
 
             if not self.state.get('internet_gateway_id'):
-                ig_id = InternetGateway(self.parameters).create(ig_name, vpc_id)
+                ig_id = InternetGateway(self.parameters).create(self.ig_name, vpc_id)
                 self.state['internet_gateway_id'] = ig_id
                 logger.info(f"Created internet gateway {ig_id}")
             else:
                 ig_id = self.state.get('internet_gateway_id')
 
             if not self.state.get('route_table_id'):
-                rt_id = RouteTable(self.parameters).create(rt_name, vpc_id)
+                rt_id = RouteTable(self.parameters).create(self.rt_name, vpc_id)
                 self.state['route_table_id'] = rt_id
                 RouteTable(self.parameters).add_route("0.0.0.0/0", ig_id, rt_id)
                 logger.info(f"Created route table {rt_id}")

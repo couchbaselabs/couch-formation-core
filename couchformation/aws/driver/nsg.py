@@ -2,6 +2,7 @@
 ##
 
 import logging
+import botocore.exceptions
 from typing import Union, List
 from couchformation.aws.driver.base import CloudBase, AWSDriverError, EmptyResultSet
 from couchformation.aws.driver.constants import AWSTagStruct, AWSTag
@@ -100,7 +101,28 @@ class SecurityGroup(CloudBase):
         return result['Return']
 
     def delete(self, sg_id: str) -> None:
+        sg = self.details(sg_id)
+        if not sg:
+            return
         try:
             self.ec2_client.delete_security_group(GroupId=sg_id)
         except Exception as err:
             raise AWSDriverError(f"error deleting security group: {err}")
+
+    def details(self, sg_id: str) -> Union[dict, None]:
+        try:
+            result = self.ec2_client.describe_security_groups(GroupIds=[sg_id])
+            sg_entry = result['SecurityGroups'][0]
+            sg_block = {'name': sg_entry['GroupName'],
+                        'description': sg_entry['Description'],
+                        'id': sg_entry['GroupId'],
+                        'vpc': sg_entry['VpcId']}
+            return sg_block
+        except IndexError:
+            return None
+        except botocore.exceptions.ClientError as err:
+            if err.response['Error']['Code'].endswith('NotFound'):
+                return None
+            raise AWSDriverError(f"ClientError: {err}")
+        except Exception as err:
+            raise AWSDriverError(f"error getting Internet Gateway details: {err}")

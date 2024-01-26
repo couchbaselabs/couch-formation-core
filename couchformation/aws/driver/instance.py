@@ -5,8 +5,9 @@ import base64
 import logging
 import re
 import time
+import botocore.exceptions
 from datetime import datetime, timezone
-
+from typing import Union
 from couchformation.aws.driver.base import CloudBase, AWSDriverError
 from couchformation.aws.driver.constants import AWSEbsDisk, AWSTagStruct, EbsVolume, AWSTag, PlacementType
 from couchformation.ssh import SSHUtil
@@ -152,22 +153,29 @@ class Instance(CloudBase):
         except Exception as err:
             raise AWSDriverError(f"error getting instance details: {err}")
 
-    def details(self, instance_id: str) -> dict:
+    def details(self, instance_id: str) -> Union[dict, None]:
         try:
             result = self.ec2_client.describe_instances(InstanceIds=[instance_id])
+            return result['Reservations'][0]['Instances'][0]
+        except IndexError:
+            return None
+        except botocore.exceptions.ClientError as err:
+            if err.response['Error']['Code'].endswith('NotFound'):
+                return None
+            raise AWSDriverError(f"ClientError: {err}")
         except Exception as err:
             raise AWSDriverError(f"error getting instance details: {err}")
 
-        return result['Reservations'][0]['Instances'][0]
-
     def terminate(self, instance_id: str) -> None:
+        instance = self.details(instance_id)
+        if not instance:
+            return
         try:
             self.ec2_client.terminate_instances(InstanceIds=[instance_id])
+            waiter = self.ec2_client.get_waiter('instance_terminated')
+            waiter.wait(InstanceIds=[instance_id])
         except Exception as err:
             raise AWSDriverError(f"error terminating instance: {err}")
-
-        waiter = self.ec2_client.get_waiter('instance_terminated')
-        waiter.wait(InstanceIds=[instance_id])
 
     def image_details(self, ami_id: str) -> dict:
         ami_filter = {

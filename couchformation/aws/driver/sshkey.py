@@ -2,6 +2,7 @@
 ##
 
 import logging
+import botocore.exceptions
 from typing import Union, List
 from botocore.exceptions import ClientError
 from couchformation.aws.driver.base import CloudBase, AWSDriverError, EmptyResultSet
@@ -83,7 +84,7 @@ class SSHKey(CloudBase):
 
         return key_block
 
-    def details(self, key_name: str) -> dict:
+    def details(self, key_name: str) -> Union[dict, None]:
         try:
             result = self.ec2_client.describe_key_pairs(KeyNames=[key_name])
             key_result = result['KeyPairs'][0]
@@ -91,10 +92,19 @@ class SSHKey(CloudBase):
                          'id': key_result['KeyPairId'],
                          'fingerprint': key_result['KeyFingerprint']}
             return key_block
+        except IndexError:
+            return None
+        except botocore.exceptions.ClientError as err:
+            if err.response['Error']['Code'].endswith('NotFound'):
+                return None
+            raise AWSDriverError(f"ClientError: {err}")
         except Exception as err:
             raise AWSDriverError(f"error deleting key pair: {err}")
 
     def delete(self, name: str) -> None:
+        key = self.details(name)
+        if not key:
+            return
         try:
             self.ec2_client.delete_key_pair(KeyName=name)
         except Exception as err:

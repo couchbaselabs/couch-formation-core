@@ -2,6 +2,7 @@
 ##
 
 import logging
+import botocore.exceptions
 from typing import Union, List
 from couchformation.aws.driver.base import CloudBase, AWSDriverError, EmptyResultSet
 from couchformation.aws.driver.constants import AWSTagStruct, AWSTag
@@ -67,6 +68,10 @@ class Network(CloudBase):
     def delete(self, vpc_id: str) -> None:
         try:
             self.ec2_client.delete_vpc(VpcId=vpc_id)
+        except botocore.exceptions.ClientError as err:
+            if err.response['Error']['Code'].endswith('NotFound'):
+                return
+            raise AWSDriverError(f"ClientError: {err}")
         except Exception as err:
             raise AWSDriverError(f"error deleting VPC: {err}")
 
@@ -78,8 +83,10 @@ class Network(CloudBase):
                          'default': vpc_entry['IsDefault'],
                          'id': vpc_entry['VpcId']}
             return vpc_block
-        except (KeyError, IndexError):
-            return None
+        except botocore.exceptions.ClientError as err:
+            if err.response['Error']['Code'].endswith('NotFound'):
+                return None
+            raise AWSDriverError(f"ClientError: {err}")
         except Exception as err:
             raise AWSDriverError(f"error getting VPC details: {err}")
 
@@ -150,8 +157,32 @@ class Subnet(CloudBase):
         except Exception as err:
             AWSDriverError(f"error creating subnet: {err}")
 
+    def details(self, subnet_id: str) -> Union[dict, None]:
+        try:
+            result = self.ec2_client.describe_subnets(SubnetIds=[subnet_id])
+            subnet = result['Subnets'][0]
+            net_block = {'cidr': subnet['CidrBlock'],
+                         'name': subnet['SubnetId'],
+                         'vpc': subnet['VpcId'],
+                         'zone': subnet['AvailabilityZone'],
+                         'default': subnet['DefaultForAz'],
+                         'public': subnet['MapPublicIpOnLaunch']}
+            return net_block
+        except IndexError:
+            return None
+        except botocore.exceptions.ClientError as err:
+            if err.response['Error']['Code'].endswith('NotFound'):
+                return None
+            raise AWSDriverError(f"ClientError: {err}")
+        except Exception as err:
+            raise AWSDriverError(f"error getting VPC details: {err}")
+
     def delete(self, subnet_id: str) -> None:
         try:
             self.ec2_client.delete_subnet(SubnetId=subnet_id)
+        except botocore.exceptions.ClientError as err:
+            if err.response['Error']['Code'].endswith('NotFound'):
+                return
+            raise AWSDriverError(f"ClientError: {err}")
         except Exception as err:
             raise AWSDriverError(f"error deleting subnet: {err}")

@@ -67,7 +67,15 @@ class AWSDeployment(object):
 
         self.aws_network = AWSNetwork(self.parameters)
 
+    def check_state(self):
+        if self.state.get('instance_id'):
+            result = Instance(self.parameters).details(self.state['instance_id'])
+            if result is None:
+                logger.warning(f"Removing stale state entry for instance {self.state['instance_id']}")
+                del self.state['instance_id']
+
     def deploy(self):
+        self.check_state()
         subnet_list = []
 
         if self.state.get('instance_id'):

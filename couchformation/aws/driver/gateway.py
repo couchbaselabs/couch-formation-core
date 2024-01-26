@@ -2,6 +2,7 @@
 ##
 
 import logging
+import botocore.exceptions
 from typing import Union, List
 from couchformation.aws.driver.base import CloudBase, AWSDriverError, EmptyResultSet
 from couchformation.aws.driver.constants import AWSTagStruct, AWSTag
@@ -73,7 +74,11 @@ class InternetGateway(CloudBase):
                         'attachments': [a['VpcId'] for a in ig_entry['Attachments']],
                         'id': ig_entry['InternetGatewayId']}
             return ig_block
-        except (KeyError, IndexError):
+        except IndexError:
             return None
+        except botocore.exceptions.ClientError as err:
+            if err.response['Error']['Code'].endswith('NotFound'):
+                return None
+            raise AWSDriverError(f"ClientError: {err}")
         except Exception as err:
             raise AWSDriverError(f"error getting Internet Gateway details: {err}")
