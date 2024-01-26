@@ -156,3 +156,5 @@ pip3 install wheel
 ```
 pip3 install couchformation
 ```
+## Troubleshooting
+Log files are written to ```.config/couch-formation/log```.
