@@ -35,6 +35,11 @@ download:
 		-t "Release $(PROJECT_VERSION)" \
 		-n "Release $(PROJECT_VERSION)" \
 		$(PROJECT_VERSION)
+remote_download:
+		gh release create -R "couchbaselabs/$(PROJECT_NAME)" \
+		-t "Release $(PROJECT_VERSION)" \
+		-n "Release $(PROJECT_VERSION)" \
+		$(PROJECT_VERSION)
 test_kvdb:
 		python -m pytest tests/test_kvdb.py
 test_aws_drv:
