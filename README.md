@@ -1,4 +1,4 @@
-# Couch Formation 4.0.0a26
+# Couch Formation 4.0.0a27
 
 ![Logo](https://raw.githubusercontent.com/mminichino/couch-formation-core/main/doc/couch-formation-1.png)
 
@@ -92,6 +92,12 @@ cloudmgr create --build cbs --cloud aws --project sgw-dev01 --name devdb01 --reg
 cloudmgr create --build sgw --cloud aws --project sgw-dev01 --name gateway --region us-east-2 --quantity 1 --os_id ubuntu --os_version 22.04 --ssh_key /Users/jdoe/.ssh/jdoe-default-key-pair.pem --machine_type 4x16 --connect devdb01
 ```
 
+## Capella example
+For Capella the Couch Formation project aligns with the Capella project.
+```
+cloudmgr create --build capella --cloud capella --project pytest-project --name test-cluster --region us-east-2 --quantity 3 --provider aws --machine_type 4x16
+```
+
 ## Additional CLI examples
 ### Destroy a project:
 ```
@@ -156,5 +162,31 @@ pip3 install wheel
 ```
 pip3 install couchformation
 ```
+## Operating System IDs
+
+| ID            | Operating System         | Versions     |
+|---------------|--------------------------|--------------|
+| amzn          | Amazon Linux             | 2, 2023      |
+| rhel          | Red Hat Enterprise Linux | 8, 9         |
+| centos        | CentOS                   | 8            |
+| ol            | Oracle Linux             | 8, 9         |
+| rocky         | Rocky Linux              | 8, 9         |
+| fedora        | Fedora                   | 34           |
+| sles          | SUSE Linux               | 12, 15       |
+| opensuse-leap | openSUSE                 | 15           |
+| ubuntu        | Ubuntu Linux             | 20.04, 22.04 |
+| debian        | Debian Linux             | 10, 11       |
+| windows       | Windows Server           | 2019, 2022   |
+| macos         | macOS                    | 13, 14       |
+
+## Build Types
+
+| Build Type | Description                     |
+|------------|---------------------------------|
+| cbs        | Couchbase Server                |
+| sgw        | Sync Gateway                    |
+| capella    | Capella Database                |
+| generic    | Base configured node from image |
+
 ## Troubleshooting
 Log files are written to ```.config/couch-formation/log```.
