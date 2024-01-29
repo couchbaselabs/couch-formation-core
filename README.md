@@ -95,7 +95,7 @@ cloudmgr create --build sgw --cloud aws --project sgw-dev01 --name gateway --reg
 ## Capella example
 For Capella the Couch Formation project aligns with the Capella project.
 ```
-cloudmgr create --build capella --cloud capella --project pytest-project --name test-cluster --region us-east-2 --quantity 3 --provider aws --machine_type 4x16
+cloudmgr create --build capella --cloud capella --project test-project --name test-cluster --region us-east-2 --quantity 3 --provider aws --machine_type 4x16
 ```
 
 ## Additional CLI examples
