@@ -56,6 +56,21 @@ class Service:
         return AuthMode[self.auth_mode]
 
 
+class MetadataManager(object):
+
+    def __init__(self, project: str):
+        self.project_dir = get_project_dir(project)
+        metadata = os.path.join(self.project_dir, C.METADATA)
+        self.meta = KeyValueStore(metadata)
+
+    def list_services(self):
+        self.meta.document('resources')
+        for resource in self.meta.keys():
+            if not resource:
+                continue
+            yield resource, self.meta[resource]
+
+
 class NodeGroup(object):
 
     def __init__(self, options: argparse.Namespace):

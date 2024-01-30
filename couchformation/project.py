@@ -2,11 +2,14 @@
 ##
 
 import logging
+import os.path
+import couchformation.constants as C
 from couchformation.exception import FatalError
-from couchformation.config import get_project_dir
-from couchformation.deployment import NodeGroup
+from couchformation.config import get_project_dir, get_base_dir
+from couchformation.deployment import NodeGroup, MetadataManager
 from couchformation.executor.targets import TargetProfile, ProvisionerProfile, BuildProfile, DeployStrategy, DeployMode, CloudConfig
 from couchformation.executor.dispatch import JobDispatch
+from couchformation.util import FileManager
 
 logger = logging.getLogger('couchformation.exec.process')
 logger.addHandler(logging.NullHandler())
@@ -41,7 +44,7 @@ class Project(object):
             raise ProjectError(f"Missing required parameters: {','.join(missing)}")
         NodeGroup(self.options).add_to_node_group(profile.options)
 
-    def deploy(self, service=None):
+    def deploy(self, service=None, skip_provision=False):
         for group in NodeGroup(self.options).get_node_groups():
             self._test_cloud(group)
         for group in NodeGroup(self.options).get_node_groups():
@@ -52,7 +55,7 @@ class Project(object):
             region = group[0].get('region') if group[0].get('region') else "local"
             if strategy.deployer == DeployMode.node.value:
                 self._deploy_network(cloud, region)
-                self._deploy_node(group)
+                self._deploy_node(group, skip_provision)
             elif strategy.deployer == DeployMode.saas.value:
                 self._deploy_saas(group)
 
@@ -116,7 +119,7 @@ class Project(object):
             runner.foreground(module, instance, compose, parameters)
         runner.foreground(module, instance, deploy, group[0].as_dict)
 
-    def _deploy_node(self, group):
+    def _deploy_node(self, group, skip_provision=False):
         number = 0
         runner = JobDispatch()
 
@@ -140,6 +143,9 @@ class Project(object):
         private_ip_list = [d['private_ip'] for d in result_list]
         public_ip_list = [d['public_ip'] for d in result_list]
         result_list = [dict(item, private_ip_list=private_ip_list, public_ip_list=public_ip_list) for item in result_list]
+
+        if skip_provision:
+            return
 
         if group[0].get('connect'):
             connect_list = self.list(api=True, service=group[0].get('connect'))
@@ -299,6 +305,18 @@ class Project(object):
                         f"Allow CIDR: {result.get('allow')}")
 
         return return_list
+
+    @staticmethod
+    def list_projects():
+        base_path = get_base_dir()
+        logger.info("Configured project list:")
+        logger.info("========================")
+        for project in sorted(list(FileManager().list_dir(base_path))):
+            project_metadata_path = os.path.join(base_path, project, C.METADATA)
+            if os.path.exists(project_metadata_path):
+                logger.info(f"{project}:")
+                for service, cloud in MetadataManager(project).list_services():
+                    logger.info(f"- {service} ({cloud})")
 
     @property
     def location(self):

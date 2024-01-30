@@ -6,7 +6,7 @@ default:
       - windows
       - macos
     commands:
-      - curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | sudo -E bash -s - -s -g https://github.com/mminichino/host-prep-lib
+      - curl -sfL https://raw.githubusercontent.com/couchbaselabs/host-prep-lib/main/bin/setup.sh | sudo -E bash -s - -s -p pyhostprep
 generic:
   - provisioner: remote
     root: true
@@ -25,7 +25,7 @@ cbs:
   - provisioner: docker
     root: true
     commands:
-      - curl -sfL https://raw.githubusercontent.com/mminichino/host-prep-lib/main/bin/setup.sh | bash -s - -s -g https://github.com/mminichino/host-prep-lib
+      - curl -sfL https://raw.githubusercontent.com/couchbaselabs/host-prep-lib/main/bin/setup.sh | bash -s - -s -p pyhostprep
       - swmgr cluster create -n {{ SERVICE_NAME }} -s {{ SERVICES }}
 sgw:
   - provisioner: remote

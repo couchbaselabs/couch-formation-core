@@ -65,6 +65,11 @@ class FileManager(object):
         except Exception as err:
             raise FileManagerError(f"can not copy {source} to {destination}: {err}")
 
+    @staticmethod
+    def list_dir(dir_name: str):
+        for name in os.listdir(dir_name):
+            yield name
+
 
 class UUIDGen(object):
 

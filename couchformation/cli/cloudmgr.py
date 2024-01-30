@@ -30,6 +30,7 @@ class CloudMgrCLI(CLI):
         opt_parser.add_argument('-x', '--connect', action='store', help="Connection Name", default=None)
         opt_parser.add_argument('-g', '--group', action='store', help="Group Number", default=1, type=int)
         opt_parser.add_argument('-P', '--provisioner', action='store', help="Provisioner Name", default="remote")
+        opt_parser.add_argument('-R', '--raw', action='store_true', help="Skip provision phase")
 
         command_subparser = self.parser.add_subparsers(dest='command')
         command_subparser.add_parser('create', help="Create New Service", parents=[opt_parser], add_help=False)
@@ -44,6 +45,10 @@ class CloudMgrCLI(CLI):
         logger.info(f"Couch Formation v{couchformation.__version__}")
 
         if self.options.show_version:
+            return
+
+        if self.options.command == "list" and not self.options.project:
+            Project(self.options, self.remainder).list_projects()
             return
 
         if not self.options.command or not self.options.project:
@@ -64,7 +69,7 @@ class CloudMgrCLI(CLI):
                 return
             project.add()
         elif self.options.command == "deploy":
-            project.deploy(self.options.name)
+            project.deploy(self.options.name, self.options.raw)
         elif self.options.command == "destroy":
             project.destroy(self.options.name)
         elif self.options.command == "remove":
