@@ -9,6 +9,7 @@ from couchformation.kvdb import KeyValueStore
 from couchformation.util import FileManager, Synchronize
 from cbcmgr.cb_capella import Capella, CapellaCluster, AllowedCIDR, Credentials
 import couchformation.constants as C
+from couchformation.util import PasswordUtility
 
 
 logger = logging.getLogger('couchformation.capella.node')
@@ -24,10 +25,12 @@ class CapellaDeployment(object):
     def __init__(self, parameters: dict):
         self.parameters = parameters
         self.name = parameters.get('name')
+        self.deploy_type = parameters.get('type') if parameters.get('type') else "database"
+        self.cluster_id = parameters.get('instance_id')
         self.project = parameters.get('project')
-        self.region = parameters.get('region')
+        self.region = parameters.get('region') if parameters.get('region') else "us-east-1"
         self.cloud = parameters.get('cloud')
-        self.provider = parameters.get('provider')
+        self.provider = parameters.get('provider') if parameters.get('provider') else "aws"
         self.username = parameters.get('username') if parameters.get('username') else "Administrator"
         self.password = parameters.get('password')
         self.account_email = parameters.get('account_email')
@@ -107,6 +110,11 @@ class CapellaDeployment(object):
 
         logger.info(f"Cluster ID: {cluster_id}")
 
+        cluster_info = Capella(project_id=project_id).get_cluster_by_id(cluster_id)
+        connect_string = cluster_info.get('connectionString')
+        self.state['connect_string'] = connect_string
+        logger.info(f"Connect string: {connect_string}")
+
         if self.state.get('allow'):
             logger.info(f"Allow list already set to {self.state.get('allow')}")
         else:
@@ -121,12 +129,13 @@ class CapellaDeployment(object):
             if self.password:
                 password = self.password
             else:
-                password = Capella().generate_password()
+                password = PasswordUtility().generate(16)
                 logger.info(f"Password: {password}")
             credentials = Credentials().create(self.username, password)
             logger.info(f"Creating database user {self.username}")
             Capella(project_id=project_id).add_db_user(cluster_id, credentials)
             self.state['username'] = self.username
+            self.state['password'] = password
 
         logger.info("Capella database successfully created")
 

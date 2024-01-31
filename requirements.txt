@@ -38,6 +38,6 @@ paramiko==3.4.0
 overrides>=7.4.0
 bumpversion>=0.6.0
 PyYAML>=5.1
-cbcmgr>=2.2.8
+cbcmgr>=2.2.11
 pyhostprep==0.1.52
 rsa>=4.9

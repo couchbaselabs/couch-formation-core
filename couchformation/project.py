@@ -298,11 +298,14 @@ class Project(object):
         return_list.append(result)
 
         if not api:
-            logger.info(f"ID: {result.get('instance_id')} "
-                        f"Name: {result.get('name')} "
-                        f"Cloud: {result.get('provider')} "
-                        f"Network CIDR: {result.get('cidr')} "
-                        f"Allow CIDR: {result.get('allow')}")
+            logger.info(f"ID: {result.get('instance_id')}")
+            logger.info(f"Name: {result.get('name')}")
+            logger.info(f"Connect String: {result.get('connect_string')}")
+            logger.info(f"Cloud: {result.get('provider')}")
+            logger.info(f"Network CIDR: {result.get('cidr')}")
+            logger.info(f"Allow CIDR: {result.get('allow')}")
+            if result.get('password'):
+                logger.info(f"Password: {result.get('password')}")
 
         return return_list
 

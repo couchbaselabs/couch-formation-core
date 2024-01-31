@@ -149,9 +149,9 @@ capella:
     - username
     - password
     - account_email
+    - type
   required:
-    - provider
-    - region
+    - machine_type
     - quantity
 docker:
   base:
