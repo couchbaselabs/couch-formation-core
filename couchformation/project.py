@@ -113,11 +113,24 @@ class Project(object):
         instance = profile.node.module
         compose = profile.node.compose
         deploy = profile.node.deploy
+
         for n, db in enumerate(group):
             parameters = db.as_dict
             parameters['number'] = n + 1
             runner.foreground(module, instance, compose, parameters)
-        runner.foreground(module, instance, deploy, group[0].as_dict)
+
+        main_params = group[0].as_dict
+
+        if group[0].get('connect'):
+            connect_list = self.list(api=True, service=group[0].get('connect'))
+            if len(connect_list) == 0:
+                raise ProjectError(f"Connect: No services in {group[0].get('connect')}")
+            logger.info(f"Connecting service {group[0].get('name')} to {group[0].get('connect')}")
+            main_params.update({
+                'instance_id': connect_list[0].get('instance_id')
+            })
+
+        runner.foreground(module, instance, deploy, main_params)
 
     def _deploy_node(self, group, skip_provision=False):
         number = 0

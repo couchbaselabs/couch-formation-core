@@ -95,6 +95,10 @@ For Capella the Couch Formation project aligns with the Capella project.
 ```
 cloudmgr create --build capella --cloud capella --project test-project --name test-cluster --region us-east-2 --quantity 3 --provider aws --machine_type 4x16
 ```
+Optionally create an app service (Sync Gateway in Capella) and attach it to a Capella database.
+```
+cloudmgr create --build capella --cloud capella --project test-project --name test-app-svc --quantity 2 --machine_type 4x8 --type mobile --connect test-cluster
+```
 
 ## Additional CLI examples
 ### Destroy a project:
@@ -160,22 +164,22 @@ pip3 install wheel
 ```
 pip3 install couchformation
 ```
-## Operating System IDs
+## Operating System Information
 
-| ID            | Operating System         | Versions     |
-|---------------|--------------------------|--------------|
-| amzn          | Amazon Linux             | 2, 2023      |
-| rhel          | Red Hat Enterprise Linux | 8, 9         |
-| centos        | CentOS                   | 8            |
-| ol            | Oracle Linux             | 8, 9         |
-| rocky         | Rocky Linux              | 8, 9         |
-| fedora        | Fedora                   | 34           |
-| sles          | SUSE Linux               | 12, 15       |
-| opensuse-leap | openSUSE                 | 15           |
-| ubuntu        | Ubuntu Linux             | 20.04, 22.04 |
-| debian        | Debian Linux             | 10, 11       |
-| windows       | Windows Server           | 2019, 2022   |
-| macos         | macOS                    | 13, 14       |
+| ID            | Operating System         | Versions     | AWS User      | GCP User  | Azure User |
+|---------------|--------------------------|--------------|---------------|-----------|------------|
+| amzn          | Amazon Linux             | 2, 2023      | ec2-user      | N/A       | N/A        |
+| rhel          | Red Hat Enterprise Linux | 8, 9         | ec2-user      | admin     | rhel       |
+| centos        | CentOS                   | 8            | centos        | centos    | centos     |
+| ol            | Oracle Linux             | 8, 9         | ec2-user      | N/A       | N/A        |
+| rocky         | Rocky Linux              | 8, 9         | rocky         | rocky     | N/A        |
+| fedora        | Fedora                   | 34           | core          | fedora    | N/A        |
+| sles          | SUSE Linux               | 12, 15       | ec2-user      | admin     | sles       |
+| opensuse-leap | openSUSE                 | 15           | ec2-user      | admin     | sles       |
+| ubuntu        | Ubuntu Linux             | 20.04, 22.04 | ubuntu        | ubuntu    | ubuntu     |
+| debian        | Debian Linux             | 10, 11       | admin         | admin     | debian     |
+| windows       | Windows Server           | 2019, 2022   | Administrator | adminuser | adminuser  |
+| macos         | macOS                    | 13, 14       | ec2-user      | N/A       | N/A        |
 
 ## Build Types
 
