@@ -47,12 +47,19 @@ class TestMainCapella(unittest.TestCase):
         project.add()
 
     def test_3(self):
+        args = ["create", "--build", "capella", "--cloud", "capella", "--project", "pytest-project", "--name", "test-app-svc",
+                "--quantity", "2", "--machine_type", "4x8", "--type", "mobile", "--connect", "test-cluster"]
+        cm = CloudMgrCLI(args)
+        project = Project(cm.options, cm.remainder)
+        project.create()
+
+    def test_4(self):
         args = ["deploy", "--project", "pytest-project"]
         cm = CloudMgrCLI(args)
         project = Project(cm.options, cm.remainder)
         project.deploy()
 
-    def test_4(self):
+    def test_5(self):
         args = ["destroy", "--project", "pytest-project"]
         cm = CloudMgrCLI(args)
         project = Project(cm.options, cm.remainder)
