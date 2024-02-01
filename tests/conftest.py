@@ -63,24 +63,23 @@ class CustomFormatter(logging.Formatter):
         return formatter.format(record)
 
 
+def make_dir(name: str):
+    if not os.path.exists(name):
+        path_dir = os.path.dirname(name)
+        if not os.path.exists(path_dir):
+            make_dir(path_dir)
+        try:
+            os.mkdir(name)
+        except OSError:
+            raise
+
+
 def pytest_configure():
     pass
 
 
 def pytest_sessionstart():
-    log_dir = LOG_DIRECTORY
-    default_debug_file = os.path.join(log_dir, "pytest.log")
-    debug_file = os.environ.get("COUCH_FORMATION_DEBUG_FILE", default_debug_file)
-
-    screen_handler = logging.StreamHandler()
-    screen_handler.setFormatter(CustomFormatter())
-    logger.addHandler(screen_handler)
-
-    file_handler = logging.FileHandler(debug_file, 'w')
-    file_handler.setFormatter(CustomLogFormatter())
-    logger.addHandler(file_handler)
-
-    logger.setLevel(logging.INFO)
+    make_dir(LOG_DIRECTORY)
 
 
 def pytest_sessionfinish():
