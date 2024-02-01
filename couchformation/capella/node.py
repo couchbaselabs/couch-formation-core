@@ -212,6 +212,8 @@ class CapellaDeployment(object):
 
     def destroy(self):
         project = self.state.get('project')
+        if not project:
+            return
         project_data = Capella().get_project(project)
         project_id = project_data.get('id')
         logger.info(f"Project {project} ID {project_id}")

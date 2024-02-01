@@ -63,7 +63,8 @@ setup(
         "PyYAML>=5.1",
         "cbcmgr>=2.2.1",
         "pyhostprep>=0.1.52",
-        "rsa>=4.9"
+        "rsa>=4.9",
+        "pywinrm>=0.4.3"
     ],
     author_email='info@unix.us.com',
     description='Couchbase Cloud Automation',
