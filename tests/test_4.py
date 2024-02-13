@@ -86,9 +86,10 @@ class TestMainAWS(unittest.TestCase):
         nodes = list(project.list(api=True))
         connect_ip = nodes[0].get('public_ip')
 
+        time.sleep(1)
         session = requests.Session()
-        retries = Retry(total=5,
-                        backoff_factor=0.1,
+        retries = Retry(total=10,
+                        backoff_factor=0.01,
                         status_forcelist=[500, 501, 503])
         session.mount('http://', HTTPAdapter(max_retries=retries))
         session.mount('https://', HTTPAdapter(max_retries=retries))

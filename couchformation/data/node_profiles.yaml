@@ -9,9 +9,12 @@ default:
       - curl -sfL https://raw.githubusercontent.com/couchbaselabs/host-prep-lib/main/bin/setup.sh | sudo -E bash -s - -s -p pyhostprep
   - provisioner: winrm
     root: true
+    exclude: []
     commands:
-      - (New-Object Net.WebClient).DownloadFile("https://www.python.org/ftp/python/3.11.7/python-3.11.7-amd64.exe", "$env:Temp\python-3.11.7-amd64.exe")
-      - & $env:Temp\python-3.11.7-amd64.exe /quiet InstallAllUsers=1 PrependPath=1
+      - >-
+        (New-Object Net.WebClient).DownloadFile("https://www.python.org/ftp/python/3.11.7/python-3.11.7-amd64.exe", "$env:Temp\python-3.11.7-amd64.exe")
+      - >-
+        & $env:Temp\python-3.11.7-amd64.exe /quiet InstallAllUsers=1 PrependPath=1
 generic:
   - provisioner: remote
     root: true

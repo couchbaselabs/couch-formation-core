@@ -3,6 +3,7 @@ remote:
   driver: couchformation.provisioner.remote
   module: RemoteProvisioner
   method: run
+  when: os_id != "windows"
   parameters:
     - name
     - service
@@ -21,6 +22,7 @@ docker:
   driver: couchformation.provisioner.docker
   module: ContainerExec
   method: run
+  when: cloud == "docker"
   parameters:
     - name
     - service
@@ -34,6 +36,7 @@ winrm:
   driver: couchformation.provisioner.winrm
   module: WinRMProvisioner
   method: run
+  when: os_id == "windows"
   parameters:
     - name
     - service

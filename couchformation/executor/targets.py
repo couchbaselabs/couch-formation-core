@@ -102,6 +102,7 @@ class Provisioner:
     driver: str = attr.ib()
     module: str = attr.ib()
     method: str = attr.ib()
+    when: str = attr.ib()
     options: List[str] = attr.ib()
     parameters: Dict = attr.ib()
 
@@ -192,7 +193,7 @@ class TargetProfile(object):
                     profile = CloudProfile(cloud, base, network, node, Parameters(settings.get('parameters'), settings.get('required', [])))
                     self.config.add(profile)
             except yaml.YAMLError as err:
-                RuntimeError(f"Can not open target config file {self.cfg_file}: {err}")
+                raise RuntimeError(f"Can not open target config file {self.cfg_file}: {err}")
 
     @staticmethod
     def construct_profile(settings, key):
@@ -248,7 +249,7 @@ class BuildProfile(object):
                         sequence.add(profile)
                     self.config.add(sequence)
             except yaml.YAMLError as err:
-                RuntimeError(f"Can not open node config file {self.cfg_file}: {err}")
+                raise RuntimeError(f"Can not open node config file {self.cfg_file}: {err}")
 
 
 class ProvisionerProfile(object):
@@ -264,6 +265,22 @@ class ProvisionerProfile(object):
             raise ValueError(f"Provisioner type {name} is not supported")
         return profile
 
+    @staticmethod
+    def run(parameters, expression):
+        for key, val in parameters.items():
+            exec(key + '=val')
+        try:
+            return eval(expression)
+        except NameError:
+            return False
+
+    def search(self, parameters):
+        for provisioner in self.config.provisioners:
+            expression = provisioner.when
+            if self.run(parameters, expression):
+                return provisioner.name
+        return None
+
     def load_config(self):
         with open(self.cfg_file, "r") as f:
             try:
@@ -271,16 +288,17 @@ class ProvisionerProfile(object):
                     provisioner = Provisioner(*self.construct_profile(name, settings))
                     self.config.add(provisioner)
             except yaml.YAMLError as err:
-                RuntimeError(f"Can not open provisioner config file {self.cfg_file}: {err}")
+                raise RuntimeError(f"Can not open provisioner config file {self.cfg_file}: {err}")
 
     @staticmethod
     def construct_profile(name, settings):
         driver = settings.get('driver')
         module = settings.get('module')
         method = settings.get('method')
+        when = settings.get('when')
         options = settings.get('parameters')
         parameters = {}
-        return name, driver, module, method, options, parameters
+        return name, driver, module, method, when, options, parameters
 
 
 class DeployStrategy(object):
@@ -303,7 +321,7 @@ class DeployStrategy(object):
                     strategy = Strategy(*self.construct_strategy(name, settings))
                     self.config.add(strategy)
             except yaml.YAMLError as err:
-                RuntimeError(f"Can not open strategy config file {self.cfg_file}: {err}")
+                raise RuntimeError(f"Can not open strategy config file {self.cfg_file}: {err}")
 
     @staticmethod
     def construct_strategy(name, settings):
@@ -331,7 +349,7 @@ class CloudConfig(object):
                     cloud = CloudType(*self.construct_strategy(name, settings))
                     self.config.add(cloud)
             except yaml.YAMLError as err:
-                RuntimeError(f"Can not open strategy config file {self.cfg_file}: {err}")
+                raise RuntimeError(f"Can not open strategy config file {self.cfg_file}: {err}")
 
     @staticmethod
     def construct_strategy(name, settings):

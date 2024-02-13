@@ -4,6 +4,7 @@
 import logging
 import warnings
 import os
+import pytest
 from pathlib import Path
 
 warnings.filterwarnings("ignore")
@@ -12,6 +13,7 @@ logger = logging.getLogger()
 ROOT_DIRECTORY = os.path.join(Path.home(), '.config', 'couch-formation')
 STATE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'state')
 LOG_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'log')
+FAILURE_LOG = 'failure.log'
 
 
 class CustomLogFormatter(logging.Formatter):
@@ -74,12 +76,25 @@ def make_dir(name: str):
             raise
 
 
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport():
+    outcome = yield
+    rep = outcome.get_result()
+
+    if rep.when == 'call' and rep.failed:
+        with open(FAILURE_LOG, 'a') as f:
+            f.write(f"{rep.head_line}\n")
+            f.write(f"{rep.longreprtext}\n")
+
+
 def pytest_configure():
     pass
 
 
 def pytest_sessionstart():
     make_dir(LOG_DIRECTORY)
+    if os.path.exists(FAILURE_LOG):
+        open(FAILURE_LOG, 'w').close()
 
 
 def pytest_sessionfinish():

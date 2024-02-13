@@ -7,7 +7,7 @@ import couchformation.constants as C
 from couchformation.exception import FatalError
 from couchformation.config import get_project_dir, get_base_dir
 from couchformation.deployment import NodeGroup, MetadataManager
-from couchformation.executor.targets import TargetProfile, ProvisionerProfile, BuildProfile, DeployStrategy, DeployMode, CloudConfig
+from couchformation.executor.targets import TargetProfile, ProvisionerProfile, BuildProfile, DeployStrategy, DeployMode
 from couchformation.executor.dispatch import JobDispatch
 from couchformation.util import FileManager
 
@@ -169,10 +169,15 @@ class Project(object):
             private_connect_list = [d['private_ip'] for d in connect_list]
             result_list = [dict(item, connect=private_connect_list) for item in result_list]
 
-        cloud_config = CloudConfig().get(group[0].get('cloud'))
+        provisioner_name = ProvisionerProfile().search(group[0])
+        if not provisioner_name:
+            raise ProjectError("No provisioner matches configuration")
+
+        logger.info(f"Selected provisioner {provisioner_name}")
+
         default_seq = BuildProfile().get('default')
 
-        for build_config in default_seq.get(cloud_config.provisioner):
+        for build_config in default_seq.get(provisioner_name):
             if group[0].get('os_id') in build_config.exclude:
                 continue
             provisioner = ProvisionerProfile().get(build_config.provisioner)
@@ -190,7 +195,7 @@ class Project(object):
 
         build_seq = BuildProfile().get(group[0].get('build'))
 
-        for build_config in build_seq.get(cloud_config.provisioner):
+        for build_config in build_seq.get(provisioner_name):
             if group[0].get('os_id') in build_config.exclude:
                 continue
             provisioner = ProvisionerProfile().get(build_config.provisioner)

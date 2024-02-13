@@ -1,5 +1,5 @@
 .PHONY:	setup push pypi test
-export PYTHONPATH := $(shell pwd)/test:$(shell pwd):$(PYTHONPATH)
+export LOGPATH := $(shell pwd)/tests/log
 export PROJECT_NAME := $$(basename $$(pwd))
 export PROJECT_VERSION := $(shell cat VERSION)
 
@@ -65,6 +65,7 @@ test_drv:
 test_cli:
 		python -m pytest tests/test_4.py tests/test_5.py tests/test_6.py tests/test_7.py pytest tests/test_9.py
 test:
+		mkdir -p $(LOGPATH)
 		python -m pytest \
 		tests/test_1.py \
 		tests/test_2.py \

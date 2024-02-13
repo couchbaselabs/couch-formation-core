@@ -162,4 +162,7 @@ cython_debug/
 tests/output/
 tests/state/
 tests/db/
+tests/log/
 test/
+pytest.log
+failure.log
