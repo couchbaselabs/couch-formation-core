@@ -153,7 +153,11 @@ class GCPNetwork(object):
                 logger.info(f"Created firewall rule {self.firewall_ssh}")
 
             if not self.state.get('firewall_rdp'):
-                Firewall(self.parameters).create_ingress(self.firewall_rdp, self.vpc_name, "0.0.0.0/0", "tcp", ["3389"])
+                Firewall(self.parameters).create_ingress(self.firewall_rdp, self.vpc_name, "0.0.0.0/0", "tcp", [
+                    "3389",
+                    "5985",
+                    "5986"
+                ])
                 self.state['firewall_rdp'] = self.firewall_rdp
                 logger.info(f"Created firewall rule {self.firewall_rdp}")
 

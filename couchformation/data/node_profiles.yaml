@@ -12,9 +12,7 @@ default:
     exclude: []
     commands:
       - >-
-        (New-Object Net.WebClient).DownloadFile("https://www.python.org/ftp/python/3.11.7/python-3.11.7-amd64.exe", "$env:Temp\python-3.11.7-amd64.exe")
-      - >-
-        & $env:Temp\python-3.11.7-amd64.exe /quiet InstallAllUsers=1 PrependPath=1
+        iex "& {$(irm https://raw.githubusercontent.com/couchbaselabs/host-prep-lib/main/bin/bootstrap.ps1)}"
 generic:
   - provisioner: remote
     root: true
