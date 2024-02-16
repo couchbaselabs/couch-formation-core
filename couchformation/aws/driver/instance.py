@@ -50,6 +50,7 @@ class Instance(CloudBase):
             host_id: str = None,
             enable_winrm: bool = False):
         volume_type = "gp3"
+        kwargs = {}
         try:
             ami_details = self.image_details(ami)
         except Exception as err:
@@ -75,9 +76,7 @@ class Instance(CloudBase):
                 placement.update({"HostId": host_id})
 
         if enable_winrm:
-            user_data = WIN_USER_DATA
-        else:
-            user_data = None
+            kwargs['UserData'] = WIN_USER_DATA
 
         try:
             result = self.ec2_client.run_instances(BlockDeviceMappings=disk_list,
@@ -89,8 +88,8 @@ class Instance(CloudBase):
                                                    SecurityGroupIds=[sg_id],
                                                    SubnetId=subnet,
                                                    Placement=placement,
-                                                   UserData=user_data,
-                                                   TagSpecifications=instance_tag)
+                                                   TagSpecifications=instance_tag,
+                                                   **kwargs)
         except Exception as err:
             raise AWSDriverError(f"error running instance: {err}")
 
