@@ -2,8 +2,6 @@
 ##
 
 import logging
-import os.path
-import couchformation.constants as C
 from couchformation.exception import FatalError
 from couchformation.config import get_project_dir, get_base_dir
 from couchformation.deployment import NodeGroup, MetadataManager
@@ -333,11 +331,14 @@ class Project(object):
         logger.info("Configured project list:")
         logger.info("========================")
         for project in sorted(list(FileManager().list_dir(base_path))):
-            project_metadata_path = os.path.join(base_path, project, C.METADATA)
-            if os.path.exists(project_metadata_path):
+            if MetadataManager(project).exists:
                 logger.info(f"{project}:")
                 for service, cloud in MetadataManager(project).list_services():
-                    logger.info(f"- {service} ({cloud})")
+                    group = MetadataManager(project).get_service_groups(service)[0]
+                    build = group['build'] if 'build' in group and group['build'] is not None else '-'
+                    region = group['region'] if 'region' in group and group['region'] is not None else '-'
+                    os_id = group['os_id'] if 'os_id' in group and group['os_id'] is not None else '-'
+                    logger.info(f"- {service} ({cloud}/{region}/{build}/{os_id})")
 
     @property
     def location(self):

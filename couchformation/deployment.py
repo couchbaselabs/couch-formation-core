@@ -60,15 +60,25 @@ class MetadataManager(object):
 
     def __init__(self, project: str):
         self.project_dir = get_project_dir(project)
-        metadata = os.path.join(self.project_dir, C.METADATA)
-        self.meta = KeyValueStore(metadata)
+        self.metadata = os.path.join(self.project_dir, C.METADATA)
+
+    @property
+    def exists(self):
+        return os.path.exists(self.metadata)
 
     def list_services(self):
-        self.meta.document('resources')
-        for resource in self.meta.keys():
+        meta = KeyValueStore(self.metadata)
+        meta.document('resources')
+        for resource in meta.keys():
             if not resource:
                 continue
-            yield resource, self.meta[resource]
+            yield resource, meta[resource]
+
+    def get_service_groups(self, service: str) -> List[KeyValueStore]:
+        filename = os.path.join(self.project_dir, f"{service}.db")
+        db = KeyValueStore(filename)
+        doc_list = db.doc_id_startswith(service)
+        return [KeyValueStore(filename, doc) for doc in doc_list]
 
 
 class NodeGroup(object):

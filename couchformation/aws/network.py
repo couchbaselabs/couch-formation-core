@@ -132,6 +132,8 @@ class AWSNetwork(object):
                 SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 18091, 18097, "0.0.0.0/0")
                 SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 4984, 4986, "0.0.0.0/0")
                 SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 3389, 3389, "0.0.0.0/0")
+                SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 5985, 5985, "0.0.0.0/0")
+                SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 5986, 5986, "0.0.0.0/0")
                 self.state['security_group_id'] = sg_id
                 logger.info(f"Created security group {sg_id}")
 

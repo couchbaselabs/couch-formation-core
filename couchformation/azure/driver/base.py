@@ -72,7 +72,7 @@ class CloudBase(object):
         self.subscription_client = None
 
         if not parameters.get('auth_mode') or AuthMode[parameters.get('auth_mode')] == AuthMode.default:
-            self.credential, self.azure_subscription_id = self.default_auth()
+            self.credential, self.azure_subscription_id, self.azure_tenant_id = self.default_auth()
         else:
             raise AzureDriverError(f"Unsupported auth mode {parameters.get('auth_mode')}")
 
@@ -94,7 +94,8 @@ class CloudBase(object):
             subscription_client = SubscriptionClient(credential)
             subscriptions = subscription_client.subscriptions.list()
             azure_subscription_id = next((s.subscription_id for s in subscriptions), None)
-            return credential, azure_subscription_id
+            azure_tenant_id = credential.tenant_id
+            return credential, azure_subscription_id, azure_tenant_id
         except Exception as err:
             raise AzureDriverError(f"Azure: unauthorized (use az login): {err}")
 

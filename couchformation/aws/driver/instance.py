@@ -17,6 +17,16 @@ logger.addHandler(logging.NullHandler())
 logging.getLogger("botocore").setLevel(logging.ERROR)
 logging.getLogger("urllib3").setLevel(logging.ERROR)
 
+WIN_USER_DATA = """<powershell>
+winrm quickconfig -q -force
+winrm set winrm/config/service/auth '@{Basic="true"}'
+$hostname = $env:computername
+$certificateThumbprint = (New-SelfSignedCertificate -DnsName "${hostname}" -CertStoreLocation Cert:\LocalMachine\My).Thumbprint
+winrm create winrm/config/Listener?Address=*+Transport=HTTPS "@{Hostname=`"${hostname}`"; CertificateThumbprint=`"${certificateThumbprint}`"}"
+netsh advfirewall firewall add rule name="Windows Remote Management (HTTPS-In)" dir=in action=allow protocol=TCP localport=5986
+</powershell>
+"""
+
 
 class Instance(CloudBase):
 
@@ -37,7 +47,8 @@ class Instance(CloudBase):
             data_iops=3000,
             instance_type="t2.micro",
             placement: PlacementType = PlacementType.ZONE,
-            host_id: str = None):
+            host_id: str = None,
+            enable_winrm: bool = False):
         volume_type = "gp3"
         try:
             ami_details = self.image_details(ami)
@@ -63,6 +74,11 @@ class Instance(CloudBase):
             if host_id:
                 placement.update({"HostId": host_id})
 
+        if enable_winrm:
+            user_data = WIN_USER_DATA
+        else:
+            user_data = None
+
         try:
             result = self.ec2_client.run_instances(BlockDeviceMappings=disk_list,
                                                    ImageId=ami,
@@ -73,6 +89,7 @@ class Instance(CloudBase):
                                                    SecurityGroupIds=[sg_id],
                                                    SubnetId=subnet,
                                                    Placement=placement,
+                                                   UserData=user_data,
                                                    TagSpecifications=instance_tag)
         except Exception as err:
             raise AWSDriverError(f"error running instance: {err}")

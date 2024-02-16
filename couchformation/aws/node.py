@@ -144,6 +144,11 @@ class AWSDeployment(object):
         else:
             host_id = None
 
+        if image['os_id'] == 'windows':
+            enable_winrm = True
+        else:
+            enable_winrm = False
+
         logger.info(f"Creating node {self.node_name}")
         instance_id = Instance(self.parameters).run(self.node_name,
                                                     image['name'],
@@ -156,7 +161,8 @@ class AWSDeployment(object):
                                                     data_iops=volume_iops,
                                                     instance_type=machine_name,
                                                     placement=placement,
-                                                    host_id=host_id)
+                                                    host_id=host_id,
+                                                    enable_winrm=enable_winrm)
 
         self.state['instance_id'] = instance_id
         self.state['name'] = self.node_name

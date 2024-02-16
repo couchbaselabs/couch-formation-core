@@ -11,6 +11,14 @@ logger.addHandler(logging.NullHandler())
 logging.getLogger("azure").setLevel(logging.ERROR)
 logging.getLogger("urllib3").setLevel(logging.ERROR)
 
+WIN_INIT_SCRIPT = """winrm quickconfig -q -force
+winrm set winrm/config/service/auth '@{Basic="true"}'
+$hostname = $env:computername
+$certificateThumbprint = (New-SelfSignedCertificate -DnsName "${hostname}" -CertStoreLocation Cert:\LocalMachine\My).Thumbprint
+winrm create winrm/config/Listener?Address=*+Transport=HTTPS "@{Hostname=`"${hostname}`"; CertificateThumbprint=`"${certificateThumbprint}`"}"
+netsh advfirewall firewall add rule name="Windows Remote Management (HTTPS-In)" dir=in action=allow protocol=TCP localport=5986
+"""
+
 
 class Instance(CloudBase):
 
@@ -103,6 +111,10 @@ class Instance(CloudBase):
         try:
             request = self.compute_client.virtual_machines.begin_create_or_update(resource_group, name, parameters)
             request.wait()
+            if image_os == 'windows':
+                result = self.run_command(WIN_INIT_SCRIPT, name, resource_group)
+                if result.exit_code != 0:
+                    raise AzureDriverError(f"error running instance config script: {result.error}")
             return request.result()
         except Exception as err:
             raise AzureDriverError(f"error creating instance: {err}")
@@ -143,3 +155,20 @@ class Instance(CloudBase):
             return None
         except Exception as err:
             raise AzureDriverError(f"error deleting instance: {err}")
+
+    def run_command(self, command: str, vm_name: str, resource_group: str):
+        run_command_name = "RunPowerShellScript"
+
+        run_command = {
+            'command_id': 'RunPowerShellScript',
+            'location': self.azure_location,
+            'source': {
+                'script': command
+            }
+        }
+
+        request = self.compute_client.virtual_machine_run_commands.begin_create_or_update(resource_group, vm_name, run_command_name, run_command)
+        request.wait()
+        result = self.compute_client.virtual_machine_run_commands.get_by_virtual_machine(resource_group, vm_name, run_command_name, expand="instanceView")
+        iw = result.instance_view
+        return iw
