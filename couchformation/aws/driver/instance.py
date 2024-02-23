@@ -163,8 +163,8 @@ class Instance(CloudBase):
 
     def release_host(self, host_id: str):
         try:
-            result = self.ec2_client.allocate_hosts(HostIds=[host_id])
-            if 'Unsuccessful' in result:
+            result = self.ec2_client.release_hosts(HostIds=[host_id])
+            if 'Unsuccessful' in result and len(result['Unsuccessful']) > 0:
                 raise AWSDriverError(f"Can not release host {host_id}: {result['Unsuccessful'][0]['Error']['Message']}")
         except Exception as err:
             raise AWSDriverError(f"error getting instance details: {err}")
