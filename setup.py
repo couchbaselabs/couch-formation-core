@@ -61,7 +61,7 @@ setup(
         "overrides>=7.4.0",
         "bumpversion>=0.6.0",
         "PyYAML>=5.1",
-        "cbcmgr>=2.2.1",
+        "cbcmgr>=2.2.13",
         "pyhostprep>=0.1.52",
         "rsa>=4.9",
         "pywinrm>=0.4.3"

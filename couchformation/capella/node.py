@@ -123,7 +123,8 @@ class CapellaDeployment(object):
                 self.state['name'] = self.name
                 self.state['app_svc_id'] = app_svc_id
                 logger.info("Waiting for app service creation to complete")
-                Capella(project_id=project_id).wait_for_app_svc(self.cluster_id)
+                if not Capella(project_id=project_id).wait_for_app_svc(self.cluster_id):
+                    raise CapellaNodeError("Timeout waiting for app service to deploy")
 
             logger.info(f"App service ID: {app_svc_id}")
 
@@ -175,7 +176,8 @@ class CapellaDeployment(object):
             self.state['name'] = self.name
             self.state['cloud'] = self.cloud
             logger.info("Waiting for cluster creation to complete")
-            Capella(project_id=project_id).wait_for_cluster(self.name)
+            if not Capella(project_id=project_id).wait_for_cluster(self.name):
+                raise CapellaNodeError("Timeout waiting for cluster to deploy")
 
         logger.info(f"Cluster ID: {cluster_id}")
 
@@ -230,7 +232,8 @@ class CapellaDeployment(object):
         logger.info(f"Destroying app service {app_svc_name}")
         Capella(project_id=project_id).delete_app_svc(cluster_id)
         logger.info("Waiting for app service deletion to complete")
-        Capella(project_id=project_id).wait_for_app_svc_delete(cluster_id)
+        if not Capella(project_id=project_id).wait_for_app_svc_delete(cluster_id):
+            raise CapellaNodeError("Timeout waiting for app service deletion to complete")
 
         self.state.clear()
 
@@ -239,7 +242,8 @@ class CapellaDeployment(object):
         logger.info(f"Destroying cluster {cluster_name}")
         Capella(project_id=project_id).delete_cluster(cluster_name)
         logger.info("Waiting for cluster deletion to complete")
-        Capella(project_id=project_id).wait_for_cluster_delete(cluster_name)
+        if not Capella(project_id=project_id).wait_for_cluster_delete(cluster_name):
+            raise CapellaNodeError("Timeout waiting for cluster deletion to complete")
 
         if self.state.get('project_id'):
             cluster_list = Capella(project_id=project_id).list_clusters()
