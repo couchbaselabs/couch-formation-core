@@ -173,6 +173,19 @@ class Project(object):
 
         logger.info(f"Selected provisioner {provisioner_name}")
 
+        if group[0].get('upload'):
+            provisioner = ProvisionerProfile().get(provisioner_name)
+            p_module = provisioner.driver
+            p_instance = provisioner.module
+            p_upload = provisioner.upload
+            p_list = [provisioner.parameter_gen(result, group[0].as_dict) for result in result_list]
+            for p_set in p_list:
+                logger.info(f"Uploading file {p_set.get('upload')}")
+                runner.dispatch(p_module, p_instance, p_upload, p_set)
+            exit_codes = list(runner.join())
+            if any(n != 0 for n in exit_codes):
+                raise ProjectError(f"Provisioning step failed")
+
         default_seq = BuildProfile().get('default')
 
         for build_config in default_seq.get(provisioner_name):

@@ -11,6 +11,7 @@ from typing import Optional, List
 from couchformation.exception import NonFatalError
 from couchformation.config import NodeList, get_state_dir
 from couchformation.provisioner.ssh import RunSSHCommand
+from couchformation.provisioner.sftp import SFTPFile
 import couchformation.constants as C
 
 logger = logging.getLogger('couchformation.provisioner.remote')
@@ -70,7 +71,7 @@ class ProvisionSet:
 
 class RemoteProvisioner(object):
 
-    def __init__(self, parameters: dict, command: str, root: bool = True):
+    def __init__(self, parameters: dict, command: str = '', root: bool = True):
         self.parameters = parameters
         self.command = command
         self.root = root
@@ -81,12 +82,31 @@ class RemoteProvisioner(object):
         self.username = self.parameters.get('username')
         self.ssh_key = self.parameters.get('ssh_key')
         self.zone = self.parameters.get('zone')
+        self.upload_file = self.parameters.get('upload')
         self.services = self.parameters.get('services')
         self.connect = ','.join(self.parameters.get('connect')) \
             if self.parameters.get('connect') and type(self.parameters.get('connect')) is list \
             else self.parameters.get('connect')
         self.private_ip_list = ','.join(self.parameters.get('private_ip_list'))
         self.use_private_ip = self.parameters.get('use_private_ip') if self.parameters.get('use_private_ip') else False
+
+    def upload(self):
+        if self.use_private_ip:
+            hostname = self.private_ip
+        else:
+            hostname = self.public_ip
+
+        filename = os.path.basename(self.upload_file)
+
+        if not self.wait_port(hostname):
+            raise ProvisionerError(f"Host {hostname} is not reachable")
+
+        logger.info(f"Connection to {hostname} successful")
+        time.sleep(0.5)
+
+        SFTPFile(self.ssh_key, self.username, hostname, self.upload_file, f"/var/tmp/{filename}").upload()
+
+        return 0
 
     def run(self):
         working_dir = get_state_dir(self.project, self.service)

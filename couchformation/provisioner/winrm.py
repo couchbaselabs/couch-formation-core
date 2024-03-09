@@ -18,7 +18,7 @@ class ProvisionerError(NonFatalError):
 
 class WinRMProvisioner(object):
 
-    def __init__(self, parameters: dict, command: str, root: bool = True):
+    def __init__(self, parameters: dict, command: str = '', root: bool = True):
         self.parameters = parameters
         self.command = command
         self.root = root
@@ -35,6 +35,10 @@ class WinRMProvisioner(object):
             else self.parameters.get('connect')
         self.private_ip_list = ','.join(self.parameters.get('private_ip_list'))
         self.use_private_ip = self.parameters.get('use_private_ip') if self.parameters.get('use_private_ip') else False
+
+    @staticmethod
+    def upload():
+        logger.warning("Upload not implemented")
 
     def run(self):
         if self.use_private_ip:

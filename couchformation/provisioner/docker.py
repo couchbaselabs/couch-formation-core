@@ -32,7 +32,7 @@ class CustomLogFormatter(logging.Formatter):
 
 class ContainerExec(object):
 
-    def __init__(self, parameters: dict, command: str, root: bool = True):
+    def __init__(self, parameters: dict, command: str = '', root: bool = True):
         self.parameters = parameters
         self.command = command
         self.root = root
@@ -47,6 +47,10 @@ class ContainerExec(object):
             else self.parameters.get('connect')
         self.private_ip_list = ','.join(self.parameters.get('private_ip_list'))
         self.use_private_ip = self.parameters.get('use_private_ip') if self.parameters.get('use_private_ip') else False
+
+    @staticmethod
+    def copy():
+        logger.warning("File copy not implemented")
 
     def run(self):
         working_dir = get_state_dir(self.project, self.service)

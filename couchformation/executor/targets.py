@@ -102,6 +102,7 @@ class Provisioner:
     driver: str = attr.ib()
     module: str = attr.ib()
     method: str = attr.ib()
+    upload: str = attr.ib()
     when: str = attr.ib()
     options: List[str] = attr.ib()
     parameters: Dict = attr.ib()
@@ -295,10 +296,11 @@ class ProvisionerProfile(object):
         driver = settings.get('driver')
         module = settings.get('module')
         method = settings.get('method')
+        upload = settings.get('upload')
         when = settings.get('when')
         options = settings.get('parameters')
         parameters = {}
-        return name, driver, module, method, when, options, parameters
+        return name, driver, module, method, upload, when, options, parameters
 
 
 class DeployStrategy(object):

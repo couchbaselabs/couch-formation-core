@@ -3,6 +3,7 @@ remote:
   driver: couchformation.provisioner.remote
   module: RemoteProvisioner
   method: run
+  upload: upload
   when: os_id != "windows"
   parameters:
     - name
@@ -18,10 +19,12 @@ remote:
     - private_ip_list
     - public_ip_list
     - use_private_ip
+    - upload
 docker:
   driver: couchformation.provisioner.docker
   module: ContainerExec
   method: run
+  upload: copy
   when: cloud == "docker"
   parameters:
     - name
@@ -32,10 +35,12 @@ docker:
     - services
     - private_ip_list
     - use_private_ip
+    - copy
 winrm:
   driver: couchformation.provisioner.winrm
   module: WinRMProvisioner
   method: run
+  upload: upload
   when: os_id == "windows"
   parameters:
     - name
@@ -50,3 +55,4 @@ winrm:
     - private_ip_list
     - public_ip_list
     - use_private_ip
+    - upload
