@@ -83,6 +83,7 @@ class RemoteProvisioner(object):
         self.ssh_key = self.parameters.get('ssh_key')
         self.zone = self.parameters.get('zone')
         self.upload_file = self.parameters.get('upload')
+        self.sw_version = self.parameters.get('sw_version') if 'sw_version' in self.parameters else 'latest'
         self.services = self.parameters.get('services')
         self.connect = ','.join(self.parameters.get('connect')) \
             if self.parameters.get('connect') and type(self.parameters.get('connect')) is list \
@@ -181,6 +182,7 @@ class RemoteProvisioner(object):
         raw_template = env.from_string(line)
         formatted_value = raw_template.render(
             SERVICE_NAME=self.service,
+            SOFTWARE_VERSION=self.sw_version,
             PRIVATE_IP_LIST=self.private_ip_list,
             NODE_ZONE=self.zone,
             SERVICES=self.services,

@@ -19,6 +19,7 @@ remote:
     - private_ip_list
     - public_ip_list
     - use_private_ip
+    - sw_version
     - upload
 docker:
   driver: couchformation.provisioner.docker
@@ -55,4 +56,5 @@ winrm:
     - private_ip_list
     - public_ip_list
     - use_private_ip
+    - sw_version
     - upload

@@ -34,6 +34,7 @@ aws:
     - services
     - volume_iops
     - volume_size
+    - sw_version
     - upload
   required:
     - region
@@ -73,6 +74,7 @@ gcp:
     - quantity
     - services
     - volume_size
+    - sw_version
     - upload
   required:
     - region
@@ -114,6 +116,7 @@ azure:
     - volume_iops
     - volume_size
     - volume_tier
+    - sw_version
     - upload
   required:
     - region

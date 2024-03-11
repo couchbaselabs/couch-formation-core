@@ -29,6 +29,8 @@ class WinRMProvisioner(object):
         self.public_ip = self.parameters.get('public_ip')
         self.private_ip = self.parameters.get('private_ip')
         self.zone = self.parameters.get('zone')
+        self.upload_file = self.parameters.get('upload')
+        self.sw_version = self.parameters.get('sw_version') if 'sw_version' in self.parameters else 'latest'
         self.services = self.parameters.get('services')
         self.connect = ','.join(self.parameters.get('connect')) \
             if self.parameters.get('connect') and type(self.parameters.get('connect')) is list \
@@ -112,6 +114,7 @@ class WinRMProvisioner(object):
         raw_template = env.from_string(line)
         formatted_value = raw_template.render(
             SERVICE_NAME=self.service,
+            SOFTWARE_VERSION=self.sw_version,
             PRIVATE_IP_LIST=self.private_ip_list,
             NODE_ZONE=self.zone,
             SERVICES=self.services,
