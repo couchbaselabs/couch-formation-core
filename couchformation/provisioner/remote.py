@@ -79,9 +79,11 @@ class RemoteProvisioner(object):
         self.project = self.parameters.get('project')
         self.public_ip = self.parameters.get('public_ip')
         self.private_ip = self.parameters.get('private_ip')
+        self.public = self.parameters.get('public') if 'public' in self.parameters else False
         self.username = self.parameters.get('username')
         self.ssh_key = self.parameters.get('ssh_key')
         self.zone = self.parameters.get('zone')
+        self.password = self.parameters.get('password') if 'password' in self.parameters else 'password'
         self.upload_file = self.parameters.get('upload')
         self.sw_version = self.parameters.get('sw_version') if 'sw_version' in self.parameters else 'latest'
         self.services = self.parameters.get('services')
@@ -89,6 +91,7 @@ class RemoteProvisioner(object):
             if self.parameters.get('connect') and type(self.parameters.get('connect')) is list \
             else self.parameters.get('connect')
         self.private_ip_list = ','.join(self.parameters.get('private_ip_list'))
+        self.public_ip_list = ','.join(self.parameters.get('public_ip_list'))
         self.use_private_ip = self.parameters.get('use_private_ip') if self.parameters.get('use_private_ip') else False
 
     def upload(self):
@@ -183,7 +186,10 @@ class RemoteProvisioner(object):
         formatted_value = raw_template.render(
             SERVICE_NAME=self.service,
             SOFTWARE_VERSION=self.sw_version,
+            PASSWORD=self.password,
             PRIVATE_IP_LIST=self.private_ip_list,
+            PUBLIC_IP_LIST=self.public_ip_list,
+            IP_LIST=self.public_ip_list if self.public else self.private_ip_list,
             NODE_ZONE=self.zone,
             SERVICES=self.services,
             CONNECT_SERVICE=self.connect,

@@ -26,8 +26,8 @@ cbs:
     root: true
     commands:
       - bundlemgr -b CBS -V {{ SOFTWARE_VERSION }}
-      - swmgr cluster create -n {{ SERVICE_NAME }} -s {{ SERVICES }} -g {{ NODE_ZONE }} -D /cbdata -l {{ PRIVATE_IP_LIST }}
-      - swmgr cluster rebalance -l {{ PRIVATE_IP_LIST }}
+      - swmgr cluster create -n {{ SERVICE_NAME }} -s {{ SERVICES }} -g {{ NODE_ZONE }} -D /cbdata -l {{ PRIVATE_IP_LIST }} -p {{ PASSWORD }}
+      - swmgr cluster rebalance -l {{ PRIVATE_IP_LIST }} -p {{ PASSWORD }}
   - provisioner: docker
     root: true
     commands:
@@ -38,5 +38,5 @@ sgw:
     root: true
     commands:
       - bundlemgr -b InstallSGW -V {{ SOFTWARE_VERSION }}
-      - swmgr gateway configure -l {{ CONNECT_LIST }}
+      - swmgr gateway configure -l {{ CONNECT_LIST }} -p {{ PASSWORD }}
       - bundlemgr -b EnableSGW

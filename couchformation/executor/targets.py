@@ -28,6 +28,7 @@ class Profile:
 class Parameters:
     options: List[str] = attr.ib()
     required: Optional[List[str]] = attr.ib(default=[])
+    boolean: Optional[List[str]] = attr.ib(default=[])
 
 
 @attr.s
@@ -181,7 +182,7 @@ class TargetProfile(object):
         profile = self.config.get(cloud)
         if not profile:
             raise ValueError(f"Cloud {cloud} is not supported")
-        profile.options = self.initialize_args(self.options, profile.parameters.options)
+        profile.options = self.initialize_args(self.options, profile.parameters.options, profile.parameters.boolean)
         return profile
 
     def load_config(self):
@@ -191,7 +192,7 @@ class TargetProfile(object):
                     base = CloudDriverBase(*self.construct_driver(settings, 'base'))
                     network = Profile(*self.construct_profile(settings, 'network'))
                     node = Profile(*self.construct_profile(settings, 'node'))
-                    profile = CloudProfile(cloud, base, network, node, Parameters(settings.get('parameters'), settings.get('required', [])))
+                    profile = CloudProfile(cloud, base, network, node, Parameters(settings.get('parameters'), settings.get('required', []), settings.get('boolean', [])))
                     self.config.add(profile)
             except yaml.YAMLError as err:
                 raise RuntimeError(f"Can not open target config file {self.cfg_file}: {err}")
@@ -218,10 +219,13 @@ class TargetProfile(object):
         return driver, module, test
 
     @staticmethod
-    def initialize_args(args, parameters):
+    def initialize_args(args, parameters, boolean):
         parser = argparse.ArgumentParser(add_help=False)
         for attribute in parameters:
-            parser.add_argument(f"--{attribute}", action='store')
+            if attribute in boolean:
+                parser.add_argument(f"--{attribute}", action='store_true')
+            else:
+                parser.add_argument(f"--{attribute}", action='store')
         options, undefined = parser.parse_known_args(args)
         return options
 

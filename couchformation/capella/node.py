@@ -201,12 +201,12 @@ class CapellaDeployment(object):
                 password = self.password
             else:
                 password = PasswordUtility().generate(16)
+                self.state['password'] = password
                 logger.info(f"Password: {password}")
             credentials = Credentials().create(self.username, password)
             logger.info(f"Creating database user {self.username}")
             Capella(project_id=project_id).add_db_user(cluster_id, credentials)
             self.state['username'] = self.username
-            self.state['password'] = password
 
         logger.info("Capella database successfully created")
 

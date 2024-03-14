@@ -20,7 +20,9 @@ remote:
     - public_ip_list
     - use_private_ip
     - sw_version
+    - password
     - upload
+    - public
 docker:
   driver: couchformation.provisioner.docker
   module: ContainerExec
@@ -57,4 +59,6 @@ winrm:
     - public_ip_list
     - use_private_ip
     - sw_version
+    - password
     - upload
+    - public

@@ -13,6 +13,7 @@ from couchformation.exception import FatalError
 from couchformation.config import BaseConfig, NodeConfig, Parameters, AuthMode, get_project_dir
 from couchformation.util import FileManager, dict_merge
 from couchformation.kvdb import KeyValueStore
+from couchformation.util import PasswordUtility
 
 DEPLOYMENT = "deployment.db"
 logger = logging.getLogger('couchformation.deployment')
@@ -98,9 +99,11 @@ class NodeGroup(object):
         filename = os.path.join(self.project_dir, f"{self.name}.db")
         network = os.path.join(self.project_dir, C.NETWORK)
         metadata = os.path.join(self.project_dir, C.METADATA)
+        credentials = os.path.join(self.project_dir, C.CREDENTIALS)
         self.db = KeyValueStore(filename)
         self.net = KeyValueStore(network)
         self.meta = KeyValueStore(metadata)
+        self.credentials = KeyValueStore(credentials)
 
     def create_network(self, parameters: argparse.Namespace, region, group=1):
         document = f"network:{self.cloud}:{region}"
@@ -115,6 +118,20 @@ class NodeGroup(object):
             self.meta.document('network')
             self.net.update(combined)
             self.meta[self.cloud] = True
+
+    def create_credentials(self):
+        document = f"credentials:{self.project}"
+
+        self.credentials.document(document)
+        if not self.credentials.get('password'):
+            password = PasswordUtility().generate(16)
+            self.credentials['password'] = password
+
+        return self.credentials.get('password')
+
+    def remove_credentials(self):
+        document = f"credentials:{self.project}"
+        self.credentials.remove(document)
 
     def create_node_group(self, parameters: argparse.Namespace, group=1):
         document = f"{self.name}:{group:04d}"
@@ -135,6 +152,11 @@ class NodeGroup(object):
         self.meta[self.name] = self.cloud
 
         self.create_network(parameters, region, group)
+
+    def get_credentials(self):
+        document = f"credentials:{self.project}"
+        self.credentials.document(document)
+        return self.credentials.get('password')
 
     def add_to_node_group(self, parameters: argparse.Namespace):
         count = len(self.db.doc_id_startswith(self.name))

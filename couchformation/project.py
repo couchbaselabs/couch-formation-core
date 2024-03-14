@@ -43,6 +43,7 @@ class Project(object):
         NodeGroup(self.options).add_to_node_group(profile.options)
 
     def deploy(self, service=None, skip_provision=False):
+        password = NodeGroup(self.options).create_credentials()
         for group in NodeGroup(self.options).get_node_groups():
             self._test_cloud(group)
         for group in NodeGroup(self.options).get_node_groups():
@@ -53,9 +54,9 @@ class Project(object):
             region = group[0].get('region') if group[0].get('region') else "local"
             if strategy.deployer == DeployMode.node.value:
                 self._deploy_network(cloud, region)
-                self._deploy_node(group, skip_provision)
+                self._deploy_node(group, password, skip_provision)
             elif strategy.deployer == DeployMode.saas.value:
-                self._deploy_saas(group)
+                self._deploy_saas(group, password)
 
     def destroy(self, service=None):
         for group in NodeGroup(self.options).get_node_groups():
@@ -86,6 +87,9 @@ class Project(object):
             elif strategy.deployer == DeployMode.saas.value:
                 results = self._list_saas(group, api)
                 return_list.extend(results)
+        if not api:
+            password = NodeGroup(self.options).get_credentials()
+            logger.info(f"Project Credentials: {password} ")
         return return_list
 
     def _test_cloud(self, group):
@@ -103,7 +107,7 @@ class Project(object):
         method = profile.network.deploy
         runner.foreground(module, instance, method, net.as_dict)
 
-    def _deploy_saas(self, group):
+    def _deploy_saas(self, group, password):
         runner = JobDispatch()
         cloud = group[0].get('cloud')
         profile = TargetProfile(self.remainder).get(cloud)
@@ -118,6 +122,9 @@ class Project(object):
             runner.foreground(module, instance, compose, parameters)
 
         main_params = group[0].as_dict
+        main_params.update({
+            'password': password
+        })
 
         if group[0].get('connect'):
             connect_list = self.list(api=True, service=group[0].get('connect'))
@@ -130,7 +137,7 @@ class Project(object):
 
         runner.foreground(module, instance, deploy, main_params)
 
-    def _deploy_node(self, group, skip_provision=False):
+    def _deploy_node(self, group, password, skip_provision=False):
         number = 0
         runner = JobDispatch()
 
@@ -153,7 +160,7 @@ class Project(object):
         result_list = sorted(result_list, key=lambda d: d['name'])
         private_ip_list = [d['private_ip'] for d in result_list]
         public_ip_list = [d['public_ip'] for d in result_list]
-        result_list = [dict(item, private_ip_list=private_ip_list, public_ip_list=public_ip_list) for item in result_list]
+        result_list = [dict(item, private_ip_list=private_ip_list, public_ip_list=public_ip_list, password=password) for item in result_list]
 
         if skip_provision:
             return

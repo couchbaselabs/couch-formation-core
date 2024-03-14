@@ -23,6 +23,7 @@ PLAYBOOK_DIR = os.path.join(DATA_DIRECTORY, "playbooks")
 METADATA = "metadata.db"
 NETWORK = "network.db"
 STATE = "state.db"
+CREDENTIALS = "credentials.db"
 
 GREY_COLOR = "\x1b[38;20m"
 YELLOW_COLOR = "\x1b[33;20m"
