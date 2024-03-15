@@ -28,6 +28,8 @@ class WinRMProvisioner(object):
         self.password = self.parameters.get('password')
         self.public_ip = self.parameters.get('public_ip')
         self.private_ip = self.parameters.get('private_ip')
+        self.public_hostname = self.parameters.get('public_hostname')
+        self.private_hostname = self.parameters.get('private_hostname')
         self.public = self.parameters.get('public') if 'public' in self.parameters else False
         self.zone = self.parameters.get('zone')
         self.password = self.parameters.get('password') if 'password' in self.parameters else 'password'
@@ -39,6 +41,14 @@ class WinRMProvisioner(object):
             else self.parameters.get('connect')
         self.private_ip_list = ','.join(self.parameters.get('private_ip_list'))
         self.public_ip_list = ','.join(self.parameters.get('public_ip_list'))
+        if self.parameters.get('private_host_list') and len(self.parameters.get('private_host_list')) > 0:
+            self.private_host_list = ','.join(self.parameters.get('private_host_list'))
+        else:
+            self.private_host_list = 'null'
+        if self.parameters.get('public_host_list') and len(self.parameters.get('public_host_list')) > 0:
+            self.public_host_list = ','.join(self.parameters.get('public_host_list'))
+        else:
+            self.public_host_list = 'null'
         self.use_private_ip = self.parameters.get('use_private_ip') if self.parameters.get('use_private_ip') else False
 
     @staticmethod
@@ -122,6 +132,7 @@ class WinRMProvisioner(object):
             PRIVATE_IP_LIST=self.private_ip_list,
             PUBLIC_IP_LIST=self.public_ip_list,
             IP_LIST=self.public_ip_list if self.public else self.private_ip_list,
+            HOST_LIST=self.public_host_list if self.public else self.private_host_list,
             NODE_ZONE=self.zone,
             SERVICES=self.services,
             CONNECT_SERVICE=self.connect,

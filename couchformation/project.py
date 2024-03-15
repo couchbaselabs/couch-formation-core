@@ -160,7 +160,14 @@ class Project(object):
         result_list = sorted(result_list, key=lambda d: d['name'])
         private_ip_list = [d['private_ip'] for d in result_list]
         public_ip_list = [d['public_ip'] for d in result_list]
-        result_list = [dict(item, private_ip_list=private_ip_list, public_ip_list=public_ip_list, password=password) for item in result_list]
+        private_host_list = [d['private_hostname'] for d in result_list if d.get('private_hostname')]
+        public_host_list = [d['public_hostname'] for d in result_list if d.get('public_hostname')]
+        result_list = [dict(item,
+                            private_ip_list=private_ip_list,
+                            public_ip_list=public_ip_list,
+                            private_host_list=private_host_list,
+                            public_host_list=public_host_list,
+                            password=password) for item in result_list]
 
         if skip_provision:
             return
@@ -171,8 +178,8 @@ class Project(object):
             if len(connect_list) == 0:
                 raise ProjectError(f"Connect: No nodes in service {group[0].get('connect')}")
             logger.info(f"Connecting service {group[0].get('name')} to {group[0].get('connect')}")
-            private_connect_list = [d['private_ip'] for d in connect_list]
-            result_list = [dict(item, connect=private_connect_list) for item in result_list]
+            connect_list = [d['private_ip'] for d in connect_list]
+            result_list = [dict(item, connect=connect_list) for item in result_list]
 
         provisioner_name = ProvisionerProfile().search(group[0])
         if not provisioner_name:

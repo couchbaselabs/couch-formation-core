@@ -36,15 +36,14 @@ aws:
     - volume_size
     - sw_version
     - upload
-    - public
+    - domain
   required:
     - region
     - ssh_key
     - os_id
     - os_version
     - quantity
-  boolean:
-    - public
+  boolean: []
 gcp:
   base:
     couchformation.gcp.driver.base:
@@ -79,15 +78,14 @@ gcp:
     - volume_size
     - sw_version
     - upload
-    - public
+    - domain
   required:
     - region
     - ssh_key
     - os_id
     - os_version
     - quantity
-  boolean:
-    - public
+  boolean: []
 azure:
   base:
     couchformation.azure.driver.base:
@@ -124,15 +122,14 @@ azure:
     - volume_tier
     - sw_version
     - upload
-    - public
+    - domain
   required:
     - region
     - ssh_key
     - os_id
     - os_version
     - quantity
-  boolean:
-    - public
+  boolean: []
 capella:
   base:
     couchformation.capella.driver.base:
