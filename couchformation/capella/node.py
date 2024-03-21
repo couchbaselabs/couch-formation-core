@@ -140,7 +140,7 @@ class CapellaDeployment(object):
         if len(node_groups) == 0:
             raise CapellaNodeError("no node groups present")
 
-        cluster = CapellaCluster().create(self.name, "CouchFormation managed cluster", self.provider, self.region, self.cidr)
+        cluster = CapellaCluster().create(self.name, "CouchFormation managed cluster", self.provider, self.region, self.cidr, version=self.sw_version)
 
         for group in node_groups:
             group_db = KeyValueStore(self.state_file, group)

@@ -10,6 +10,7 @@ import googleapiclient.errors
 import google.oauth2.credentials
 import google.auth
 from google.cloud import storage
+from google.cloud import dns
 from google.oauth2 import service_account
 from couchformation.config import AuthMode
 from couchformation.exception import FatalError, NonFatalError
@@ -56,6 +57,8 @@ class CloudBase(object):
             raise GCPDriverError(f"Unsupported auth mode {parameters.get('auth_mode')}")
 
         self.gcp_client = googleapiclient.discovery.build('compute', 'v1', credentials=self.credentials)
+        self.dns_client = googleapiclient.discovery.build('dns', 'v1', credentials=self.credentials)
+        # self.dns_client = dns.Client(project=self.gcp_project, credentials=self.credentials)
 
         if not self.gcp_account_email:
             raise GCPDriverError(f"can not determine account email")

@@ -10,6 +10,7 @@ from couchformation.gcp.driver.instance import Instance
 from couchformation.gcp.driver.machine import MachineType
 from couchformation.gcp.driver.disk import Disk
 from couchformation.gcp.driver.image import Image
+from couchformation.gcp.driver.dns import DNS
 from couchformation.gcp.network import GCPNetwork
 from couchformation.config import get_state_file, get_state_dir
 from couchformation.ssh import SSHUtil
@@ -176,6 +177,18 @@ class GCPDeployment(object):
             except KeyError:
                 time.sleep(1)
 
+        if self.gcp_network.public_zone and self.gcp_network.domain_name and not self.state.get('public_hostname'):
+            host_name = f"{self.node_name}.{self.gcp_network.domain_name}"
+            DNS(self.parameters).add_record(self.gcp_network.public_zone, host_name, [self.state['public_ip']])
+            self.state['public_zone_id'] = self.gcp_network.public_zone
+            self.state['public_hostname'] = host_name
+
+        if self.gcp_network.private_zone and self.gcp_network.domain_name and not self.state.get('private_hostname'):
+            host_name = f"{self.node_name}.{self.gcp_network.domain_name}"
+            DNS(self.parameters).add_record(self.gcp_network.private_zone, host_name, [self.state['private_ip']])
+            self.state['private_zone_id'] = self.gcp_network.private_zone
+            self.state['private_hostname'] = host_name
+
         if image['os_id'] == 'windows':
             password = Instance(self.parameters).gen_password(image['os_user'],
                                                               self.node_name,
@@ -188,6 +201,18 @@ class GCPDeployment(object):
         return self.state.as_dict
 
     def destroy(self):
+        if self.state.get('public_hostname'):
+            domain_id = self.state['public_zone_id']
+            name = self.state['public_hostname']
+            ip = self.state['public_ip']
+            DNS(self.parameters).delete_record(domain_id, name)
+            logger.info(f"Deleted DNS record for {ip}")
+        if self.state.get('private_hostname'):
+            domain_id = self.state['private_zone_id']
+            name = self.state['private_hostname']
+            ip = self.state['private_ip']
+            DNS(self.parameters).delete_record(domain_id, name)
+            logger.info(f"Deleted DNS record for {ip}")
         if self.state.get('instance_id'):
             instance_name = self.state['instance_id']
             zone = self.state['zone']

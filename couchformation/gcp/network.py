@@ -3,10 +3,13 @@
 
 import os
 import logging
+import random
+import string
 from itertools import cycle
 from couchformation.network import NetworkDriver
 from couchformation.gcp.driver.network import Network, Subnet
 from couchformation.gcp.driver.firewall import Firewall
+from couchformation.gcp.driver.dns import DNS
 from couchformation.gcp.driver.base import CloudBase
 import couchformation.gcp.driver.constants as C
 from couchformation.config import get_state_file, get_state_dir
@@ -34,6 +37,7 @@ class GCPNetwork(object):
         self.profile = parameters.get('profile')
         self.ssh_key = parameters.get('ssh_key')
         self.cloud = parameters.get('cloud')
+        self.domain = parameters.get('domain')
 
         filename = get_state_file(self.project, f"network-{self.region}")
 
@@ -91,6 +95,16 @@ class GCPNetwork(object):
                 del self.state['network']
                 del self.state['network_cidr']
                 del self.state['zone']
+        if self.state.get('public_hosted_zone'):
+            result = DNS(self.parameters).details(self.state['public_hosted_zone'])
+            if result is None:
+                logger.warning(f"Removing stale state entry for public managed zone {self.state['public_hosted_zone']}")
+                del self.state['public_hosted_zone']
+        if self.state.get('private_hosted_zone'):
+            result = DNS(self.parameters).details(self.state['private_hosted_zone'])
+            if result is None:
+                logger.warning(f"Removing stale state entry for private managed zone {self.state['private_hosted_zone']}")
+                del self.state['private_hosted_zone']
 
     def create_vpc(self):
         self.check_state()
@@ -167,6 +181,37 @@ class GCPNetwork(object):
                 self.state.list_add('zone', zone, self.subnet_name)
                 logger.info(f"Added zone {zone}")
 
+            if self.domain and not self.state.get('domain'):
+                domain_prefix = ''.join(random.choice(string.ascii_lowercase) for _ in range(7))
+                domain_name = f"{domain_prefix}.{self.domain}"
+                self.state['domain'] = domain_name
+                logger.info(f"Generated project domain {domain_name}")
+            elif self.state.get('domain'):
+                domain_name = self.state.get('domain')
+                logger.info(f"Using existing domain {domain_name}")
+            else:
+                domain_name = None
+
+            if domain_name and not self.state.get('public_hosted_zone'):
+                domain_id = DNS(self.parameters).create(domain_name, private=False)
+                self.state['public_hosted_zone'] = domain_id
+                logger.info(f"Created public managed zone {domain_id} for domain {domain_name}")
+
+            if domain_name and not self.state.get('private_hosted_zone'):
+                domain_id = DNS(self.parameters).create(domain_name, private=True)
+                self.state['private_hosted_zone'] = domain_id
+                logger.info(f"Created private managed zone {domain_id} for domain {domain_name}")
+
+            if self.state.get('public_hosted_zone'):
+                parent_domain = '.'.join(domain_name.split('.')[1:])
+                parent_id = DNS(self.parameters).zone_name(parent_domain)
+                if parent_id:
+                    ns_names = DNS(self.parameters).record_sets(self.state['public_hosted_zone'], 'NS')
+                    DNS(self.parameters).add_record(parent_id, domain_name, ns_names, 'NS')
+                    self.state['parent_hosted_zone'] = parent_id
+                    self.state['parent_zone_ns_records'] = ','.join(ns_names)
+                    logger.info(f"Added {len(ns_names)} NS record(s) to domain {parent_domain}")
+
         except Exception as err:
             raise GCPNetworkError(f"Error creating network: {err}")
 
@@ -220,6 +265,29 @@ class GCPNetwork(object):
                 del self.state['network_cidr']
                 logger.info(f"Removed network {vpc_name}")
 
+            if self.state.get('parent_hosted_zone') and self.state.get('domain'):
+                DNS(self.parameters).delete_record(self.state['parent_hosted_zone'], self.state['domain'], 'NS')
+                del self.state['parent_hosted_zone']
+                del self.state['parent_zone_ns_records']
+                logger.info(f"Removing NS records for domain {self.state['domain']}")
+
+            if self.state.get('public_hosted_zone'):
+                domain_id = self.state.get('public_hosted_zone')
+                DNS(self.parameters).delete(domain_id)
+                del self.state['public_hosted_zone']
+                logger.info(f"Removing public hosted zone {domain_id}")
+
+            if self.state.get('private_hosted_zone'):
+                domain_id = self.state.get('private_hosted_zone')
+                DNS(self.parameters).delete(domain_id)
+                del self.state['private_hosted_zone']
+                logger.info(f"Removing private hosted zone {domain_id}")
+
+            if self.state.get('domain'):
+                domain_name = self.state.get('domain')
+                del self.state['domain']
+                logger.info(f"Removing project domain {domain_name}")
+
         except Exception as err:
             raise GCPNetworkError(f"Error removing network: {err}")
 
@@ -245,6 +313,18 @@ class GCPNetwork(object):
     @property
     def zones(self):
         return self.state.list_get('zone')
+
+    @property
+    def domain_name(self):
+        return self.state.get('domain')
+
+    @property
+    def public_zone(self):
+        return self.state.get('public_hosted_zone')
+
+    @property
+    def private_zone(self):
+        return self.state.get('private_hosted_zone')
 
     def add_service(self, name):
         self.state.list_add('services', name)
