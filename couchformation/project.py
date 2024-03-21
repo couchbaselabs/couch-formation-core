@@ -320,6 +320,7 @@ class Project(object):
                 logger.info(f"Node: {result.get('name')} "
                             f"Private IP: {result.get('private_ip'):<15} "
                             f"Public IP: {result.get('public_ip'):<15} "
+                            f"DNS Name: {result.get('public_hostname', 'N/A')} "
                             f"Services: {result.get('services')}")
                 if result.get('password'):
                     logger.info(f"Password: {result.get('password')} ")

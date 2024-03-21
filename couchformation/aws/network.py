@@ -205,6 +205,16 @@ class AWSNetwork(object):
                 self.state['private_hosted_zone'] = domain_id
                 logger.info(f"Created private hosted zone {domain_id} for domain {domain_name}")
 
+            if self.state.get('public_hosted_zone'):
+                parent_domain = '.'.join(domain_name.split('.')[1:])
+                parent_id = DNS(self.parameters).zone_id(parent_domain)
+                if parent_id:
+                    ns_names = DNS(self.parameters).record_sets(self.state['public_hosted_zone'], 'NS')
+                    DNS(self.parameters).add_record(parent_id, domain_name, ns_names, 'NS')
+                    self.state['parent_hosted_zone'] = parent_id
+                    self.state['parent_zone_ns_records'] = ','.join(ns_names)
+                    logger.info(f"Added {len(ns_names)} NS record(s) to domain {parent_domain}")
+
         except Exception as err:
             raise AWSNetworkError(f"Error creating VPC: {err}")
 
@@ -251,6 +261,13 @@ class AWSNetwork(object):
                 SSHKey(self.parameters).delete(ssh_key_name)
                 del self.state['ssh_key']
                 logger.info(f"Removing key pair {ssh_key_name}")
+
+            if self.state.get('parent_hosted_zone') and self.state.get('domain'):
+                ns_names = self.state['parent_zone_ns_records'].split(',')
+                DNS(self.parameters).delete_record(self.state['parent_hosted_zone'], self.state['domain'], ns_names, 'NS')
+                del self.state['parent_hosted_zone']
+                del self.state['parent_zone_ns_records']
+                logger.info(f"Removing NS records for domain {self.state['domain']}")
 
             if self.state.get('public_hosted_zone'):
                 domain_id = self.state.get('public_hosted_zone')

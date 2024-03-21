@@ -34,6 +34,7 @@ class CapellaDeployment(object):
         self.username = parameters.get('username') if parameters.get('username') else "Administrator"
         self.password = parameters.get('password')
         self.account_email = parameters.get('account_email')
+        self.sw_version = self.parameters.get('sw_version') if self.parameters.get('sw_version') else "latest"
         self.cidr = parameters.get('cidr') if parameters.get('cidr') else "10.0.0.0/23"
         self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
         self.db_name = f"{self.name}-database"
