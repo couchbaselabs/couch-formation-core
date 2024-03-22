@@ -10,6 +10,7 @@ from typing import Union, List, Callable
 from azure.identity import AzureCliCredential
 from azure.mgmt.compute import ComputeManagementClient
 from azure.mgmt.network import NetworkManagementClient
+from azure.mgmt.dns import DnsManagementClient
 from azure.mgmt.resource.resources import ResourceManagementClient
 from azure.mgmt.resource.subscriptions import SubscriptionClient
 from couchformation.config import AuthMode
@@ -82,6 +83,7 @@ class CloudBase(object):
         self.resource_client = ResourceManagementClient(self.credential, self.azure_subscription_id)
         self.compute_client = ComputeManagementClient(self.credential, self.azure_subscription_id)
         self.network_client = NetworkManagementClient(self.credential, self.azure_subscription_id)
+        self.dns_client = DnsManagementClient(self.credential, self.azure_subscription_id)
 
         self.azure_location = parameters.get('region')
 
