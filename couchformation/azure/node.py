@@ -10,6 +10,8 @@ from couchformation.azure.driver.instance import Instance
 from couchformation.azure.driver.machine import MachineType
 from couchformation.azure.driver.disk import Disk
 from couchformation.azure.driver.image import Image
+from couchformation.azure.driver.dns import DNS
+from couchformation.azure.driver.private_dns import PrivateDNS
 from couchformation.azure.network import AzureNetwork
 from couchformation.config import get_state_file, get_state_dir
 from couchformation.ssh import SSHUtil
@@ -214,6 +216,18 @@ class AzureDeployment(object):
         self.state['public_ip'] = pub_ip_details.ip_address
         self.state['private_ip'] = nic_details.ip_configurations[0].private_ip_address
 
+        if self.az_network.public_zone and self.az_network.domain_name and not self.state.get('public_hostname'):
+            host_name = f"{self.node_name}.{self.az_network.domain_name}"
+            DNS(self.parameters).add_record(self.az_network.public_zone, host_name, [self.state['public_ip']], rg_name)
+            self.state['public_zone_id'] = self.az_network.public_zone
+            self.state['public_hostname'] = host_name
+
+        if self.az_network.private_zone and self.az_network.domain_name and not self.state.get('private_hostname'):
+            host_name = f"{self.node_name}.{self.az_network.domain_name}"
+            PrivateDNS(self.parameters).add_record(self.az_network.private_zone, host_name, [self.state['private_ip']], rg_name)
+            self.state['private_zone_id'] = self.az_network.private_zone
+            self.state['private_hostname'] = host_name
+
         if image['os_id'] == 'windows':
             self.state['password'] = self.password
 
@@ -221,9 +235,21 @@ class AzureDeployment(object):
         return self.state.as_dict
 
     def destroy(self):
+        rg_name = self.state['resource_group']
+        if self.state.get('public_hostname'):
+            domain_id = self.state['public_zone_id']
+            name = self.state['public_hostname']
+            ip = self.state['public_ip']
+            DNS(self.parameters).delete_record(domain_id, name, rg_name)
+            logger.info(f"Deleted DNS record for {ip}")
+        if self.state.get('private_hostname'):
+            domain_id = self.state['private_zone_id']
+            name = self.state['private_hostname']
+            ip = self.state['private_ip']
+            PrivateDNS(self.parameters).delete_record(domain_id, name, rg_name)
+            logger.info(f"Deleted DNS record for {ip}")
         if self.state.get('instance_id'):
             instance_name = self.state['instance_id']
-            rg_name = self.state['resource_group']
             node_nic = self.state['node_nic']
             node_pub_ip = self.state['node_pub_ip']
             Instance(self.parameters).terminate(instance_name, rg_name)
