@@ -67,6 +67,7 @@ class Network(CloudBase):
             request = self.gcp_client.networks().insert(project=self.gcp_project, body=network_body)
             operation = request.execute()
             self.wait_for_global_operation(operation['name'])
+            return operation.get('targetLink')
         except googleapiclient.errors.HttpError as err:
             error_details = err.error_details[0].get('reason')
             if error_details != "alreadyExists":

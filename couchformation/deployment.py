@@ -11,7 +11,7 @@ from typing import Optional, List, Tuple
 from enum import Enum
 from couchformation.exception import FatalError
 from couchformation.config import BaseConfig, NodeConfig, Parameters, AuthMode, get_project_dir
-from couchformation.util import FileManager, dict_merge
+from couchformation.util import FileManager, dict_merge, dict_merge_not_none
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import PasswordUtility
 
@@ -107,14 +107,14 @@ class NodeGroup(object):
 
     def create_network(self, parameters: argparse.Namespace, region, group=1):
         document = f"network:{self.cloud}:{region}"
+        self.net.document(document)
 
         opt_dict = vars(self.options)
         parm_dict = vars(parameters)
-        combined = dict_merge(opt_dict, parm_dict)
+        opt_merge = dict_merge(opt_dict, parm_dict)
+        combined = dict_merge_not_none(self.net.as_dict, opt_merge)
 
         if group == 1:
-            self.net.remove(document)
-            self.net.document(document)
             self.meta.document('network')
             self.net.update(combined)
             self.meta[self.cloud] = True

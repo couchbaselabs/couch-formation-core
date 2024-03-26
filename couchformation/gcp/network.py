@@ -119,13 +119,15 @@ class GCPNetwork(object):
 
             if not self.state.get('network'):
                 vpc_cidr = cidr_util.get_next_network()
-                Network(self.parameters).create(self.vpc_name)
+                network_link = Network(self.parameters).create(self.vpc_name)
                 self.state['network'] = self.vpc_name
                 self.state['network_cidr'] = vpc_cidr
+                self.state['network_link'] = network_link
                 logger.info(f"Created network {self.vpc_name}")
             else:
                 self.vpc_name = self.state['network']
                 vpc_cidr = self.state['network_cidr']
+                network_link = self.state['network_link']
                 cidr_util.set_active_network(vpc_cidr)
 
             subnet_list = list(cidr_util.get_next_subnet())
@@ -198,11 +200,11 @@ class GCPNetwork(object):
                 logger.info(f"Created public managed zone {domain_id} for domain {domain_name}")
 
             if domain_name and not self.state.get('private_hosted_zone'):
-                domain_id = DNS(self.parameters).create(domain_name, private=True)
+                domain_id = DNS(self.parameters).create(domain_name, network_link, private=True)
                 self.state['private_hosted_zone'] = domain_id
                 logger.info(f"Created private managed zone {domain_id} for domain {domain_name}")
 
-            if self.state.get('public_hosted_zone'):
+            if self.state.get('public_hosted_zone') and not self.state['parent_hosted_zone']:
                 parent_domain = '.'.join(domain_name.split('.')[1:])
                 parent_id = DNS(self.parameters).zone_name(parent_domain)
                 if parent_id:
@@ -258,13 +260,6 @@ class GCPNetwork(object):
             for n, zone_state in reversed(list(enumerate(self.state.list_get('zone')))):
                 self.state.list_remove('zone', zone_state[0])
 
-            if self.state.get('network'):
-                vpc_name = self.state.get('network')
-                Network(self.parameters).delete(vpc_name)
-                del self.state['network']
-                del self.state['network_cidr']
-                logger.info(f"Removed network {vpc_name}")
-
             if self.state.get('parent_hosted_zone') and self.state.get('domain'):
                 DNS(self.parameters).delete_record(self.state['parent_hosted_zone'], self.state['domain'], 'NS')
                 del self.state['parent_hosted_zone']
@@ -287,6 +282,14 @@ class GCPNetwork(object):
                 domain_name = self.state.get('domain')
                 del self.state['domain']
                 logger.info(f"Removing project domain {domain_name}")
+
+            if self.state.get('network'):
+                vpc_name = self.state.get('network')
+                Network(self.parameters).delete(vpc_name)
+                del self.state['network']
+                del self.state['network_cidr']
+                del self.state['network_link']
+                logger.info(f"Removed network {vpc_name}")
 
         except Exception as err:
             raise GCPNetworkError(f"Error removing network: {err}")

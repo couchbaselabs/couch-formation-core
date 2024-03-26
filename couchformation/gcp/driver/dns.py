@@ -21,7 +21,7 @@ class DNS(CloudBase):
             domain = domain + '.'
         return domain
 
-    def create(self, domain: str, private: bool = False):
+    def create(self, domain: str, network_link: str = None, private: bool = False):
         name_part = domain.replace('.', '-')
         name = f"{name_part}-public" if not private else f"{name_part}-private"
         visibility = 'private' if private else 'public'
@@ -32,6 +32,16 @@ class DNS(CloudBase):
             'description': 'Couch Formation Managed Zone',
             'visibility': visibility
         }
+        if private and network_link:
+            dns_body['privateVisibilityConfig'] = {
+                "kind": "dns#managedZonePrivateVisibilityConfig",
+                "networks": [
+                    {
+                        "kind": "dns#managedZonePrivateVisibilityConfigNetwork",
+                        "networkUrl": network_link
+                    }
+                ]
+            }
 
         try:
             request = self.dns_client.managedZones().create(project=self.gcp_project, body=dns_body)

@@ -36,6 +36,14 @@ def dict_merge_list(*dicts):
     return {k: set(v) for k, v in res.items()}
 
 
+def dict_merge_not_none(source, target):
+    new_dict = dict(target)
+    for key, value in source.items():
+        if new_dict.get(key) is None and source.get(key) is not None:
+            new_dict[key] = value
+    return new_dict
+
+
 class FileManager(object):
 
     def __init__(self):
