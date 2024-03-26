@@ -122,6 +122,7 @@ class AWSNetwork(object):
             if not self.state.get('vpc_id'):
                 vpc_cidr = cidr_util.get_next_network()
                 vpc_id = Network(self.parameters).create(self.vpc_name, vpc_cidr)
+                Network(self.parameters).enable_dns_hostnames(vpc_id)
                 self.state['vpc_id'] = vpc_id
                 self.state['vpc_cidr'] = vpc_cidr
                 logger.info(f"Created VPC {vpc_id}")
@@ -205,7 +206,7 @@ class AWSNetwork(object):
                 self.state['private_hosted_zone'] = domain_id
                 logger.info(f"Created private hosted zone {domain_id} for domain {domain_name}")
 
-            if self.state.get('public_hosted_zone'):
+            if self.state.get('public_hosted_zone') and not self.state['parent_hosted_zone']:
                 parent_domain = '.'.join(domain_name.split('.')[1:])
                 parent_id = DNS(self.parameters).zone_id(parent_domain)
                 if parent_id:

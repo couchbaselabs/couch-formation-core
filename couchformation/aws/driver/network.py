@@ -65,6 +65,12 @@ class Network(CloudBase):
 
         return result['Vpc']['VpcId']
 
+    def enable_dns_hostnames(self, vpc_id: str):
+        try:
+            self.ec2_client.modify_vpc_attribute(VpcId=vpc_id, EnableDnsHostnames={'Value': True})
+        except Exception as err:
+            raise AWSDriverError(f"error setting VPC DNS hostname option: {err}")
+
     def delete(self, vpc_id: str) -> None:
         try:
             self.ec2_client.delete_vpc(VpcId=vpc_id)
