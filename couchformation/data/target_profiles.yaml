@@ -150,6 +150,7 @@ capella:
       info: info
       compose: compose
   parameters:
+    - profile
     - provider
     - region
     - cidr

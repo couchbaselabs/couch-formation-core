@@ -1,5 +1,12 @@
 ---
+generic:
+  supports:
+    - create
+  parameters: {}
 cbs:
+  supports:
+    - create
+    - add
   parameters:
     - services:
         type: csv

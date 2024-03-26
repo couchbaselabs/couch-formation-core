@@ -80,11 +80,11 @@ class TestMainAzure(unittest.TestCase):
     def test_4(self):
         args = ["list", "--project", "pytest-azure"]
         username = "Administrator"
-        password = "password"
         cm = CloudMgrCLI(args)
         project = Project(cm.options, cm.remainder)
         nodes = list(project.list(api=True))
         connect_ip = nodes[0].get('public_ip')
+        password = project.credential()
 
         time.sleep(1)
         session = requests.Session()

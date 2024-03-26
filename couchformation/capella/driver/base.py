@@ -19,6 +19,7 @@ class CloudBase(object):
         self.parameters = parameters
         self.profile = parameters.get('profile') if parameters.get('profile') else 'default'
 
+        logger.debug(f"Capella credential profile: {self.profile}")
         try:
             self.cm = Capella(profile=self.profile)
             self._organization_id = self.cm.organization_id

@@ -34,6 +34,7 @@ class CapellaDeployment(object):
         self.username = parameters.get('username') if parameters.get('username') else "Administrator"
         self.password = parameters.get('password')
         self.account_email = parameters.get('account_email')
+        self.profile = parameters.get('profile') if parameters.get('profile') else 'default'
         self.sw_version = self.parameters.get('sw_version') if self.parameters.get('sw_version') else "latest"
         self.cidr = parameters.get('cidr') if parameters.get('cidr') else "10.0.0.0/23"
         self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
@@ -94,7 +95,7 @@ class CapellaDeployment(object):
         if self.state.get('project_id'):
             project_id = self.state.get('project_id')
         else:
-            project_data = Capella().get_project(self.project)
+            project_data = Capella(profile=self.profile).get_project(self.project)
             if not project_data:
                 raise CapellaNodeError(f"Project {self.project} does not exist, please create a database for app service {self.name}")
             else:
@@ -120,11 +121,11 @@ class CapellaDeployment(object):
                 logger.info(f"Creating app service {self.name} with {quantity} {machine} nodes")
                 app_svc = AppService.create(self.name, "CouchFormation managed app service", quantity, machine, "3.0")
 
-                app_svc_id = Capella(project_id=project_id).create_app_svc(self.cluster_id, app_svc)
+                app_svc_id = Capella(project_id=project_id, profile=self.profile).create_app_svc(self.cluster_id, app_svc)
                 self.state['name'] = self.name
                 self.state['app_svc_id'] = app_svc_id
                 logger.info("Waiting for app service creation to complete")
-                if not Capella(project_id=project_id).wait_for_app_svc(self.cluster_id):
+                if not Capella(project_id=project_id, profile=self.profile).wait_for_app_svc(self.cluster_id):
                     raise CapellaNodeError("Timeout waiting for app service to deploy")
 
             logger.info(f"App service ID: {app_svc_id}")
@@ -153,10 +154,10 @@ class CapellaDeployment(object):
         if self.state.get('project_id'):
             project_id = self.state.get('project_id')
         else:
-            project_data = Capella().get_project(self.project)
+            project_data = Capella(profile=self.profile).get_project(self.project)
             if not project_data:
                 logger.info(f"Creating project {self.project}")
-                project_id = Capella().create_project(self.project, self.account_email)
+                project_id = Capella(profile=self.profile).create_project(self.project, self.account_email)
                 self.state['project_id'] = project_id
             else:
                 project_id = project_data.get('id')
@@ -169,7 +170,7 @@ class CapellaDeployment(object):
             cluster_id = self.state['instance_id']
         else:
             logger.info(f"Creating cluster {self.name}")
-            cluster_id = Capella(project_id=project_id).create_cluster(cluster)
+            cluster_id = Capella(project_id=project_id, profile=self.profile).create_cluster(cluster)
             self.state['instance_id'] = cluster_id
             self.state['provider'] = self.provider
             self.state['region'] = self.region
@@ -177,12 +178,12 @@ class CapellaDeployment(object):
             self.state['name'] = self.name
             self.state['cloud'] = self.cloud
             logger.info("Waiting for cluster creation to complete")
-            if not Capella(project_id=project_id).wait_for_cluster(self.name):
+            if not Capella(project_id=project_id, profile=self.profile).wait_for_cluster(self.name):
                 raise CapellaNodeError("Timeout waiting for cluster to deploy")
 
         logger.info(f"Cluster ID: {cluster_id}")
 
-        cluster_info = Capella(project_id=project_id).get_cluster_by_id(cluster_id)
+        cluster_info = Capella(project_id=project_id, profile=self.profile).get_cluster_by_id(cluster_id)
         connect_string = cluster_info.get('connectionString')
         self.state['connect_string'] = connect_string
         logger.info(f"Connect string: {connect_string}")
@@ -192,7 +193,7 @@ class CapellaDeployment(object):
         else:
             allow_cidr = AllowedCIDR().create(self.allow)
             logger.info(f"Configuring allowed CIDR {self.allow}")
-            Capella(project_id=project_id).allow_cidr(cluster_id, allow_cidr)
+            Capella(project_id=project_id, profile=self.profile).allow_cidr(cluster_id, allow_cidr)
             self.state['allow'] = self.allow
 
         if self.state.get('username'):
@@ -206,7 +207,7 @@ class CapellaDeployment(object):
                 logger.info(f"Password: {password}")
             credentials = Credentials().create(self.username, password)
             logger.info(f"Creating database user {self.username}")
-            Capella(project_id=project_id).add_db_user(cluster_id, credentials)
+            Capella(project_id=project_id, profile=self.profile).add_db_user(cluster_id, credentials)
             self.state['username'] = self.username
 
         logger.info("Capella database successfully created")
@@ -217,7 +218,7 @@ class CapellaDeployment(object):
         project = self.state.get('project')
         if not project:
             return
-        project_data = Capella().get_project(project)
+        project_data = Capella(profile=self.profile).get_project(project)
         project_id = project_data.get('id')
         logger.info(f"Project {project} ID {project_id}")
 
@@ -231,9 +232,9 @@ class CapellaDeployment(object):
         cluster_id = self.state['instance_id']
 
         logger.info(f"Destroying app service {app_svc_name}")
-        Capella(project_id=project_id).delete_app_svc(cluster_id)
+        Capella(project_id=project_id, profile=self.profile).delete_app_svc(cluster_id)
         logger.info("Waiting for app service deletion to complete")
-        if not Capella(project_id=project_id).wait_for_app_svc_delete(cluster_id):
+        if not Capella(project_id=project_id, profile=self.profile).wait_for_app_svc_delete(cluster_id):
             raise CapellaNodeError("Timeout waiting for app service deletion to complete")
 
         self.state.clear()
@@ -241,16 +242,16 @@ class CapellaDeployment(object):
     def destroy_database(self, project, project_id):
         cluster_name = self.state['name'] = self.name
         logger.info(f"Destroying cluster {cluster_name}")
-        Capella(project_id=project_id).delete_cluster(cluster_name)
+        Capella(project_id=project_id, profile=self.profile).delete_cluster(cluster_name)
         logger.info("Waiting for cluster deletion to complete")
-        if not Capella(project_id=project_id).wait_for_cluster_delete(cluster_name):
+        if not Capella(project_id=project_id, profile=self.profile).wait_for_cluster_delete(cluster_name):
             raise CapellaNodeError("Timeout waiting for cluster deletion to complete")
 
         if self.state.get('project_id'):
-            cluster_list = Capella(project_id=project_id).list_clusters()
+            cluster_list = Capella(project_id=project_id, profile=self.profile).list_clusters()
             if len(cluster_list) == 0:
                 logger.info(f"Removing project {project}")
-                Capella().delete_project(project)
+                Capella(profile=self.profile).delete_project(project)
             else:
                 logger.warning(f"Project {project} has active clusters, it will not be removed")
 

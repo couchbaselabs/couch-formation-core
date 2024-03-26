@@ -135,6 +135,8 @@ class BuildManager(object):
     def validate(self):
         if self.options and self.options.build:
             build = self.build_list.get(self.options.build)
+            if not build:
+                return None
             for parameter in build.parameters:
                 if not self.parameter_check(parameter):
                     return f"--{parameter.name} value is not valid"

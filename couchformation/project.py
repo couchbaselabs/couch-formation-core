@@ -91,9 +91,12 @@ class Project(object):
                 results = self._list_saas(group, api)
                 return_list.extend(results)
         if not api:
-            password = NodeGroup(self.options).get_credentials()
+            password = self.credential()
             logger.info(f"Project Credentials: {password} ")
         return return_list
+
+    def credential(self):
+        return NodeGroup(self.options).get_credentials()
 
     def _test_cloud(self, group):
         runner = JobDispatch()
