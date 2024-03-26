@@ -1,0 +1,16 @@
+---
+cbs:
+  parameters:
+    - services:
+        type: csv
+        allowed_values:
+          - data
+          - index
+          - query
+          - fts
+          - eventing
+          - analytics
+          - backup
+          - manager-only
+          - search
+          - default

@@ -4,7 +4,7 @@
 import logging
 from couchformation.exception import FatalError
 from couchformation.config import get_project_dir, get_base_dir
-from couchformation.deployment import NodeGroup, MetadataManager
+from couchformation.deployment import NodeGroup, MetadataManager, BuildManager
 from couchformation.executor.targets import TargetProfile, ProvisionerProfile, BuildProfile, DeployStrategy, DeployMode
 from couchformation.executor.dispatch import JobDispatch
 from couchformation.util import FileManager
@@ -32,6 +32,9 @@ class Project(object):
         missing = profile.check_required_options()
         if missing:
             raise ProjectError(f"Missing required parameters: {','.join(missing)}")
+        result = BuildManager(self.options, self.remainder).validate()
+        if result:
+            raise ProjectError(f"Error validating parameters: {result}")
         NodeGroup(self.options).create_node_group(profile.options)
 
     def add(self):

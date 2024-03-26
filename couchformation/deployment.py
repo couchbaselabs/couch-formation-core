@@ -6,8 +6,9 @@ import attr
 import os
 import json
 import argparse
+import yaml
 import couchformation.constants as C
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Union, Any
 from enum import Enum
 from couchformation.exception import FatalError
 from couchformation.config import BaseConfig, NodeConfig, Parameters, AuthMode, get_project_dir
@@ -57,6 +58,33 @@ class Service:
         return AuthMode[self.auth_mode]
 
 
+@attr.s
+class BuildParameter:
+    name: Optional[str] = attr.ib()
+    type: Optional[str] = attr.ib(default="string")
+    allowed_values: Optional[List[str]] = attr.ib(default=[])
+
+
+@attr.s
+class Build:
+    name: Optional[str] = attr.ib()
+    parameters: Optional[List[BuildParameter]] = attr.ib(default=[])
+
+
+@attr.s
+class BuildList:
+    build_list: List[Build] = attr.ib(default=[])
+
+    def add(self, build: Build):
+        self.build_list.append(build)
+
+    def get(self, name: str) -> Union[Build, None]:
+        for build in self.build_list:
+            if build.name == name:
+                return build
+        return None
+
+
 class MetadataManager(object):
 
     def __init__(self, project: str):
@@ -80,6 +108,71 @@ class MetadataManager(object):
         db = KeyValueStore(filename)
         doc_list = db.doc_id_startswith(service)
         return [KeyValueStore(filename, doc) for doc in doc_list]
+
+
+class BuildManager(object):
+
+    def __init__(self, options: argparse.Namespace, parameters: List[str]):
+        self.cfg_file = C.BUILD_PROFILES
+        self.options = options
+        self.parameters = parameters
+        self.build_list = BuildList()
+        self.load_config()
+
+    def load_config(self):
+        with open(self.cfg_file, "r") as f:
+            try:
+                for build, settings in yaml.safe_load(f).items():
+                    p_list = []
+                    for parameter in settings.get('parameters', []):
+                        for key, value in parameter.items():
+                            p_list.append(BuildParameter(key, value.get('type'), value.get('allowed_values')))
+                    build = Build(build, p_list)
+                    self.build_list.add(build)
+            except yaml.YAMLError as err:
+                raise RuntimeError(f"Can not open build config file {self.cfg_file}: {err}")
+
+    def validate(self):
+        if self.options and self.options.build:
+            build = self.build_list.get(self.options.build)
+            for parameter in build.parameters:
+                if not self.parameter_check(parameter):
+                    return f"--{parameter.name} value is not valid"
+        return None
+
+    def parameter_check(self, parameter: BuildParameter):
+        parser = argparse.ArgumentParser(add_help=False)
+        if parameter.type == "boolean":
+            parser.add_argument(f"--{parameter.name}", action='store_true')
+        else:
+            parser.add_argument(f"--{parameter.name}", action='store')
+        options, undefined = parser.parse_known_args(self.parameters)
+        result = getattr(options, parameter.name)
+        if result:
+            return self.value_check(parameter.type, result, parameter.allowed_values)
+        return True
+
+    @staticmethod
+    def value_check(v_type: str, v_value: Any, v_allowed: List[str]):
+        if v_type == "boolean":
+            return isinstance(v_value, bool)
+        elif v_type == "integer":
+            try:
+                int(v_value)
+            except ValueError:
+                return False
+        elif v_type == "float":
+            try:
+                float(v_value)
+            except ValueError:
+                return False
+        elif v_type == "string":
+            pass
+        elif v_type == "csv":
+            return isinstance(v_value, str) and all(val in v_allowed for val in v_value.split(','))
+        else:
+            return False
+        return True
 
 
 class NodeGroup(object):

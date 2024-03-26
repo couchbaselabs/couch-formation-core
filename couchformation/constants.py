@@ -18,6 +18,7 @@ PROVISIONER_PROFILES = os.path.join(DATA_DIRECTORY, "provisioner_profiles.yaml")
 STRATEGY_PROFILES = os.path.join(DATA_DIRECTORY, "strategy_profiles.yaml")
 CONTAINER_PROFILES = os.path.join(DATA_DIRECTORY, "container_profiles.yaml")
 CLOUD_PROFILES = os.path.join(DATA_DIRECTORY, "cloud_profiles.yaml")
+BUILD_PROFILES = os.path.join(DATA_DIRECTORY, "build_profiles.yaml")
 PLAYBOOK_DIR = os.path.join(DATA_DIRECTORY, "playbooks")
 
 METADATA = "metadata.db"
