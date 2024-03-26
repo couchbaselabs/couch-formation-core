@@ -80,6 +80,7 @@ class CloudBase(object):
         try:
             self.ec2_client = boto3.client('ec2', region_name=self.aws_region)
             self.dns_client = boto3.client('route53')
+            self.cost_client = boto3.client('pricing', region_name='us-east-1')
         except Exception as err:
             raise AWSDriverError(f"can not initialize AWS driver: {err}")
 
