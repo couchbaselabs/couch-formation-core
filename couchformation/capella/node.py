@@ -7,7 +7,7 @@ from couchformation.capella.driver.base import CloudBase
 from couchformation.config import get_state_file, get_state_dir
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import FileManager, Synchronize
-from cbcmgr.cb_capella import Capella, CapellaCluster, AllowedCIDR, Credentials, AppService
+from couchformation.capella.driver.cb_capella import Capella, CapellaCluster, AllowedCIDR, Credentials, AppService
 import couchformation.constants as C
 from couchformation.util import PasswordUtility
 

@@ -61,10 +61,11 @@ setup(
         "overrides>=7.4.0",
         "bumpversion>=0.6.0",
         "PyYAML>=5.1",
-        "cbcmgr>=2.2.16",
-        "pyhostprep>=0.1.52",
         "rsa>=4.9",
-        "pywinrm>=0.4.3"
+        "pywinrm>=0.4.3",
+        "aiohttp>=3.9.3",
+        "python-certifi-win32>=1.6.1",
+        "certifi>=2023.5.7"
     ],
     author_email='info@unix.us.com',
     description='Couchbase Cloud Automation',

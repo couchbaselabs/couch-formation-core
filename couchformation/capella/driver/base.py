@@ -2,7 +2,7 @@
 ##
 
 import logging
-from cbcmgr.cb_capella import Capella
+from couchformation.capella.driver.cb_capella import Capella
 from couchformation.exception import FatalError
 
 logger = logging.getLogger('couchformation.capella.driver.base')

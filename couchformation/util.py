@@ -11,7 +11,7 @@ from typing import Union
 from uuid import UUID
 from shutil import copyfile
 from multiprocessing import Lock
-from pyhostprep.command import RunShellCommand
+from couchformation.provisioner.shell import RunShellCommand
 from couchformation.exception import FatalError
 
 logger = logging.getLogger('couchformation.util')
