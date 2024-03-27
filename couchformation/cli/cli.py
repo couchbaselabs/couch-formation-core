@@ -51,6 +51,21 @@ class CustomDisplayFormatter(logging.Formatter):
         return formatter.format(record)
 
 
+class CustomMinimalDisplayFormatter(logging.Formatter):
+    FORMATS = {
+        logging.DEBUG: f"{C.FORMAT_MESSAGE}",
+        logging.INFO: f"{C.FORMAT_MESSAGE}",
+        logging.WARNING: f"{C.FORMAT_MESSAGE}",
+        logging.ERROR: f"{C.FORMAT_MESSAGE}",
+        logging.CRITICAL: f"{C.FORMAT_MESSAGE}"
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        formatter = logging.Formatter(log_fmt)
+        return formatter.format(record)
+
+
 class CustomLogFormatter(logging.Formatter):
     FORMATS = {
         logging.DEBUG: f"{C.FORMAT_TIMESTAMP} [{C.FORMAT_LEVEL}] {C.FORMAT_MESSAGE}",
@@ -120,6 +135,13 @@ class CLI(object):
         screen_handler.setFormatter(CustomDisplayFormatter())
         screen_handler.setLevel(logging.INFO)
         logger.addHandler(screen_handler)
+
+        min_log = logging.getLogger('minimum_output')
+        min_screen_handler = logging.StreamHandler()
+        min_screen_handler.setFormatter(CustomMinimalDisplayFormatter())
+        min_screen_handler.setLevel(logging.INFO)
+        min_log.addHandler(min_screen_handler)
+        min_log.propagate = False
 
         file_handler = logging.handlers.RotatingFileHandler(debug_file, maxBytes=10485760, backupCount=5)
         file_handler.setFormatter(CustomLogFormatter())

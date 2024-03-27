@@ -63,6 +63,7 @@ class BuildParameter:
     name: Optional[str] = attr.ib()
     type: Optional[str] = attr.ib(default="string")
     allowed_values: Optional[List[str]] = attr.ib(default=[])
+    required_values: Optional[List[str]] = attr.ib(default=[])
 
 
 @attr.s
@@ -112,21 +113,22 @@ class MetadataManager(object):
         return [KeyValueStore(filename, doc) for doc in doc_list]
 
     def print_services(self):
+        log = logging.getLogger('minimum_output')
         cloud_map = {}
-        logger.info(f"<{self.project}>")
+        log.info(f"\n<{self.project}>")
         for service, cloud in self.list_services():
             cloud_map.setdefault(cloud, []).append(service)
         for cloud in cloud_map.keys():
-            logger.info(f"[{cloud}]")
+            log.info(f"[{cloud}]")
             for service in cloud_map[cloud]:
-                logger.info(f"+ [{service}]")
+                log.info(f"+- [{service}]")
                 for n, group in enumerate(self.get_service_groups(service)):
                     build = group['build'] if 'build' in group and group['build'] is not None else ''
                     region = group['region'] if 'region' in group and group['region'] is not None else ''
                     os_id = group['os_id'] if 'os_id' in group and group['os_id'] is not None else ''
                     machine_type = group['machine_type'] if 'machine_type' in group and group['machine_type'] is not None else ''
                     quantity = group['quantity'] if 'quantity' in group and group['quantity'] is not None else 1
-                    logger.info(f"|- [{n+1}] ({build}) {quantity}x {os_id} {machine_type} {region}")
+                    log.info(f"| +- [{n+1}] ({build}) {quantity}x {os_id} {machine_type} {region}")
 
 
 class BuildManager(object):
@@ -135,6 +137,7 @@ class BuildManager(object):
         self.cfg_file = C.BUILD_PROFILES
         self.options = options
         self.parameters = parameters
+        self.create_mode = self.options.command == "create"
         self.build_list = BuildList()
         self.load_config()
 
@@ -145,7 +148,7 @@ class BuildManager(object):
                     p_list = []
                     for parameter in settings.get('parameters', []):
                         for key, value in parameter.items():
-                            p_list.append(BuildParameter(key, value.get('type'), value.get('allowed_values')))
+                            p_list.append(BuildParameter(key, value.get('type'), value.get('allowed_values'), value.get('required_values')))
                     build = Build(build, p_list, settings.get('supports', []))
                     self.build_list.add(build)
             except yaml.YAMLError as err:
@@ -162,9 +165,8 @@ class BuildManager(object):
     def validate_base(self):
         project = self.options.project
         name = self.options.name
-        command = self.options.command
         services = [service for service, cloud in MetadataManager(project).list_services()]
-        if name in services and command == "create":
+        if name in services and self.create_mode:
             logger.warning(f"Overwriting previously configured service {name}")
 
     def validate_command(self, build: Build):
@@ -186,11 +188,10 @@ class BuildManager(object):
         options, undefined = parser.parse_known_args(self.parameters)
         result = getattr(options, parameter.name)
         if result:
-            return self.value_check(parameter.type, result, parameter.allowed_values)
+            return self.value_check(parameter.type, result, parameter.allowed_values, parameter.required_values)
         return True
 
-    @staticmethod
-    def value_check(v_type: str, v_value: Any, v_allowed: List[str]):
+    def value_check(self, v_type: str, v_value: Any, v_allowed: List[str], v_required: List[str]):
         if v_type == "boolean":
             return isinstance(v_value, bool)
         elif v_type == "integer":
@@ -208,6 +209,9 @@ class BuildManager(object):
         elif v_type == "csv":
             if not isinstance(v_value, str) or not all(val in v_allowed for val in v_value.split(',')):
                 logger.warning(f"Invalid comma separated list: allowed values: {','.join(v_allowed)}")
+                return False
+            if self.create_mode and not any(val in v_required for val in v_value.split(',')):
+                logger.warning(f"Invalid comma separated list: required values: {','.join(v_required)}")
                 return False
         elif v_type == "path":
             if not os.path.exists(v_value):

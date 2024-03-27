@@ -195,7 +195,7 @@ class GCPDeployment(object):
                                                               subnet['zone'],
                                                               self.gcp_base.gcp_account_email,
                                                               self.ssh_key)
-            self.state['password'] = password
+            self.state['host_password'] = password
 
         logger.info(f"Created instance {self.node_name}")
         return self.state.as_dict

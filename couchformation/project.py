@@ -173,8 +173,8 @@ class Project(object):
                             private_ip_list=private_ip_list,
                             public_ip_list=public_ip_list,
                             private_host_list=private_host_list,
-                            public_host_list=public_host_list,
-                            password=password) for item in result_list]
+                            public_host_list=public_host_list) for item in result_list]
+        result_list = [dict(item, password=password) if 'password' not in item else item for item in result_list]
 
         if skip_provision:
             return
@@ -324,13 +324,19 @@ class Project(object):
             logger.info(f"Service: {group[0].get('name')}")
         for result in result_list:
             if not api:
-                logger.info(f"Node: {result.get('name')} "
-                            f"Private IP: {result.get('private_ip'):<15} "
-                            f"Public IP: {result.get('public_ip'):<15} "
-                            f"DNS Name: {result.get('public_hostname', 'N/A')} "
-                            f"Services: {result.get('services')}")
-                if result.get('password'):
-                    logger.info(f"Password: {result.get('password')} ")
+                output = [f"Node: {result.get('name')}",
+                          f"Private IP: {result.get('private_ip'):<15}",
+                          f"Public IP: {result.get('public_ip'):<15}"]
+
+                if result.get('host_password'):
+                    output.append(f"Password: {result.get('host_password'):<18}")
+
+                if result.get('public_hostname') is not None:
+                    output.append(f"DNS Name: {result.get('public_hostname', 'N/A')}")
+
+                output.append(f"Services: {result.get('services')}")
+
+                logger.info(' '.join(output))
             return_list.append(result)
 
         return return_list
@@ -363,8 +369,6 @@ class Project(object):
     @staticmethod
     def list_projects():
         base_path = get_base_dir()
-        logger.info("Configured project list:")
-        logger.info("========================")
         for project in sorted(list(FileManager().list_dir(base_path))):
             if MetadataManager(project).exists:
                 MetadataManager(project).print_services()

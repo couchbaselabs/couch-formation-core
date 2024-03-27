@@ -21,6 +21,7 @@ remote:
     - use_private_ip
     - sw_version
     - password
+    - host_password
     - upload
     - public_hostname
     - private_hostname
@@ -63,6 +64,7 @@ winrm:
     - use_private_ip
     - sw_version
     - password
+    - host_password
     - upload
     - public_hostname
     - private_hostname

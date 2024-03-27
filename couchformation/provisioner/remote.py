@@ -87,6 +87,7 @@ class RemoteProvisioner(object):
         self.ssh_key = self.parameters.get('ssh_key')
         self.zone = self.parameters.get('zone')
         self.password = self.parameters.get('password') if 'password' in self.parameters else 'password'
+        self.host_password = self.parameters.get('host_password')
         self.upload_file = self.parameters.get('upload')
         self.sw_version = self.parameters.get('sw_version') if 'sw_version' in self.parameters else 'latest'
         self.services = self.parameters.get('services')

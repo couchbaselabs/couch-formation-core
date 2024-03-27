@@ -194,7 +194,7 @@ class AWSDeployment(object):
 
         if image['os_id'] == 'windows':
             password = Instance(self.parameters).get_password(instance_id, self.ssh_key)
-            self.state['password'] = password
+            self.state['host_password'] = password
 
         logger.info(f"Created instance {instance_id}")
         return self.state.as_dict

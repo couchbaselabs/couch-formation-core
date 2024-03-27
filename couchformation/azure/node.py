@@ -229,7 +229,7 @@ class AzureDeployment(object):
             self.state['private_hostname'] = host_name
 
         if image['os_id'] == 'windows':
-            self.state['password'] = self.password
+            self.state['host_password'] = self.password
 
         logger.info(f"Created instance {self.node_name}")
         return self.state.as_dict

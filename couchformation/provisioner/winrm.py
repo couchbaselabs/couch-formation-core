@@ -25,7 +25,6 @@ class WinRMProvisioner(object):
         self.service = self.parameters.get('service')
         self.project = self.parameters.get('project')
         self.username = self.parameters.get('username')
-        self.password = self.parameters.get('password')
         self.public_ip = self.parameters.get('public_ip')
         self.private_ip = self.parameters.get('private_ip')
         self.public_hostname = self.parameters.get('public_hostname')
@@ -33,6 +32,7 @@ class WinRMProvisioner(object):
         self.public = self.parameters.get('public') if 'public' in self.parameters else False
         self.zone = self.parameters.get('zone')
         self.password = self.parameters.get('password') if 'password' in self.parameters else 'password'
+        self.host_password = self.parameters.get('host_password')
         self.upload_file = self.parameters.get('upload')
         self.sw_version = self.parameters.get('sw_version') if 'sw_version' in self.parameters else 'latest'
         self.services = self.parameters.get('services')
@@ -50,6 +50,9 @@ class WinRMProvisioner(object):
         else:
             self.public_host_list = 'null'
         self.use_private_ip = self.parameters.get('use_private_ip') if self.parameters.get('use_private_ip') else False
+
+        if not self.host_password:
+            raise ProvisionerError('WinRM provisioner requires host_password property to be set')
 
     @staticmethod
     def upload():
@@ -74,7 +77,7 @@ class WinRMProvisioner(object):
         logger.info(f"Connecting to {hostname} as {self.username}")
         logger.debug(f"Running command: {_command}")
 
-        s = winrm.Session(url, auth=(self.username, self.password), transport='ntlm', server_cert_validation='ignore')
+        s = winrm.Session(url, auth=(self.username, self.host_password), transport='ntlm', server_cert_validation='ignore')
 
         if not self.wait_service(s):
             raise ProvisionerError(f"WinRM service unavailable on {hostname}")
