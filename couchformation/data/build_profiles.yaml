@@ -2,7 +2,10 @@
 generic:
   supports:
     - create
-  parameters: {}
+  parameters:
+    - ssh_key:
+        type: path
+        allowed_values: []
 cbs:
   supports:
     - create
@@ -21,3 +24,6 @@ cbs:
           - manager-only
           - search
           - default
+    - ssh_key:
+        type: path
+        allowed_values: []

@@ -69,6 +69,7 @@ class BuildParameter:
 class Build:
     name: Optional[str] = attr.ib()
     parameters: Optional[List[BuildParameter]] = attr.ib(default=[])
+    supports: Optional[List[str]] = attr.ib(default=[])
 
 
 @attr.s
@@ -88,6 +89,7 @@ class BuildList:
 class MetadataManager(object):
 
     def __init__(self, project: str):
+        self.project = project
         self.project_dir = get_project_dir(project)
         self.metadata = os.path.join(self.project_dir, C.METADATA)
 
@@ -109,6 +111,23 @@ class MetadataManager(object):
         doc_list = db.doc_id_startswith(service)
         return [KeyValueStore(filename, doc) for doc in doc_list]
 
+    def print_services(self):
+        cloud_map = {}
+        logger.info(f"<{self.project}>")
+        for service, cloud in self.list_services():
+            cloud_map.setdefault(cloud, []).append(service)
+        for cloud in cloud_map.keys():
+            logger.info(f"[{cloud}]")
+            for service in cloud_map[cloud]:
+                logger.info(f"+ [{service}]")
+                for n, group in enumerate(self.get_service_groups(service)):
+                    build = group['build'] if 'build' in group and group['build'] is not None else ''
+                    region = group['region'] if 'region' in group and group['region'] is not None else ''
+                    os_id = group['os_id'] if 'os_id' in group and group['os_id'] is not None else ''
+                    machine_type = group['machine_type'] if 'machine_type' in group and group['machine_type'] is not None else ''
+                    quantity = group['quantity'] if 'quantity' in group and group['quantity'] is not None else 1
+                    logger.info(f"|- [{n+1}] ({build}) {quantity}x {os_id} {machine_type} {region}")
+
 
 class BuildManager(object):
 
@@ -127,20 +146,36 @@ class BuildManager(object):
                     for parameter in settings.get('parameters', []):
                         for key, value in parameter.items():
                             p_list.append(BuildParameter(key, value.get('type'), value.get('allowed_values')))
-                    build = Build(build, p_list)
+                    build = Build(build, p_list, settings.get('supports', []))
                     self.build_list.add(build)
             except yaml.YAMLError as err:
                 raise RuntimeError(f"Can not open build config file {self.cfg_file}: {err}")
 
     def validate(self):
-        if self.options and self.options.build:
-            build = self.build_list.get(self.options.build)
-            if not build:
-                return None
-            for parameter in build.parameters:
-                if not self.parameter_check(parameter):
-                    return f"--{parameter.name} value is not valid"
-        return None
+        build = self.build_list.get(self.options.build)
+        if not build:
+            return None
+        self.validate_base()
+        self.validate_command(build)
+        self.validate_parameters(build)
+
+    def validate_base(self):
+        project = self.options.project
+        name = self.options.name
+        command = self.options.command
+        services = [service for service, cloud in MetadataManager(project).list_services()]
+        if name in services and command == "create":
+            logger.warning(f"Overwriting previously configured service {name}")
+
+    def validate_command(self, build: Build):
+        command = self.options.command
+        if command not in build.supports:
+            raise DeploymentError(f"Command {command} not allowed with build type {build.name}")
+
+    def validate_parameters(self, build: Build):
+        for parameter in build.parameters:
+            if not self.parameter_check(parameter):
+                raise DeploymentError(f"--{parameter.name} value is not valid")
 
     def parameter_check(self, parameter: BuildParameter):
         parser = argparse.ArgumentParser(add_help=False)
@@ -171,9 +206,13 @@ class BuildManager(object):
         elif v_type == "string":
             pass
         elif v_type == "csv":
-            return isinstance(v_value, str) and all(val in v_allowed for val in v_value.split(','))
-        else:
-            return False
+            if not isinstance(v_value, str) or not all(val in v_allowed for val in v_value.split(',')):
+                logger.warning(f"Invalid comma separated list: allowed values: {','.join(v_allowed)}")
+                return False
+        elif v_type == "path":
+            if not os.path.exists(v_value):
+                logger.warning(f"Path does not exist: {v_value}")
+                return False
         return True
 
 

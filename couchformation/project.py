@@ -27,23 +27,24 @@ class Project(object):
         self.strategy = DeployStrategy()
 
     def create(self):
-        logger.info(f"Creating new service")
+        logger.info(f"Creating new service {self.options.name}")
         profile = TargetProfile(self.remainder).get(self.cloud)
         missing = profile.check_required_options()
         if missing:
             raise ProjectError(f"Missing required parameters: {','.join(missing)}")
-        result = BuildManager(self.options, self.remainder).validate()
-        if result:
-            raise ProjectError(f"Error validating parameters: {result}")
+        BuildManager(self.options, self.remainder).validate()
         NodeGroup(self.options).create_node_group(profile.options)
+        MetadataManager(self.options.project).print_services()
 
     def add(self):
-        logger.info(f"Adding node group to service")
+        logger.info(f"Adding node group to service {self.options.name}")
         profile = TargetProfile(self.remainder).get(self.cloud)
         missing = profile.check_required_options()
         if missing:
             raise ProjectError(f"Missing required parameters: {','.join(missing)}")
+        BuildManager(self.options, self.remainder).validate()
         NodeGroup(self.options).add_to_node_group(profile.options)
+        MetadataManager(self.options.project).print_services()
 
     def deploy(self, service=None, skip_provision=False):
         password = NodeGroup(self.options).create_credentials()
@@ -366,13 +367,7 @@ class Project(object):
         logger.info("========================")
         for project in sorted(list(FileManager().list_dir(base_path))):
             if MetadataManager(project).exists:
-                logger.info(f"{project}:")
-                for service, cloud in MetadataManager(project).list_services():
-                    group = MetadataManager(project).get_service_groups(service)[0]
-                    build = group['build'] if 'build' in group and group['build'] is not None else '-'
-                    region = group['region'] if 'region' in group and group['region'] is not None else '-'
-                    os_id = group['os_id'] if 'os_id' in group and group['os_id'] is not None else '-'
-                    logger.info(f"- {service} ({cloud}/{region}/{build}/{os_id})")
+                MetadataManager(project).print_services()
 
     @property
     def location(self):
