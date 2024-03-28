@@ -163,6 +163,7 @@ capella:
     - password
     - account_email
     - type
+    - sw_version
   required:
     - machine_type
     - quantity

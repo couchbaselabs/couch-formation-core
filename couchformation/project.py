@@ -289,6 +289,7 @@ class Project(object):
         logger.info("Removing All Services" if not service else f"Removing {service}")
         self.destroy(service=service)
         NodeGroup(self.options).remove_node_groups(service)
+        MetadataManager(self.options.project).print_services()
 
     def clean(self):
         logger.info("Cleaning project")
