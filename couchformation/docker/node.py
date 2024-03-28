@@ -47,7 +47,15 @@ class DockerDeployment(object):
 
         self.docker_network = DockerNetwork(self.parameters)
 
+    def check_state(self):
+        if self.state.get('instance_id'):
+            result = Container(self.parameters).get_container(self.state.get('instance_id'))
+            if result is None:
+                logger.warning(f"Removing stale state entry for container {self.state.get('instance_id')}")
+                del self.state['instance_id']
+
     def deploy(self):
+        self.check_state()
         if self.state.get('instance_id'):
             logger.info(f"Node {self.node_name} already exists")
             return self.state.as_dict

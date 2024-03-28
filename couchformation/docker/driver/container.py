@@ -104,7 +104,7 @@ class Container(CloudBase):
                 run_cmd = self.process_command_vars(ip)
             else:
                 run_cmd = None
-            FileManager().dir_populate(host_path, run_cmd)
+            FileManager().dir_populate(str(host_path), run_cmd)
         if not command and ip.volume.command:
             command = ip.volume.command
 
@@ -140,6 +140,9 @@ class Container(CloudBase):
     @staticmethod
     def map(name: str):
         return ContainerBuildMap().image(name)
+
+    def get_container(self, container_id: str):
+        return self.get_container_id(container_id)
 
     @staticmethod
     def get_container_id(name: str) -> Union[ContainerClass, None]:

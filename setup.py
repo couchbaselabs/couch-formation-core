@@ -65,7 +65,8 @@ setup(
         "pywinrm>=0.4.3",
         "aiohttp>=3.9.3",
         "python-certifi-win32>=1.6.1",
-        "certifi>=2023.5.7"
+        "certifi>=2023.5.7",
+        "pyhostprep>=1.0.10"
     ],
     author_email='info@unix.us.com',
     description='Couchbase Cloud Automation',

@@ -40,7 +40,15 @@ class DockerNetwork(object):
 
         self.docker_network = Network(self.parameters)
 
+    def check_state(self):
+        if self.state.get('network'):
+            network = Network(self.parameters).get_network(self.state.get('network'))
+            if network is None:
+                logger.warning(f"Removing stale state entry for network {self.state.get('network')}")
+                del self.state['network']
+
     def create_vpc(self):
+        self.check_state()
         cidr_util = NetworkDriver()
         net_name = f"{self.project}-net"
 
