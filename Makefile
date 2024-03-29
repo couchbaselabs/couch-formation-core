@@ -87,3 +87,8 @@ test_win:
 		tests/test_6.py \
 		tests/test_7.py \
 		tests/test_kvdb.py
+test_install:
+		python -m pytest \
+		tests/test_10.py \
+		tests/test_11.py \
+		tests/test_12.py

@@ -44,7 +44,7 @@ class BasicAuth(AuthBase):
 
 
 @pytest.mark.serial
-class TestMainAWS(unittest.TestCase):
+class TestMainGCP(unittest.TestCase):
     command = None
 
     def setUp(self):
@@ -59,8 +59,8 @@ class TestMainAWS(unittest.TestCase):
                 logger.removeHandler(handler)
 
     def test_1(self):
-        args = ["create", "--build", "cbs", "--cloud", "aws", "--project", "pytest-aws", "--name", "test-cluster", "--auth_mode", "sso",
-                "--region", "us-east-2", "--quantity", "3", "--os_id", "ubuntu", "--os_version", "22.04",
+        args = ["create", "--build", "cbs", "--cloud", "gcp", "--project", "pytest-gcp", "--name", "test-cluster",
+                "--region", "us-central1", "--quantity", "3", "--os_id", "ubuntu", "--os_version", "22.04",
                 "--ssh_key", ssh_key_path, "--machine_type", "4x16"]
         result, output = cli_run(self.command, *args)
         p = re.compile("Creating new service")
@@ -68,8 +68,8 @@ class TestMainAWS(unittest.TestCase):
         assert result == 0
 
     def test_2(self):
-        args = ["add", "--build", "cbs", "--cloud", "aws", "--project", "pytest-aws", "--name", "test-cluster", "--auth_mode", "sso",
-                "--region", "us-east-2", "--quantity", "2", "--os_id", "ubuntu", "--os_version", "22.04",
+        args = ["add", "--build", "cbs", "--cloud", "gcp", "--project", "pytest-gcp", "--name", "test-cluster",
+                "--region", "us-central1", "--quantity", "2", "--os_id", "ubuntu", "--os_version", "22.04",
                 "--ssh_key", ssh_key_path, "--machine_type", "4x16", "--services", "analytics"]
         result, output = cli_run(self.command, *args)
         p = re.compile("Adding node group to service")
@@ -77,14 +77,14 @@ class TestMainAWS(unittest.TestCase):
         assert result == 0
 
     def test_3(self):
-        args = ["deploy", "--project", "pytest-aws"]
+        args = ["deploy", "--project", "pytest-gcp"]
         result, output = cli_run(self.command, *args)
         p = re.compile("Cluster Initialized")
         assert p.search(output) is not None
         assert result == 0
 
     def test_4(self):
-        args = ["list", "--project", "pytest-aws"]
+        args = ["list", "--project", "pytest-gcp"]
         username = "Administrator"
         cm = CloudMgrCLI(args)
         project = Project(cm.options, cm.remainder)
@@ -105,7 +105,7 @@ class TestMainAWS(unittest.TestCase):
         assert response.status_code == 200
 
     def test_5(self):
-        args = ["destroy", "--project", "pytest-aws"]
+        args = ["destroy", "--project", "pytest-gcp"]
         result, output = cli_run(self.command, *args)
         p = re.compile("Removing")
         assert p.search(output) is not None
