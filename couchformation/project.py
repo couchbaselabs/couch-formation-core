@@ -281,6 +281,11 @@ class Project(object):
         method = profile.network.destroy
         runner.dispatch(module, instance, method, net.as_dict)
 
+    def copy(self):
+        logger.info(f"Copying project {self.options.project} to {self.options.to}")
+        MetadataManager(self.options.project).copy_project(self.options.to)
+        MetadataManager(self.options.to).print_services()
+
     def remove(self):
         if self.options.name:
             service = self.options.name

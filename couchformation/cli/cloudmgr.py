@@ -31,10 +31,12 @@ class CloudMgrCLI(CLI):
         opt_parser.add_argument('-g', '--group', action='store', help="Group Number", default=1, type=int)
         opt_parser.add_argument('-P', '--provisioner', action='store', help="Provisioner Name", default="remote")
         opt_parser.add_argument('-R', '--raw', action='store_true', help="Skip provision phase")
+        opt_parser.add_argument('-t', '--to', action='store', help="Copy target")
 
         command_subparser = self.parser.add_subparsers(dest='command')
         command_subparser.add_parser('create', help="Create New Service", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('add', help="Add Resource Group", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('copy', help="Copy Project", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('deploy', help="Deploy Project", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('destroy', help="Destroy Services", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('remove', help="Remove Services", parents=[opt_parser], add_help=False)
@@ -68,6 +70,10 @@ class CloudMgrCLI(CLI):
                 logger.error("Missing required parameter: name")
                 return
             project.add()
+        elif self.options.command == "copy":
+            if self.options.to is None:
+                logger.error("Missing required parameter: to")
+            project.copy()
         elif self.options.command == "deploy":
             project.deploy(self.options.name, self.options.raw)
         elif self.options.command == "destroy":

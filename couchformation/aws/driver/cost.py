@@ -22,16 +22,13 @@ class Cost(CloudBase):
                 'Type': 'TERM_MATCH',
                 'Field': 'instanceType',
                 'Value': machine_type
-            },
-            {
-                'Type': 'TERM_MATCH',
-                'Field': 'location',
-                'Value': region
-            },
+            }
         ]
         try:
+            result = self.cost_client.get_attribute_values(ServiceCode='AmazonEC2', AttributeName='instanceType')
+            print(result)
             result = self.cost_client.get_products(ServiceCode='AmazonEC2', Filters=filters)
-            print(result.get('Services')[0])
+            print(result)
         except botocore.exceptions.ClientError as err:
             if err.response['Error']['Code'].endswith('AccessDeniedException'):
                 return None

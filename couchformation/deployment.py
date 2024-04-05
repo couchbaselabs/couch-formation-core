@@ -93,6 +93,7 @@ class MetadataManager(object):
         self.project = project
         self.project_dir = get_project_dir(project)
         self.metadata = os.path.join(self.project_dir, C.METADATA)
+        self.network = os.path.join(self.project_dir, C.NETWORK)
 
     @property
     def exists(self):
@@ -111,6 +112,37 @@ class MetadataManager(object):
         db = KeyValueStore(filename)
         doc_list = db.doc_id_startswith(service)
         return [KeyValueStore(filename, doc) for doc in doc_list]
+
+    def copy_project(self, target: str):
+        target_dir = get_project_dir(target)
+
+        if not self.exists:
+            raise DeploymentError(f"Project {self.project} does not exist")
+
+        target_metadata = os.path.join(target_dir, C.METADATA)
+        target_network = os.path.join(target_dir, C.NETWORK)
+        try:
+            FileManager().make_dir(target_dir)
+            FileManager().copy_file(self.metadata, target_metadata)
+            FileManager().copy_file(self.network, target_network)
+            db = KeyValueStore(target_network)
+            doc_list = db.doc_id_startswith('network')
+            for doc in doc_list:
+                net = KeyValueStore(db.file_name, doc)
+                net['project'] = target
+        except Exception as err:
+            raise DeploymentError(f"can not create target project dir: {err}")
+
+        for service, cloud in self.list_services():
+            filename = f"{service}.db"
+            source_filename = os.path.join(self.project_dir, filename)
+            target_filename = os.path.join(target_dir, filename)
+            FileManager().copy_file(source_filename, target_filename)
+            db = KeyValueStore(target_filename)
+            doc_list = db.doc_id_startswith(service)
+            for doc in doc_list:
+                resource = KeyValueStore(db.file_name, doc)
+                resource['project'] = target
 
     def print_services(self):
         log = logging.getLogger('minimum_output')

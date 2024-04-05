@@ -66,7 +66,7 @@ class FileManager(object):
             RunShellCommand().cmd_exec(cmd, path)
 
     @staticmethod
-    def copy_file(source: str, destination: str) -> None:
+    def copy_file(source: Union[str, bytes], destination: Union[str, bytes]) -> None:
         try:
             logger.debug(f"Copying {source} to {destination}")
             copyfile(source, destination)
