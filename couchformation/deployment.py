@@ -100,6 +100,8 @@ class MetadataManager(object):
         return os.path.exists(self.metadata)
 
     def list_services(self):
+        if not self.exists:
+            return ()
         meta = KeyValueStore(self.metadata)
         meta.document('resources')
         for resource in meta.keys():
