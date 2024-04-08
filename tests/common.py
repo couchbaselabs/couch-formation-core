@@ -6,6 +6,7 @@ from docker.models.containers import Container
 from docker import APIClient
 from typing import Union, List
 from io import BytesIO
+from pathlib import Path
 import io
 import os
 import tarfile
@@ -19,10 +20,11 @@ parent = os.path.dirname(current)
 logging.getLogger("docker").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
-if os.name == 'nt':
-    ssh_key_path = r"C:\Users\adminuser\.ssh\mminichino-default-key-pair.pem"
-else:
-    ssh_key_path = r"/Users/michael/.ssh/mminichino-default-key-pair.pem"
+ssh_key_path = os.path.join(Path.home(), '.ssh', 'pytest-key-pair.pem')
+ssh_key_relative_path = os.path.relpath(ssh_key_path, Path.home())
+capella_config_path = os.path.join(Path.home(), '.capella')
+capella_config_relative_path = os.path.relpath(capella_config_path, Path.home())
+linux_image_name = "ubuntu:jammy"
 
 
 def make_local_dir(name: str):
@@ -84,6 +86,23 @@ def cli_run(cmd: str, *args: str, input_file: str = None):
     p.wait()
 
     return p.returncode, command_output
+
+
+def set_root(tarinfo, uid=0, gid=0, uname="root", gname="root"):
+    tarinfo.uid = uid
+    tarinfo.gid = gid
+    tarinfo.uname = uname
+    tarinfo.gname = gname
+    return tarinfo
+
+
+def copy_home_env_to_container(container_id: Container, dst: str, uid=0, gid=0, uname="root", gname="root"):
+    stream = io.BytesIO()
+    with tarfile.open(fileobj=stream, mode='w|') as tar:
+        tar.add(ssh_key_path, arcname=ssh_key_relative_path, filter=lambda x: set_root(x, uid, gid, uname, gname))
+        tar.add(capella_config_path, arcname=capella_config_relative_path, recursive=True, filter=lambda x: set_root(x, uid, gid, uname, gname))
+
+    container_id.put_archive(dst, stream.getvalue())
 
 
 def copy_to_container(container_id: Container, src: str, dst: str):

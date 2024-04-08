@@ -259,9 +259,14 @@ class AWSNetwork(object):
 
             if self.state.get('ssh_key'):
                 ssh_key_name = self.state.get('ssh_key')
-                SSHKey(self.parameters).delete(ssh_key_name)
+                instances = SSHKey(self.parameters).instances_by_key(ssh_key_name)
+                if len(instances) > 0:
+                    logger.warning(f"SSH key {ssh_key_name} in use, key will not be deleted from AWS")
+                else:
+                    logger.info(f"Deleting SSH key pair {ssh_key_name}")
+                    SSHKey(self.parameters).delete(ssh_key_name)
                 del self.state['ssh_key']
-                logger.info(f"Removing key pair {ssh_key_name}")
+                logger.info(f"Removing key pair {ssh_key_name} from project")
 
             if self.state.get('parent_hosted_zone') and self.state.get('domain'):
                 ns_names = self.state['parent_zone_ns_records'].split(',')

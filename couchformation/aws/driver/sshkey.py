@@ -109,3 +109,28 @@ class SSHKey(CloudBase):
             self.ec2_client.delete_key_pair(KeyName=name)
         except Exception as err:
             raise AWSDriverError(f"error deleting key pair: {err}")
+
+    def instances_by_key(self, name: str):
+        instances = []
+        extra_args = {}
+        key_filter = [
+            {
+                'Name': 'key-name',
+                'Values': [
+                    name,
+                ]
+            }
+        ]
+
+        try:
+            while True:
+                result = self.ec2_client.describe_instances(**extra_args, Filters=key_filter)
+                for reservation in result.get('Reservations', []):
+                    instances.extend(reservation.get('Instances', []))
+                if 'NextToken' not in result:
+                    break
+                extra_args['NextToken'] = result['NextToken']
+        except Exception as err:
+            raise AWSDriverError(f"error getting instance list: {err}")
+
+        return instances

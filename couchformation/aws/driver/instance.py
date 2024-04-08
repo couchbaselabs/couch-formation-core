@@ -99,6 +99,23 @@ class Instance(CloudBase):
 
         return instance_id
 
+    def list(self):
+        instances = []
+        extra_args = {}
+
+        try:
+            while True:
+                result = self.ec2_client.describe_instances(**extra_args)
+                for reservation in result.get('Reservations', []):
+                    instances.extend(reservation.get('Instances', []))
+                if 'NextToken' not in result:
+                    break
+                extra_args['NextToken'] = result['NextToken']
+        except Exception as err:
+            raise AWSDriverError(f"error getting instance list: {err}")
+
+        return instances
+
     def allocate_host(self, name: str, zone: str, instance_type: str):
         host_tag = [AWSTagStruct.build("dedicated-host").add(AWSTag("Name", name)).as_dict]
 
