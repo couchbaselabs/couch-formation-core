@@ -119,6 +119,13 @@ class SSHKey(CloudBase):
                 'Values': [
                     name,
                 ]
+            },
+            {
+                'Name': 'instance-state-name',
+                'Values': [
+                    'running',
+                    'pending'
+                ]
             }
         ]
 
