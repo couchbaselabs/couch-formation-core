@@ -13,6 +13,7 @@ setup(
     license='Apache License 2.0',
     author='Michael Minichino',
     python_requires='>=3.8',
+    setup_requires=['wheel'],
     entry_points={
         'console_scripts': [
             'cloudmgr = couchformation.cli.cloudmgr:main',

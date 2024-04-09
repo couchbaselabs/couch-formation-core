@@ -78,6 +78,7 @@ test:
 		tests/test_7.py \
 		tests/test_8.py \
 		tests/test_9.py \
+		tests/test_13.py \
 		tests/test_kvdb.py
 test_win:
 		python -m pytest \
