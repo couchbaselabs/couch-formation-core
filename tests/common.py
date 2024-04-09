@@ -256,14 +256,15 @@ def container_log(container_id: Container, directory: str):
         out_file.close()
 
 
-def run_in_container(name: str, command: Union[str, List[str]], directory: Union[str, None] = None):
-    container_id = get_container_id(name)
-    print(f"Running: {command}")
+def run_in_container(container_id: Container, command: Union[str, List[str]], directory: Union[str, None] = None):
     exit_code, output = container_id.exec_run(command, workdir=directory)
     for line in output.split(b'\n'):
         if len(line) > 0:
             print(line.decode("utf-8"))
-    assert exit_code == 0
+    if exit_code == 0:
+        return True
+    else:
+        return False
 
 
 def get_container_id(name: str) -> Union[Container, None]:
