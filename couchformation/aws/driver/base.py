@@ -146,10 +146,16 @@ class CloudBase(object):
         return True
 
     def default_auth(self):
-        session = boto3.Session(profile_name=self.profile)
-        credentials = session.get_credentials()
-        self.access_key = credentials.access_key
-        self.secret_key = credentials.secret_key
+        if 'AWS_ACCESS_KEY_ID' in os.environ and 'AWS_SECRET_ACCESS_KEY' in os.environ:
+            self.access_key = os.environ['AWS_ACCESS_KEY_ID']
+            self.secret_key = os.environ['AWS_SECRET_ACCESS_KEY']
+            if 'AWS_SESSION_TOKEN' in os.environ:
+                self.token = os.environ['AWS_SESSION_TOKEN']
+        else:
+            session = boto3.Session(profile_name=self.profile)
+            credentials = session.get_credentials()
+            self.access_key = credentials.access_key
+            self.secret_key = credentials.secret_key
 
     def save_auth(self):
         dt = datetime.fromtimestamp(self.token_expiration / 1000)
