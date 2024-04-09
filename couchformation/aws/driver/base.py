@@ -127,6 +127,15 @@ class CloudBase(object):
                     self.sso_region = contents.get('sso_region')
                     self.sso_registration_scopes = contents.get('sso_registration_scopes')
 
+    def get_auth_config(self) -> dict:
+        self.test_session()
+        session = botocore.session.get_session()
+        return {
+            'AWS_ACCESS_KEY_ID': session.get_credentials().access_key,
+            'AWS_SECRET_ACCESS_KEY': session.get_credentials().secret_key,
+            'AWS_SESSION_TOKEN': session.get_credentials().token,
+        }
+
     @staticmethod
     def auth_expired(timestamp):
         if timestamp:

@@ -256,8 +256,8 @@ def container_log(container_id: Container, directory: str):
         out_file.close()
 
 
-def run_in_container(container_id: Container, command: Union[str, List[str]], directory: Union[str, None] = None):
-    exit_code, output = container_id.exec_run(command, workdir=directory)
+def run_in_container(container_id: Container, command: Union[str, List[str]], directory: Union[str, None] = None, environment: Union[dict, None] = None):
+    exit_code, output = container_id.exec_run(command, workdir=directory, environment=environment)
     for line in output.split(b'\n'):
         if len(line) > 0:
             print(line.decode("utf-8"))
