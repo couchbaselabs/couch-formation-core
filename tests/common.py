@@ -17,6 +17,8 @@ import subprocess
 warnings.filterwarnings("ignore")
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
+logger = logging.getLogger('tests.common')
+logger.addHandler(logging.NullHandler())
 logging.getLogger("docker").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
@@ -106,7 +108,7 @@ def copy_home_env_to_container(container_id: Container, dst: str, uid=0, gid=0, 
 
 
 def copy_to_container(container_id: Container, src: str, dst: str):
-    print(f"Copying {src} to {dst}")
+    logger.info(f"Copying {src} to {dst}")
     stream = io.BytesIO()
     with tarfile.open(fileobj=stream, mode='w|') as tar, open(src, 'rb') as file:
         info = tar.gettarinfo(fileobj=file)
@@ -212,7 +214,7 @@ def start_container(image: str,
 
     port_struct = create_port_dict(expand_ranges(ports))
 
-    print(f"Starting {image} container")
+    logger.info(f"Starting {image} container")
 
     try:
         if volume_mount and not dir_mount:
@@ -237,7 +239,7 @@ def start_container(image: str,
         else:
             raise
 
-    print("Container started")
+    logger.info("Container started")
     return container_id
 
 
@@ -260,7 +262,7 @@ def run_in_container(container_id: Container, command: Union[str, List[str]], di
     exit_code, output = container_id.exec_run(command, workdir=directory, environment=environment)
     for line in output.split(b'\n'):
         if len(line) > 0:
-            print(line.decode("utf-8"))
+            logger.info(line.decode("utf-8"))
     if exit_code == 0:
         return True
     else:

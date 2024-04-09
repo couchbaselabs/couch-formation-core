@@ -6,6 +6,7 @@ import pytest
 import time
 import requests
 import base64
+import logging
 from requests.auth import AuthBase
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
@@ -16,6 +17,8 @@ from tests.interactive import aws_base
 from tests.common import start_container, stop_container, run_in_container, copy_to_container, copy_home_env_to_container, linux_image_name, ssh_key_path
 
 warnings.filterwarnings("ignore")
+logger = logging.getLogger('couchformation.aws.driver.base')
+logger.addHandler(logging.NullHandler())
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 
@@ -45,20 +48,24 @@ class TestInstallAWS(object):
 
     @classmethod
     def setup_class(cls):
-        print("Starting Linux container")
+        logger.info("Starting Linux container")
         platform = f"linux/{os.uname().machine}"
         script = os.path.join(parent, 'tests', 'install_pkg.sh')
         cls.aws_auth = CloudBase(aws_base).get_auth_config()
+        cls.aws_auth.update({
+            'PATH': '/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin'
+        })
         cls.container_id = start_container(linux_image_name, cls.container_name, platform=platform)
         copy_home_env_to_container(cls.container_id, '/root')
         copy_to_container(cls.container_id, script, '/root')
         command = ['/bin/bash', '/root/install_pkg.sh']
-        run_in_container(cls.container_id, command)
+        result = run_in_container(cls.container_id, command)
+        assert result is True
         time.sleep(1)
 
     @classmethod
     def teardown_class(cls):
-        print("Stopping test container")
+        logger.info("Stopping test container")
         stop_container(cls.container_name)
         time.sleep(1)
 
@@ -66,11 +73,13 @@ class TestInstallAWS(object):
         command = ["cloudmgr", "create", "--build", "cbs", "--cloud", "aws", "--project", "pytest-aws", "--name", "test-cluster", "--auth_mode", "sso",
                    "--region", "us-east-2", "--quantity", "3", "--os_id", "ubuntu", "--os_version", "22.04",
                    "--ssh_key", ssh_key_path, "--machine_type", "4x16"]
-        run_in_container(self.container_id, command, environment=self.aws_auth)
+        result = run_in_container(self.container_id, command, environment=self.aws_auth)
+        assert result is True
 
     def test_2(self):
         command = ["cloudmgr", "deploy", "--project", "pytest-aws"]
-        run_in_container(self.container_id, command, environment=self.aws_auth)
+        result = run_in_container(self.container_id, command, environment=self.aws_auth)
+        assert result is True
 
     def test_3(self):
         args = ["list", "--project", "pytest-aws"]
@@ -95,4 +104,5 @@ class TestInstallAWS(object):
 
     def test_4(self):
         command = ["cloudmgr", "destroy", "--project", "pytest-aws"]
-        run_in_container(self.container_id, command, environment=self.aws_auth)
+        result = run_in_container(self.container_id, command, environment=self.aws_auth)
+        assert result is True

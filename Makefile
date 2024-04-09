@@ -60,6 +60,8 @@ test_docker_drv:
 		python -m pytest tests/test_8.py
 test_docker_cli:
 		python -m pytest tests/test_9.py
+test_aws_install:
+		python -m pytest tests/test_13.py
 test_drv:
 		python -m pytest tests/test_1.py tests/test_2.py tests/test_3.py tests/test_8.py
 test_cli:
