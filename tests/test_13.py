@@ -7,14 +7,13 @@ import time
 import requests
 import base64
 import logging
+import json
 from requests.auth import AuthBase
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 from couchformation.aws.driver.base import CloudBase
-from couchformation.project import Project
-from couchformation.cli.cloudmgr import CloudMgrCLI
 from tests.interactive import aws_base
-from tests.common import start_container, stop_container, run_in_container, copy_to_container, copy_home_env_to_container, linux_image_name, ssh_key_relative_path
+from tests.common import start_container, stop_container, run_in_container, copy_to_container, copy_home_env_to_container, linux_image_name, ssh_key_relative_path, get_cmd_output
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger('couchformation.aws.driver.base')
@@ -83,13 +82,13 @@ class TestInstallAWS(object):
         assert result is True
 
     def test_3(self):
-        args = ["list", "--project", "pytest-aws"]
+        command = ["cloudmgr", "list", "--project", "pytest-aws", "--json"]
+        exit_code, output = get_cmd_output(self.container_id, command, environment=self.environment)
+        assert exit_code == 0
+        nodes = json.loads(output)
         username = "Administrator"
-        cm = CloudMgrCLI(args)
-        project = Project(cm.options, cm.remainder)
-        nodes = list(project.list(api=True))
         connect_ip = nodes[0].get('public_ip')
-        password = project.credential()
+        password = nodes[0].get('project_password')
 
         time.sleep(1)
         session = requests.Session()

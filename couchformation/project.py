@@ -91,8 +91,9 @@ class Project(object):
             elif strategy.deployer == DeployMode.saas.value:
                 results = self._list_saas(group, api)
                 return_list.extend(results)
+        password = self.credential()
+        return_list = [dict(item, project_password=password) for item in return_list]
         if not api:
-            password = self.credential()
             logger.info(f"Project Credentials: {password} ")
         return return_list
 

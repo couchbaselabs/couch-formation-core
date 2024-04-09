@@ -4,6 +4,7 @@
 import logging
 import warnings
 import argparse
+import json
 from overrides import override
 import couchformation
 from couchformation.cli.cli import CLI
@@ -32,6 +33,7 @@ class CloudMgrCLI(CLI):
         opt_parser.add_argument('-P', '--provisioner', action='store', help="Provisioner Name", default="remote")
         opt_parser.add_argument('-R', '--raw', action='store_true', help="Skip provision phase")
         opt_parser.add_argument('-t', '--to', action='store', help="Copy target")
+        opt_parser.add_argument('--json', action='store_true', help="List output in JSON")
 
         command_subparser = self.parser.add_subparsers(dest='command')
         command_subparser.add_parser('create', help="Create New Service", parents=[opt_parser], add_help=False)
@@ -44,7 +46,8 @@ class CloudMgrCLI(CLI):
         command_subparser.add_parser('list', help="Display Information", parents=[opt_parser], add_help=False)
 
     def run(self):
-        logger.info(f"Couch Formation v{couchformation.__version__}")
+        if not self.options.json:
+            logger.info(f"Couch Formation v{couchformation.__version__}")
 
         if self.options.show_version:
             return
@@ -83,7 +86,9 @@ class CloudMgrCLI(CLI):
         elif self.options.command == "clean":
             project.clean()
         elif self.options.command == "list":
-            project.list()
+            results = project.list(api=self.options.json)
+            if self.options.json:
+                print(json.dumps(results, indent=2))
 
         loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
         for log in loggers:

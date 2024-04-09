@@ -269,6 +269,11 @@ def run_in_container(container_id: Container, command: Union[str, List[str]], di
         return False
 
 
+def get_cmd_output(container_id: Container, command: Union[str, List[str]], directory: Union[str, None] = None, environment: Union[dict, None] = None):
+    exit_code, output = container_id.exec_run(command, workdir=directory, environment=environment)
+    return exit_code, output.decode("utf-8")
+
+
 def get_container_id(name: str) -> Union[Container, None]:
     client = docker.from_env()
     try:
