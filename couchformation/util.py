@@ -7,7 +7,8 @@ import uuid
 import collections
 import string
 import random
-from typing import Union
+import tarfile
+from typing import Union, List
 from uuid import UUID
 from shutil import copyfile
 from multiprocessing import Lock
@@ -44,6 +45,15 @@ def dict_merge_not_none(source, target):
     return new_dict
 
 
+def progress_bar(iteration, total, decimals=1, length=100, fill='#', end="\r"):
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filled = int(length * iteration // total)
+    bar = fill * filled + '-' * (length - filled)
+    print(f'\rProgress: |{bar}| {percent}% Complete', end=end)
+    if iteration == total:
+        print()
+
+
 class FileManager(object):
 
     def __init__(self):
@@ -77,6 +87,31 @@ class FileManager(object):
     def list_dir(dir_name: str):
         for name in os.listdir(dir_name):
             yield name
+
+    @staticmethod
+    def create_archive(file_name: str, root_dir: str, file_list: List[str]):
+        path_list = []
+        file_count = 0
+
+        for path_name in file_list:
+            if os.path.isdir(path_name):
+                for root, dirs, files in os.walk(path_name):
+                    for filename in dirs + files:
+                        full_path = os.path.join(root, filename)
+                        if not os.path.isfile(full_path):
+                            continue
+                        path_list.append(full_path)
+                        file_count += 1
+            else:
+                path_list.append(path_name)
+                file_count += 1
+
+        progress_bar(0, file_count, length=50)
+        with tarfile.open(file_name, mode='w:gz') as tar:
+            for n, file_name in enumerate(path_list):
+                rel_name = os.path.relpath(file_name, root_dir) if file_name.startswith(root_dir) else file_name
+                tar.add(file_name, arcname=rel_name)
+                progress_bar(n + 1, file_count, length=50)
 
 
 class UUIDGen(object):

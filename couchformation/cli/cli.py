@@ -10,6 +10,7 @@ import signal
 import inspect
 import traceback
 import datetime
+import psutil
 import logging.handlers
 from datetime import datetime
 from couchformation.config import get_log_dir
@@ -149,7 +150,9 @@ class CLI(object):
 
         logger.setLevel(logging.DEBUG)
 
-        logger.debug(f"---- CLI Start: {self.get_timestamp()} ----")
+        process = psutil.Process(os.getpid())
+        logger.debug(f"---- CLI Start: {self.get_timestamp()} PID: {process.pid}----")
+        logger.debug(f"---- CLI: {process.name()} {' '.join(sys.argv)} ----")
 
         self.process_args()
 

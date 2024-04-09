@@ -69,7 +69,8 @@ setup(
         "aiohttp>=3.9.3",
         "python-certifi-win32>=1.6.1",
         "certifi>=2023.5.7",
-        "pyhostprep>=1.0.10"
+        "pyhostprep>=1.0.10",
+        "psutil>=5.9.5"
     ],
     author_email='info@unix.us.com',
     description='Couchbase Cloud Automation',

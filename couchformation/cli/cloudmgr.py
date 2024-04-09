@@ -9,6 +9,7 @@ from overrides import override
 import couchformation
 from couchformation.cli.cli import CLI
 from couchformation.project import Project
+from couchformation.support.debug import CreateDebugPackage
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger()
@@ -44,12 +45,17 @@ class CloudMgrCLI(CLI):
         command_subparser.add_parser('remove', help="Remove Services", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('clean', help="Clean Project", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('list', help="Display Information", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('dump', help="Create Debug Bundle", parents=[opt_parser], add_help=False)
 
     def run(self):
         if not self.options.json:
             logger.info(f"Couch Formation v{couchformation.__version__}")
 
         if self.options.show_version:
+            return
+
+        if self.options.command == "dump":
+            CreateDebugPackage().create_snapshot()
             return
 
         if self.options.command == "list" and not self.options.project:

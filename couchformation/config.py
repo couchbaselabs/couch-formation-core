@@ -24,6 +24,10 @@ def get_log_dir():
         return C.LOG_DIRECTORY
 
 
+def get_root_dir():
+    return C.ROOT_DIRECTORY
+
+
 def get_resource_dir(name: str, tag: str):
     return os.path.join(get_base_dir(), name, tag)
 
