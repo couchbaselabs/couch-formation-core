@@ -110,7 +110,7 @@ def set_root(tarinfo, uid=0, gid=0, uname="root", gname="root"):
     return tarinfo
 
 
-def random_string_lower(n):
+def random_string(n=32):
     return ''.join(random.choices(string.ascii_lowercase + string.ascii_uppercase + string.digits, k=n))
 
 

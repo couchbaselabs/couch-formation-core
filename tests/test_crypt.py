@@ -10,7 +10,7 @@ parent = os.path.dirname(current)
 sys.path.append(parent)
 sys.path.append(current)
 
-from tests.common import encrypt_file, decrypt_file, random_string_lower
+from tests.common import encrypt_file, decrypt_file, random_string
 
 
 def parse_args():
@@ -29,7 +29,7 @@ def main():
     key_file = os.path.join(Path.home(), '.crypt.key')
 
     if options.keygen:
-        text = random_string_lower(16)
+        text = random_string(32)
         with open(key_file, 'w') as f:
             f.write(text)
             f.write('\n')
