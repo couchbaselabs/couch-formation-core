@@ -35,6 +35,9 @@ ssh_key_relative_path = os.path.relpath(ssh_key_path, Path.home())
 ssh_pub_key_relative_path = os.path.relpath(ssh_pub_key_path, Path.home())
 capella_config_path = os.path.join(Path.home(), '.capella')
 capella_config_relative_path = os.path.relpath(capella_config_path, Path.home())
+aws_config_dir = os.path.join(Path.home(), '.aws')
+gcp_config_dir = os.path.join(Path.home(), '.config', 'gcloud')
+azure_config_dir = os.path.join(Path.home(), '.azure')
 linux_image_name = "ubuntu:jammy"
 
 
@@ -155,6 +158,9 @@ def create_cred_package(file_name: str):
         tar.add(ssh_key_path, arcname=ssh_key_relative_path)
         tar.add(ssh_pub_key_path, arcname=ssh_pub_key_relative_path)
         tar.add(capella_config_path, arcname=capella_config_relative_path, recursive=True)
+        tar.add(aws_config_dir, arcname=os.path.relpath(aws_config_dir, Path.home()), recursive=True)
+        tar.add(gcp_config_dir, arcname=os.path.relpath(gcp_config_dir, Path.home()), recursive=True)
+        tar.add(azure_config_dir, arcname=os.path.relpath(azure_config_dir, Path.home()), recursive=True)
 
 
 def copy_home_env_to_container(container_id: Container, dst: str, uid=0, gid=0, uname="root", gname="root"):
