@@ -7,6 +7,13 @@ from docker import APIClient
 from typing import Union, List
 from io import BytesIO
 from pathlib import Path
+from Crypto.Cipher import AES
+from Crypto import Random
+from hashlib import sha256
+import string
+import random
+import base64
+import hashlib
 import io
 import os
 import tarfile
@@ -23,7 +30,9 @@ logging.getLogger("docker").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 ssh_key_path = os.path.join(Path.home(), '.ssh', 'pytest-key-pair.pem')
+ssh_pub_key_path = os.path.join(Path.home(), '.ssh', 'pytest-key-pair.pub')
 ssh_key_relative_path = os.path.relpath(ssh_key_path, Path.home())
+ssh_pub_key_relative_path = os.path.relpath(ssh_pub_key_path, Path.home())
 capella_config_path = os.path.join(Path.home(), '.capella')
 capella_config_relative_path = os.path.relpath(capella_config_path, Path.home())
 linux_image_name = "ubuntu:jammy"
@@ -96,6 +105,56 @@ def set_root(tarinfo, uid=0, gid=0, uname="root", gname="root"):
     tarinfo.uname = uname
     tarinfo.gname = gname
     return tarinfo
+
+
+def random_string_lower(n):
+    return ''.join(random.choices(string.ascii_lowercase + string.ascii_uppercase + string.digits, k=n))
+
+
+def encrypt_file(file_name: str, key_text: str):
+    with open(file_name, "rb") as in_file:
+        raw = in_file.read()
+        digest = sha256(raw).digest()
+    in_bytes = bytearray()
+    in_bytes.extend(digest)
+    in_bytes.extend(raw)
+    output_file = file_name + ".enc"
+    iv = Random.new().read(AES.block_size)
+    bs = AES.block_size
+    key = hashlib.sha256(key_text.encode()).digest()
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    block = in_bytes + (bs - len(in_bytes) % bs) * chr(bs - len(in_bytes) % bs).encode()
+    result = base64.b64encode(iv + cipher.encrypt(block)).decode("utf-8")
+    with open(output_file, "w") as out_file:
+        out_file.write(result)
+        out_file.write("\n")
+
+
+def decrypt_file(file_name: str, key_text: str):
+    with open(file_name, "r") as in_file:
+        enc = in_file.read()
+    data = base64.b64decode(enc)
+    iv = data[:AES.block_size]
+    key = hashlib.sha256(key_text.encode()).digest()
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    block = cipher.decrypt(data[AES.block_size:])
+    result = block[:-ord(block[len(block) - 1:])]
+    digest = result[0:32]
+    raw = result[32:]
+    check = sha256(raw).digest()
+    if check != digest:
+        raise ValueError("can not decrypt: checksum mismatch: check that the key is correct")
+    path = os.path.dirname(file_name)
+    output_file = os.path.join(path, Path(file_name).stem)
+    with open(output_file, "wb") as out_file:
+        out_file.write(raw)
+
+
+def create_cred_package(file_name: str):
+    with tarfile.open(file_name, mode='w:gz') as tar:
+        tar.add(ssh_key_path, arcname=ssh_key_relative_path)
+        tar.add(ssh_pub_key_path, arcname=ssh_pub_key_relative_path)
+        tar.add(capella_config_path, arcname=capella_config_relative_path, recursive=True)
 
 
 def copy_home_env_to_container(container_id: Container, dst: str, uid=0, gid=0, uname="root", gname="root"):
