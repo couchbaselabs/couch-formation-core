@@ -2,6 +2,7 @@
 ##
 
 import logging
+import json
 from azure.core.exceptions import ResourceNotFoundError
 from couchformation.azure.driver.base import CloudBase, AzureDriverError
 from couchformation.azure.driver.constants import AzureImagePublishers
@@ -112,6 +113,7 @@ class Instance(CloudBase):
             parameters['additional_capabilities'] = {}
             parameters['additional_capabilities']['ultra_ssd_enabled'] = True
 
+        logger.debug(f"Creating instance {name} with parameters:\n{json.dumps(parameters, indent=2)}")
         try:
             request = self.compute_client.virtual_machines.begin_create_or_update(resource_group, name, parameters)
             request.wait()
@@ -140,7 +142,7 @@ class Instance(CloudBase):
             request.wait()
             return request.result()
         except Exception as err:
-            raise AzureDriverError(f"error creating instance: {err}")
+            raise AzureDriverError(f"error attaching disk: {err}")
 
     def details(self, instance: str, resource_group: str):
         try:
