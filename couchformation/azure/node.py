@@ -247,6 +247,11 @@ class AzureDeployment(object):
             ip = self.state['private_ip']
             PrivateDNS(self.parameters).delete_record(domain_id, name, rg_name)
             logger.info(f"Deleted DNS record for {ip}")
+        if not self.state.get('instance_id'):
+            result = Instance(self.parameters).details(self.node_name, rg_name)
+            if result:
+                logger.warning(f"Found orphaned instance {self.node_name} - repairing configuration")
+                self.state['instance_id'] = self.node_name
         if self.state.get('instance_id'):
             instance_name = self.state['instance_id']
             node_nic = self.state['node_nic']
