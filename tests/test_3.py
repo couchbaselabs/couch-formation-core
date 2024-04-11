@@ -130,9 +130,6 @@ class TestMainAzure(unittest.TestCase):
         machine_name = machine['name']
         machine_ram = int(machine['memory'] / 1024)
 
-        swap_tier = base.disk_size_to_tier(machine_ram)
-        disk_tier = base.disk_size_to_tier(256)
-
         print("Creating disks")
         swap_resource = Disk(self.parameters).create(rg_name, azure_location, zone_list[0], machine_ram, swap_disk)
         data_resource = Disk(self.parameters).create(rg_name, azure_location, zone_list[0], 256, data_disk)
@@ -155,9 +152,9 @@ class TestMainAzure(unittest.TestCase):
                                       machine_type=machine_name)
 
         print(f"Attaching disk {swap_disk}")
-        Instance(self.parameters).attach_disk(node_name, base.disk_caching(swap_tier['disk_size']), "1", swap_resource.id, rg_name)
+        Instance(self.parameters).attach_disk(node_name, base.disk_caching(machine_ram), "1", swap_resource.id, rg_name)
         print(f"Attaching disk {data_disk}")
-        Instance(self.parameters).attach_disk(node_name, base.disk_caching(disk_tier['disk_size']), "2", data_resource.id, rg_name)
+        Instance(self.parameters).attach_disk(node_name, base.disk_caching(256), "2", data_resource.id, rg_name)
 
         nsg_list = SecurityGroup(self.parameters).list(rg_name)
         network_list = Network(self.parameters).list(rg_name)

@@ -246,7 +246,7 @@ class AzureNetwork(object):
                 rg_name = self.state.get('resource_group')
             else:
                 logger.warning("No saved resource group")
-                return
+                rg_name = self.rg_name
 
             if self.state.get('network'):
                 vpc_name = self.state.get('network')

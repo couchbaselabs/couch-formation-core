@@ -65,4 +65,4 @@ class Disk(CloudBase):
         except ResourceNotFoundError:
             return None
         except Exception as err:
-            raise AzureDriverError(f"error deleting instance: {err}")
+            raise AzureDriverError(f"error deleting disk: {err}")

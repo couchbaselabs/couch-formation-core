@@ -115,9 +115,9 @@ class CloudBase(object):
         return next(t for t in AzureDiskTiers.disk_tier_list if t['disk_size'] == str(value))
 
     @staticmethod
-    def disk_caching(value: Union[int, str]):
+    def disk_caching(value: Union[int, str], ultra: bool = False):
         size = int(value)
-        if size > 4095:
+        if size > 4095 or ultra:
             return "None"
         else:
             return "ReadWrite"

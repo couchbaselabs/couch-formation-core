@@ -50,6 +50,7 @@ class AzureDeployment(object):
         self.password = parameters.get('password') if parameters.get('password') else PasswordUtility().generate(16)
         self.volume_size = parameters.get('volume_size') if parameters.get('volume_size') else "256"
         self.services = parameters.get('services') if parameters.get('services') else "default"
+        self.rg_name = f"{self.project}-rg"
         self.node_name = f"{self.name}-node-{self.number:02d}"
         self.boot_disk = f"{self.name}-boot-{self.number:02d}"
         self.swap_disk = f"{self.name}-swap-{self.number:02d}"
@@ -198,9 +199,9 @@ class AzureDeployment(object):
                                       ultra=self.ultra)
 
         logger.info(f"Attaching disk {self.swap_disk}")
-        Instance(self.parameters).attach_disk(self.node_name, self.az_base.disk_caching(machine_ram), "1", swap_resource.id, rg_name)
+        Instance(self.parameters).attach_disk(self.node_name, self.az_base.disk_caching(machine_ram, self.ultra), "1", swap_resource.id, rg_name)
         logger.info(f"Attaching disk {self.data_disk}")
-        Instance(self.parameters).attach_disk(self.node_name, self.az_base.disk_caching(volume_size), "2", data_resource.id, rg_name)
+        Instance(self.parameters).attach_disk(self.node_name, self.az_base.disk_caching(volume_size, self.ultra), "2", data_resource.id, rg_name)
 
         self.state['instance_id'] = self.node_name
         self.state['name'] = self.node_name
@@ -235,6 +236,8 @@ class AzureDeployment(object):
 
     def destroy(self):
         rg_name = self.state['resource_group']
+        if not rg_name:
+            rg_name = self.rg_name
         if self.state.get('public_hostname'):
             domain_id = self.state['public_zone_id']
             name = self.state['public_hostname']
@@ -252,6 +255,11 @@ class AzureDeployment(object):
             if result:
                 logger.warning(f"Found orphaned instance {self.node_name} - repairing configuration")
                 self.state['instance_id'] = self.node_name
+        if not self.state.get('boot_disk'):
+            result = Disk(self.parameters).details(self.boot_disk, rg_name)
+            if result:
+                logger.warning(f"Found orphaned boot disk {self.boot_disk} - repairing configuration")
+                self.state['boot_disk'] = self.boot_disk
         if self.state.get('instance_id'):
             instance_name = self.state['instance_id']
             node_nic = self.state['node_nic']
