@@ -754,7 +754,7 @@ class Capella(object):
         app_svc_id = app_svc.get('id')
         return self.rest.delete_capella(f"/v4/organizations/{self.organization_id}/projects/{self.project_id}/clusters/{cluster_id}/appservices/{app_svc_id}")
 
-    def wait_for_app_svc(self, cluster_id: str, retry_count=240, state="healthy"):
+    def wait_for_app_svc(self, cluster_id: str, retry_count=360, state="healthy"):
         for retry_number in range(retry_count + 1):
             app_svc = self.get_app_svc(cluster_id)
             if app_svc and app_svc.get('currentState') == state:
@@ -765,7 +765,7 @@ class Capella(object):
                 logger.debug(f"Waiting for cluster {cluster_id} app service to reach state {state}")
                 time.sleep(5)
 
-    def wait_for_app_svc_delete(self, cluster_id: str, retry_count=240):
+    def wait_for_app_svc_delete(self, cluster_id: str, retry_count=360):
         for retry_number in range(retry_count + 1):
             app_svc = self.get_app_svc(cluster_id)
             if app_svc and app_svc.get('currentState') == 'destroying':
