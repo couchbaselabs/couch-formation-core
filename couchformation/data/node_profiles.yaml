@@ -21,6 +21,20 @@ generic:
       - macos
     commands:
       - bundlemgr -b Base
+windev:
+  - provisioner: winrm
+    root: true
+    exclude: [ ]
+    commands:
+      - >-
+        iex "& {$(irm https://raw.githubusercontent.com/couchbaselabs/host-prep-lib/main/powershell/devserver.ps1)}"
+winsql:
+  - provisioner: winrm
+    root: true
+    exclude: [ ]
+    commands:
+      - >-
+        iex "& {$(irm https://raw.githubusercontent.com/couchbaselabs/host-prep-lib/main/powershell/sqlserver.ps1)}"
 cbs:
   - provisioner: remote
     root: true

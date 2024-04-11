@@ -5,6 +5,10 @@ sgw:
   deployer: node
 generic:
   deployer: node
+windev:
+  deployer: node
+winsql:
+  deployer: node
 container:
   deployer: node
 capella:
