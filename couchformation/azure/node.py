@@ -166,15 +166,12 @@ class AzureDeployment(object):
         machine_ram = int(machine['memory'] / 1024)
         logger.info(f"Selecting machine type {machine_name}")
 
-        swap_tier = self.az_base.disk_size_to_tier(machine_ram)
-        disk_tier = self.az_base.disk_size_to_tier(volume_size)
-
         logger.info(f"Creating disk {self.swap_disk}")
-        swap_resource = Disk(self.parameters).create(rg_name, azure_location, subnet['zone'], swap_tier['disk_size'], self.swap_disk, self.ultra)
+        swap_resource = Disk(self.parameters).create(rg_name, azure_location, subnet['zone'], machine_ram, self.swap_disk, self.ultra)
         self.state['swap_disk'] = self.swap_disk
 
         logger.info(f"Creating disk {self.data_disk}")
-        data_resource = Disk(self.parameters).create(rg_name, azure_location, subnet['zone'], disk_tier['disk_size'], self.data_disk, self.ultra)
+        data_resource = Disk(self.parameters).create(rg_name, azure_location, subnet['zone'], volume_size, self.data_disk, self.ultra)
         self.state['data_disk'] = self.data_disk
 
         logger.info(f"Creating public IP {self.node_pub_ip}")
@@ -200,9 +197,9 @@ class AzureDeployment(object):
                                       password=self.password)
 
         logger.info(f"Attaching disk {self.swap_disk}")
-        Instance(self.parameters).attach_disk(self.node_name, self.az_base.disk_caching(swap_tier['disk_size']), "1", swap_resource.id, rg_name)
+        Instance(self.parameters).attach_disk(self.node_name, self.az_base.disk_caching(machine_ram), "1", swap_resource.id, rg_name)
         logger.info(f"Attaching disk {self.data_disk}")
-        Instance(self.parameters).attach_disk(self.node_name, self.az_base.disk_caching(disk_tier['disk_size']), "2", data_resource.id, rg_name)
+        Instance(self.parameters).attach_disk(self.node_name, self.az_base.disk_caching(volume_size), "2", data_resource.id, rg_name)
 
         self.state['instance_id'] = self.node_name
         self.state['name'] = self.node_name

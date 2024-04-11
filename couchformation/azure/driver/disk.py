@@ -19,20 +19,21 @@ class Disk(CloudBase):
         super().__init__(*args, **kwargs)
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def create(self, resource_group: str, location: str, zone: str, size: int, name: str, ultra: bool = False):
+    def create(self, resource_group: str, location: str, zone: str, size_value: Union[int, str], name: str, ultra: bool = False):
+        size = int(size_value)
+        disk_perf = self.disk_size_to_tier(size)
         parameters = {
             'location': location,
             'sku': {},
             'zones': [zone],
-            'disk_size_gb': size,
+            'disk_size_gb': int(disk_perf['disk_size']),
             'creation_data': {
                 'create_option': DiskCreateOption.empty
             }
         }
-        disk_perf = self.disk_size_to_tier(size)
         if ultra:
             parameters['sku']['name'] = 'UltraSSD_LRS'
-            parameters['disk_iops_read_write'] = disk_perf['disk_iops']
+            parameters['disk_iops_read_write'] = int(disk_perf['disk_iops'])
         else:
             parameters['sku']['name'] = 'Premium_LRS'
             parameters['tier'] = disk_perf['disk_tier']
