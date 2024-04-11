@@ -3,8 +3,7 @@
 
 import io
 import os
-import grp
-import pwd
+import getpass
 import stat
 import sys
 import logging
@@ -19,6 +18,11 @@ from couchformation.config import get_log_dir, get_root_dir, get_base_dir
 from pathlib import Path
 from datetime import datetime
 import couchformation.kvdb as kvdb
+if os.name == 'nt':
+    group_name = "staff"
+else:
+    import grp
+    group_name = grp.getgrgid(os.getgid())[0]
 
 logger = logging.getLogger('couchformation.support')
 logger.addHandler(logging.NullHandler())
@@ -100,10 +104,8 @@ class CreateDebugPackage(object):
                     d = {'7': 'rwx', '6': 'rw-', '5': 'r-x', '4': 'r--', '0': '---'}
                     perm = str(oct(st.st_mode)[-3:])
                     prefix = is_dir + ''.join(d.get(x, x) for x in perm)
-                    uid = st.st_uid
-                    gid = st.st_gid
-                    user = pwd.getpwuid(uid)[0]
-                    group = grp.getgrgid(gid)[0]
+                    user = getpass.getuser()
+                    group = group_name
                     data.write(f"{prefix} {user:<9} {group:<9} {full_path}\n".encode())
                 except Exception as err:
                     data.write(f"{full_path}: {err}\n".encode())
@@ -159,8 +161,8 @@ class CreateDebugPackage(object):
                     file_data: io.BytesIO = file_tuple[1]
                     tar_info = tarfile.TarInfo(name=os.path.join('log', file_text))
                     tar_info.mtime = time.time()
-                    tar_info.uname = pwd.getpwuid(os.getuid())[0]
-                    tar_info.gname = grp.getgrgid(os.getgid())[0]
+                    tar_info.uname = getpass.getuser()
+                    tar_info.gname = group_name
                     tar_info.size = file_data.getbuffer().nbytes
                     tar.addfile(tarinfo=tar_info, fileobj=file_data)
                 else:
