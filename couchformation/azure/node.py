@@ -46,6 +46,7 @@ class AzureDeployment(object):
         self.cloud = parameters.get('cloud')
         self.number = parameters.get('number')
         self.machine_type = parameters.get('machine_type')
+        self.ultra = parameters.get('ultra') if parameters.get('ultra') else False
         self.password = parameters.get('password') if parameters.get('password') else PasswordUtility().generate(16)
         self.volume_size = parameters.get('volume_size') if parameters.get('volume_size') else "256"
         self.services = parameters.get('services') if parameters.get('services') else "default"
@@ -169,11 +170,11 @@ class AzureDeployment(object):
         disk_tier = self.az_base.disk_size_to_tier(volume_size)
 
         logger.info(f"Creating disk {self.swap_disk}")
-        swap_resource = Disk(self.parameters).create(rg_name, azure_location, subnet['zone'], swap_tier['disk_size'], swap_tier['disk_tier'], self.swap_disk)
+        swap_resource = Disk(self.parameters).create(rg_name, azure_location, subnet['zone'], swap_tier['disk_size'], self.swap_disk, self.ultra)
         self.state['swap_disk'] = self.swap_disk
 
         logger.info(f"Creating disk {self.data_disk}")
-        data_resource = Disk(self.parameters).create(rg_name, azure_location, subnet['zone'], disk_tier['disk_size'], disk_tier['disk_tier'], self.data_disk)
+        data_resource = Disk(self.parameters).create(rg_name, azure_location, subnet['zone'], disk_tier['disk_size'], self.data_disk, self.ultra)
         self.state['data_disk'] = self.data_disk
 
         logger.info(f"Creating public IP {self.node_pub_ip}")

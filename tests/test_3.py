@@ -134,8 +134,8 @@ class TestMainAzure(unittest.TestCase):
         disk_tier = base.disk_size_to_tier(256)
 
         print("Creating disks")
-        swap_resource = Disk(self.parameters).create(rg_name, azure_location, zone_list[0], machine_ram, "P4", swap_disk)
-        data_resource = Disk(self.parameters).create(rg_name, azure_location, zone_list[0], 256, "P20", data_disk)
+        swap_resource = Disk(self.parameters).create(rg_name, azure_location, zone_list[0], machine_ram, swap_disk)
+        data_resource = Disk(self.parameters).create(rg_name, azure_location, zone_list[0], 256, data_disk)
 
         print("Creating IP and NIC")
         pub_ip_resource = Network(self.parameters).create_pub_ip(node_pub_ip, rg_name)

@@ -180,8 +180,8 @@ def azure_driver_1(args):
     machine_ram = int(machine['memory'] / 1024)
 
     print("Creating disks")
-    swap_resource = Disk(core).create(rg_name, azure_location, zone_list[0], machine_ram, "P4", swap_disk)
-    data_resource = Disk(core).create(rg_name, azure_location, zone_list[0], 256, "P20", data_disk)
+    swap_resource = Disk(core).create(rg_name, azure_location, zone_list[0], machine_ram, swap_disk)
+    data_resource = Disk(core).create(rg_name, azure_location, zone_list[0], 256, data_disk)
 
     print("Creating IP and NIC")
     pub_ip_resource = Network(core).create_pub_ip(node_pub_ip, rg_name)

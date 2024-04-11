@@ -19,19 +19,23 @@ class Disk(CloudBase):
         super().__init__(*args, **kwargs)
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def create(self, resource_group: str, location: str, zone: str, size: int, tier: str, name: str):
+    def create(self, resource_group: str, location: str, zone: str, size: int, name: str, ultra: bool = False):
         parameters = {
             'location': location,
-            'sku': {
-                'name': 'Premium_LRS',
-                'tier': tier
-            },
+            'sku': {},
             'zones': [zone],
             'disk_size_gb': size,
             'creation_data': {
                 'create_option': DiskCreateOption.empty
             }
         }
+        disk_perf = self.disk_size_to_tier(size)
+        if ultra:
+            parameters['sku']['name'] = 'UltraSSD_LRS'
+            parameters['disk_iops_read_write'] = disk_perf['disk_iops']
+        else:
+            parameters['sku']['name'] = 'Premium_LRS'
+            parameters['tier'] = disk_perf['disk_tier']
         try:
             request = self.compute_client.disks.begin_create_or_update(resource_group, name, parameters)
             request.wait()

@@ -38,22 +38,22 @@ class AzureDiskTiers(object):
         {
             "disk_size": "4",
             "disk_tier": "P2",
-            "disk_iops": "16000"
+            "disk_iops": "1200"
         },
         {
             "disk_size": "8",
             "disk_tier": "P3",
-            "disk_iops": "16000"
+            "disk_iops": "2400"
         },
         {
             "disk_size": "16",
             "disk_tier": "P4",
-            "disk_iops": "16000"
+            "disk_iops": "4800"
         },
         {
             "disk_size": "32",
             "disk_tier": "P6",
-            "disk_iops": "16000"
+            "disk_iops": "9600"
         },
         {
             "disk_size": "64",
