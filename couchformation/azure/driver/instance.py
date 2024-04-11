@@ -40,7 +40,8 @@ class Instance(CloudBase):
             root_type="Premium_LRS",
             root_size=256,
             machine_type="Standard_D4_v3",
-            password="Passw0rd!"):
+            password="Passw0rd!",
+            ultra=False):
         if not resource_group:
             resource_group = self.azure_resource_group
 
@@ -107,6 +108,9 @@ class Instance(CloudBase):
             }
 
         parameters['os_profile'].update(os_config_block)
+        if ultra:
+            parameters['additional_capabilities'] = {}
+            parameters['additional_capabilities']['ultra_ssd_enabled'] = True
 
         try:
             request = self.compute_client.virtual_machines.begin_create_or_update(resource_group, name, parameters)

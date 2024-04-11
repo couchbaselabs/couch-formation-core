@@ -194,7 +194,8 @@ class AzureDeployment(object):
                                       rg_name,
                                       self.boot_disk,
                                       machine_type=machine_name,
-                                      password=self.password)
+                                      password=self.password,
+                                      ultra=self.ultra)
 
         logger.info(f"Attaching disk {self.swap_disk}")
         Instance(self.parameters).attach_disk(self.node_name, self.az_base.disk_caching(machine_ram), "1", swap_resource.id, rg_name)
