@@ -47,8 +47,10 @@ class CreateDebugPackage(object):
         logger.debug(f"Python version: {''.join(sys.version.splitlines())}")
         logger.debug(f"System: {platform.system()} Release: {platform.release()}")
 
-        self.file_list.append(('path', self.debug_file))
-        self.file_list.append(('path', self.crash_file))
+        if os.path.exists(self.debug_file):
+            self.file_list.append(('path', self.debug_file))
+        if os.path.exists(self.crash_file):
+            self.file_list.append(('path', self.crash_file))
 
         state_dir_listing = self.state_file_list()
         self.file_list.append(("state_dir_listing.log", state_dir_listing))
