@@ -6,6 +6,7 @@ import warnings
 import os
 import pytest
 from pathlib import Path
+from io import TextIOWrapper
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger()
@@ -14,6 +15,7 @@ ROOT_DIRECTORY = os.path.join(Path.home(), '.config', 'couch-formation')
 STATE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'state')
 LOG_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'log')
 FAILURE_LOG = 'failure.log'
+RESULTS_FILE: TextIOWrapper
 
 
 class CustomLogFormatter(logging.Formatter):
@@ -92,14 +94,23 @@ def pytest_configure():
 
 
 def pytest_sessionstart():
+    global RESULTS_FILE
+    RESULTS_FILE = open("results.log", "w")
     make_dir(LOG_DIRECTORY)
     if os.path.exists(FAILURE_LOG):
         open(FAILURE_LOG, 'w').close()
 
 
 def pytest_sessionfinish():
-    pass
+    global RESULTS_FILE
+    if RESULTS_FILE:
+        RESULTS_FILE.close()
+        RESULTS_FILE = None
 
 
 def pytest_unconfigure():
     pass
+
+
+def pytest_runtest_logreport(report):
+    RESULTS_FILE.write(f"{report.nodeid} {report.when} {report.outcome} {report.duration}\n")
