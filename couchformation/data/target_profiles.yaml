@@ -65,6 +65,7 @@ gcp:
       compose: null
   parameters:
     - region
+    - zone
     - auth_mode
     - profile
     - ssh_key
@@ -107,6 +108,7 @@ azure:
       compose: null
   parameters:
     - region
+    - zone
     - auth_mode
     - profile
     - ssh_key

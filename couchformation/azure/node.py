@@ -183,6 +183,11 @@ class AzureDeployment(object):
         nic_resource = Network(self.parameters).create_nic(self.node_nic, subnet['subnet_id'], subnet['zone'], pub_ip_resource.id, rg_name)
         self.state['node_nic'] = self.node_nic
 
+        if image['os_id'] == 'windows' and not self.state['host_password']:
+            self.state['host_password'] = self.password
+        elif self.state['host_password']:
+            self.password = self.state['host_password']
+
         logger.info(f"Creating node {self.node_name}")
         Instance(self.parameters).run(self.node_name,
                                       image['publisher'],
@@ -227,9 +232,6 @@ class AzureDeployment(object):
             PrivateDNS(self.parameters).add_record(self.az_network.private_zone, host_name, [self.state['private_ip']], rg_name)
             self.state['private_zone_id'] = self.az_network.private_zone
             self.state['private_hostname'] = host_name
-
-        if image['os_id'] == 'windows':
-            self.state['host_password'] = self.password
 
         logger.info(f"Created instance {self.node_name}")
         return self.state.as_dict
