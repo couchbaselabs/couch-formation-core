@@ -380,6 +380,27 @@ class Project(object):
             if MetadataManager(project).exists:
                 MetadataManager(project).print_services()
 
+    def project_cli(self):
+        base_path = get_base_dir()
+        for project in sorted(list(FileManager().list_dir(base_path))):
+            if project != self.options.project:
+                continue
+            if MetadataManager(project).exists:
+                MetadataManager(project).print_cli(self.options)
+
+    def service_edit(self):
+        logger.info(f"Editing service {self.options.name}")
+        profile = TargetProfile(self.remainder).get(self.cloud)
+        unsupported = profile.check_undefined_options()
+        if unsupported:
+            raise ProjectError(f"Unsupported parameters: {' '.join(unsupported)}")
+        base_path = get_base_dir()
+        for project in sorted(list(FileManager().list_dir(base_path))):
+            if project != self.options.project:
+                continue
+            if MetadataManager(project).exists:
+                MetadataManager(project).edit_service(self.options.name, self.options.group, profile.options)
+
     @property
     def location(self):
         return get_project_dir(self.options.project)

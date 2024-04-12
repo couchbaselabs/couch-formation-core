@@ -46,6 +46,8 @@ class CloudMgrCLI(CLI):
         command_subparser.add_parser('clean', help="Clean Project", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('list', help="Display Information", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('dump', help="Create Debug Bundle", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('show', help="Get Project CLI", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('edit', help="Edit Service Settings", parents=[opt_parser], add_help=False)
 
     def run(self):
         if not self.options.json:
@@ -95,6 +97,13 @@ class CloudMgrCLI(CLI):
             results = project.list(api=self.options.json)
             if self.options.json:
                 print(json.dumps(results, indent=2))
+        elif self.options.command == "show":
+            project.project_cli()
+        elif self.options.command == "edit":
+            if self.options.name is None:
+                logger.error("Missing required parameter: name")
+                return
+            project.service_edit()
 
         loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
         for log in loggers:

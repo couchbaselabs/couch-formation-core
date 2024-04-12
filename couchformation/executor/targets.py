@@ -46,6 +46,7 @@ class CloudProfile:
     node: Profile = attr.ib()
     parameters: Parameters = attr.ib()
     options: Optional[argparse.Namespace] = attr.ib(default=argparse.Namespace())
+    undefined: Optional[List[str]] = attr.ib(default=[])
 
     def check_required_options(self):
         missing = []
@@ -53,6 +54,9 @@ class CloudProfile:
             if opt not in self.options or getattr(self.options, opt) is None:
                 missing.append(opt)
         return missing
+
+    def check_undefined_options(self):
+        return self.undefined
 
 
 @attr.s
@@ -182,7 +186,7 @@ class TargetProfile(object):
         profile = self.config.get(cloud)
         if not profile:
             raise ValueError(f"Cloud {cloud} is not supported")
-        profile.options = self.initialize_args(self.options, profile.parameters.options, profile.parameters.boolean)
+        profile.options, profile.undefined = self.initialize_args(self.options, profile.parameters.options, profile.parameters.boolean)
         return profile
 
     def load_config(self):
@@ -227,7 +231,7 @@ class TargetProfile(object):
             else:
                 parser.add_argument(f"--{attribute}", action='store')
         options, undefined = parser.parse_known_args(args)
-        return options
+        return options, undefined
 
 
 class BuildProfile(object):

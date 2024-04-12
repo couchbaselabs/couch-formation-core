@@ -164,6 +164,66 @@ class MetadataManager(object):
                     quantity = group['quantity'] if 'quantity' in group and group['quantity'] is not None else 1
                     log.info(f"| +- [{n+1}] ({build}) {quantity}x {os_id} {machine_type} {region}")
 
+    def print_cli(self, options: argparse.Namespace):
+        log = logging.getLogger('minimum_output')
+        cloud_map = {}
+        for service, cloud in self.list_services():
+            cloud_map.setdefault(cloud, []).append(service)
+        for cloud in cloud_map.keys():
+            for service in cloud_map[cloud]:
+                log.info(f"[{service}]")
+                for n, group in enumerate(self.get_service_groups(service)):
+                    command = "create" if n == 0 else "add"
+                    out_line = f"cloudmgr {command} "
+                    for attribute in vars(options):
+                        if attribute == 'command' or attribute == 'group' or attribute == 'provisioner':
+                            continue
+                        if group.get(attribute):
+                            out_line += f"--{attribute} {group[attribute]} "
+                    for parameter in group:
+                        if parameter not in vars(options) and group[parameter] is not None:
+                            out_line += f"--{parameter} {group[parameter]} "
+                    log.info(out_line)
+
+    def print_service(self, name: str, options: argparse.Namespace):
+        log = logging.getLogger('minimum_output')
+        cloud_map = {}
+        for service, cloud in self.list_services():
+            cloud_map.setdefault(cloud, []).append(service)
+        for cloud in cloud_map.keys():
+            for service in cloud_map[cloud]:
+                if service != name:
+                    continue
+                log.info(f"[{service}]")
+                for n, group in enumerate(self.get_service_groups(service)):
+                    for key, value in group.items():
+                        if key not in vars(options):
+                            continue
+                        if value is not None:
+                            log.info(f"{key:<14}: {value}")
+
+    def edit_service(self, name: str, group: int, options: argparse.Namespace):
+        if len([attribute for attribute in vars(options) if getattr(options, attribute) is not None]) == 0:
+            raise DeploymentError(f"No parameters to edit for service {name}")
+        cloud_map = {}
+        for service, cloud in self.list_services():
+            cloud_map.setdefault(cloud, []).append(service)
+        for cloud in cloud_map.keys():
+            for service in cloud_map[cloud]:
+                if service != name:
+                    continue
+                filename = f"{service}.db"
+                service_filename = os.path.join(self.project_dir, filename)
+                db = KeyValueStore(service_filename)
+                document = f"{service}:{group:04d}"
+                db.document(document)
+                for attribute in vars(options):
+                    if getattr(options, attribute) is None:
+                        continue
+                    logger.info(f"Setting parameter {attribute} to \"{getattr(options, attribute)}\"")
+                    db[attribute] = getattr(options, attribute)
+        self.print_service(name, options)
+
 
 class BuildManager(object):
 
