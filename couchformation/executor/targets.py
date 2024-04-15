@@ -47,6 +47,7 @@ class CloudProfile:
     parameters: Parameters = attr.ib()
     options: Optional[argparse.Namespace] = attr.ib(default=argparse.Namespace())
     undefined: Optional[List[str]] = attr.ib(default=[])
+    parser: Optional[argparse.ArgumentParser] = attr.ib(default=argparse.ArgumentParser(add_help=False))
 
     def check_required_options(self):
         missing = []
@@ -57,6 +58,9 @@ class CloudProfile:
 
     def check_undefined_options(self):
         return self.undefined
+
+    def get_options(self):
+        return self.options
 
 
 @attr.s
@@ -186,7 +190,7 @@ class TargetProfile(object):
         profile = self.config.get(cloud)
         if not profile:
             raise ValueError(f"Cloud {cloud} is not supported")
-        profile.options, profile.undefined = self.initialize_args(self.options, profile.parameters.options, profile.parameters.boolean)
+        profile.options, profile.undefined, profile.parser = self.initialize_args(self.options, profile.parameters.options)
         return profile
 
     def load_config(self):
@@ -223,15 +227,17 @@ class TargetProfile(object):
         return driver, module, test
 
     @staticmethod
-    def initialize_args(args, parameters, boolean):
+    def initialize_args(args, parameters):
+        opt_struct = C.get_option_struct()
         parser = argparse.ArgumentParser(add_help=False)
         for attribute in parameters:
-            if attribute in boolean:
-                parser.add_argument(f"--{attribute}", action='store_true')
+            opt_settings = opt_struct.get(attribute)
+            if eval(opt_settings.type) is bool:
+                parser.add_argument(f"--{attribute}", action='store_true', help=opt_settings.help)
             else:
-                parser.add_argument(f"--{attribute}", action='store')
+                parser.add_argument(f"--{attribute}", action='store', type=eval(opt_settings.type), help=opt_settings.help)
         options, undefined = parser.parse_known_args(args)
-        return options, undefined
+        return options, undefined, parser
 
 
 class BuildProfile(object):

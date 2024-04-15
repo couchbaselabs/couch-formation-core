@@ -1,8 +1,11 @@
 ##
 ##
 
+import attr
 import multiprocessing
 import os
+import yaml
+from typing import List
 from couchformation import get_data_dir
 from pathlib import Path
 
@@ -19,6 +22,7 @@ STRATEGY_PROFILES = os.path.join(DATA_DIRECTORY, "strategy_profiles.yaml")
 CONTAINER_PROFILES = os.path.join(DATA_DIRECTORY, "container_profiles.yaml")
 CLOUD_PROFILES = os.path.join(DATA_DIRECTORY, "cloud_profiles.yaml")
 BUILD_PROFILES = os.path.join(DATA_DIRECTORY, "build_profiles.yaml")
+OPTION_HELP_PROFILE = os.path.join(DATA_DIRECTORY, "option_help.yaml")
 PLAYBOOK_DIR = os.path.join(DATA_DIRECTORY, "playbooks")
 
 METADATA = "metadata.db"
@@ -238,3 +242,30 @@ provisioners = {
         "post_provision": []
     }
 }
+
+
+@attr.s
+class CloudOption:
+    name: str = attr.ib()
+    type: str = attr.ib()
+    help: str = attr.ib()
+
+
+@attr.s
+class CloudOptionList:
+    options: List[CloudOption] = attr.ib()
+
+    def get(self, option: str) -> CloudOption:
+        return next((o for o in self.options if o.name == option), CloudOption(option, "str", "Check documentation for details"))
+
+
+def get_option_struct() -> CloudOptionList:
+    options = []
+    with open(OPTION_HELP_PROFILE, "r") as f:
+        try:
+            for option, settings in yaml.safe_load(f).items():
+                option_cfg = CloudOption(option, settings.get('type_class'), settings.get('help'))
+                options.append(option_cfg)
+            return CloudOptionList(options)
+        except yaml.YAMLError as err:
+            raise RuntimeError(f"Can not open target config file {OPTION_HELP_PROFILE}: {err}")

@@ -380,6 +380,16 @@ class Project(object):
             if MetadataManager(project).exists:
                 MetadataManager(project).print_services()
 
+    def project_show(self):
+        logger.info(f"Displaying project {self.options.project}")
+        profile = TargetProfile(self.remainder).get(self.cloud)
+        base_path = get_base_dir()
+        for project in sorted(list(FileManager().list_dir(base_path))):
+            if project != self.options.project:
+                continue
+            if MetadataManager(project).exists:
+                MetadataManager(project).print_project(profile.options)
+
     def project_cli(self):
         base_path = get_base_dir()
         for project in sorted(list(FileManager().list_dir(base_path))):
@@ -389,7 +399,7 @@ class Project(object):
                 MetadataManager(project).print_cli(self.options)
 
     def service_edit(self):
-        logger.info(f"Editing service {self.options.name}")
+        logger.info(f"Updating service {self.options.name}")
         profile = TargetProfile(self.remainder).get(self.cloud)
         unsupported = profile.check_undefined_options()
         if unsupported:
@@ -400,6 +410,11 @@ class Project(object):
                 continue
             if MetadataManager(project).exists:
                 MetadataManager(project).edit_service(self.options.name, self.options.group, profile.options)
+
+    def show_help(self):
+        profile = TargetProfile(self.remainder).get(self.cloud)
+        logger.info(f"Parameters for cloud \"{self.cloud}\":\n")
+        profile.parser.print_help()
 
     @property
     def location(self):

@@ -185,17 +185,18 @@ class MetadataManager(object):
                             out_line += f"--{parameter} {group[parameter]} "
                     log.info(out_line)
 
-    def print_service(self, name: str, options: argparse.Namespace):
+    def print_project(self, options: argparse.Namespace, name: str = None):
         log = logging.getLogger('minimum_output')
         cloud_map = {}
         for service, cloud in self.list_services():
             cloud_map.setdefault(cloud, []).append(service)
         for cloud in cloud_map.keys():
             for service in cloud_map[cloud]:
-                if service != name:
+                if name and service != name:
                     continue
-                log.info(f"[{service}]")
+                log.info(f"\n<Service: {service}>")
                 for n, group in enumerate(self.get_service_groups(service)):
+                    log.info(f"[{service}] Group: {n+1}")
                     for key, value in group.items():
                         if key not in vars(options):
                             continue
@@ -222,7 +223,7 @@ class MetadataManager(object):
                         continue
                     logger.info(f"Setting parameter {attribute} to \"{getattr(options, attribute)}\"")
                     db[attribute] = getattr(options, attribute)
-        self.print_service(name, options)
+        self.print_project(options, name)
 
 
 class BuildManager(object):

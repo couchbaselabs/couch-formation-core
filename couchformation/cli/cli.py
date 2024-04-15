@@ -6,6 +6,7 @@ import warnings
 import argparse
 import sys
 import os
+import re
 import signal
 import inspect
 import traceback
@@ -76,12 +77,17 @@ class CustomLogFormatter(logging.Formatter):
         logging.CRITICAL: f"{C.FORMAT_TIMESTAMP} [{C.FORMAT_LEVEL}] {C.FORMAT_MESSAGE}"
     }
 
+    @staticmethod
+    def _filter(s):
+        return re.sub(r'(\".*password\"\s*:\s*\").+?(\")', r'\1********\2', s)
+
     def format(self, record):
         log_fmt = self.FORMATS.get(record.levelno)
         if logging.DEBUG >= logging.root.level:
             log_fmt += C.FORMAT_EXTRA
         formatter = logging.Formatter(log_fmt)
-        return formatter.format(record)
+        original = formatter.format(record)
+        return self._filter(original)
 
 
 class StreamOutputLogger(object):

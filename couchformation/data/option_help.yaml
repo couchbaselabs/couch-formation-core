@@ -1,0 +1,88 @@
+---
+account_email:
+  type_class: str
+  help: GCP account email address
+allow:
+  type_class: str
+  help: Capella IP allow CIDR
+auth_mode:
+  type_class: str
+  helpo: Alternate cloud authentication method (cloud driver specific)
+cidr:
+  type_class: str
+  help: Network/VPC CIDR (CIDR will be automatically selected if omitted)
+dir_mount:
+  type_class: str
+  help: Directory to mount in a container
+domain:
+  type_class: str
+  help: DNS domain (enables DNS integration - domain must be setup in cloud provider)
+feature:
+  type_class: str
+  help: Feature selection (if supported - cloud and build specific)
+image:
+  type_class: str
+  help: Container image
+machine_type:
+  type_class: str
+  help: Cloud independent machine size CxM (CPUs + "x" + RAM in GiB) - e.g. 4x16
+os_arch:
+  type_class: str
+  help: Machine architecture (if supported - e.g. x86_64)
+os_id:
+  type_class: str
+  help: OS identifier (see documentation for OS support matrix)
+os_version:
+  type_class: str
+  help: OS version (see documentation for OS support matrix)
+password:
+  type_class: str
+  help: Password (if omitted required passwords will be auto generated)
+ports:
+  type_class: str
+  help: Ports to expose/open
+profile:
+  type_class: str
+  help: Authentication profile (varies by cloud)
+provider:
+  type_class: str
+  help: Capella cloud service provider string)
+quantity:
+  type_class: int
+  help: Quantity of nodes in service group
+region:
+  type_class: str
+  help: Cloud region (cloud specific)
+services:
+  type_class: str
+  help: Services to deploy (build specific)
+ssh_key:
+  type_class: str
+  help: SSH private key (required in most cases for CLI authentication)
+sw_version:
+  type_class: str
+  help: Software version to deploy (build specific)
+type:
+  type_class: str
+  help: Capella asset deployment type ("database" - default, or "mobile" for App Services)
+ultra:
+  type_class: bool
+  help: Boolean option to enable Ultra SSD (Azure only)
+upload:
+  type_class: str
+  help: File to upload to hosts (e.g. software rpm or dep if supported by build type)
+username:
+  type_class: str
+  help: User name (if supported)
+volume_iops:
+  type_class: int
+  help: Data volume IOPS (if supported - cloud specific)
+volume_size:
+  type_class: int
+  help: Data volume size (in GiB)
+volume_tier:
+  type_class: str
+  help: Volume tier (if supported - cloud specific)
+zone:
+  type_class: str
+  help: Cloud availability zone (must match region - naming is cloud specific)

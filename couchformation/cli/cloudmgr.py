@@ -45,9 +45,11 @@ class CloudMgrCLI(CLI):
         command_subparser.add_parser('remove', help="Remove Services", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('clean', help="Clean Project", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('list', help="Display Information", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('show', help="Show Project Information", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('dump', help="Create Debug Bundle", parents=[opt_parser], add_help=False)
-        command_subparser.add_parser('show', help="Get Project CLI", parents=[opt_parser], add_help=False)
-        command_subparser.add_parser('edit', help="Edit Service Settings", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('cli', help="Get Project Create CLI", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('update', help="Edit Service Settings", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('help', help="Show Supported Options", parents=[opt_parser], add_help=False)
 
     def run(self):
         if not self.options.json:
@@ -62,6 +64,13 @@ class CloudMgrCLI(CLI):
 
         if self.options.command == "list" and not self.options.project:
             Project(self.options, self.remainder).list_projects()
+            return
+
+        if self.options.command == "help":
+            logger.info("General parameters:\n")
+            self.parser.print_help()
+            print("")
+            Project(self.options, self.remainder).show_help()
             return
 
         if not self.options.command or not self.options.project:
@@ -98,8 +107,10 @@ class CloudMgrCLI(CLI):
             if self.options.json:
                 print(json.dumps(results, indent=2))
         elif self.options.command == "show":
+            project.project_show()
+        elif self.options.command == "cli":
             project.project_cli()
-        elif self.options.command == "edit":
+        elif self.options.command == "update":
             if self.options.name is None:
                 logger.error("Missing required parameter: name")
                 return
