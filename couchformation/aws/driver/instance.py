@@ -7,7 +7,7 @@ import re
 import time
 import botocore.exceptions
 from datetime import datetime, timezone
-from typing import Union
+from typing import Union, List
 from couchformation.aws.driver.base import CloudBase, AWSDriverError
 from couchformation.aws.driver.constants import AWSEbsDisk, AWSTagStruct, EbsVolume, AWSTag, PlacementType
 from couchformation.ssh import SSHUtil
@@ -37,7 +37,7 @@ class Instance(CloudBase):
             name: str,
             ami: str,
             ssh_key: str,
-            sg_id: str,
+            sg_list: Union[str, List[str]],
             subnet: str,
             zone: str,
             root_size=256,
@@ -78,6 +78,11 @@ class Instance(CloudBase):
         if enable_winrm:
             kwargs['UserData'] = WIN_USER_DATA
 
+        if type(sg_list) is str:
+            security_groups = [sg_list]
+        else:
+            security_groups = sg_list
+
         try:
             result = self.ec2_client.run_instances(BlockDeviceMappings=disk_list,
                                                    ImageId=ami,
@@ -85,7 +90,7 @@ class Instance(CloudBase):
                                                    KeyName=ssh_key,
                                                    MaxCount=1,
                                                    MinCount=1,
-                                                   SecurityGroupIds=[sg_id],
+                                                   SecurityGroupIds=security_groups,
                                                    SubnetId=subnet,
                                                    Placement=placement,
                                                    TagSpecifications=instance_tag,

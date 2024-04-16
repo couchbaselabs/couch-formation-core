@@ -7,6 +7,7 @@ from enum import Enum
 from pathlib import Path
 import attr
 import argparse
+import yaml
 import couchformation.constants as C
 
 
@@ -345,3 +346,73 @@ class NodeList:
 
     def ip_csv_list(self):
         return ','.join(self.list_private_ip())
+
+
+@attr.s
+class PortSettings:
+    build: Optional[str] = attr.ib(default=None)
+    tcp_ports: Optional[List[int]] = attr.ib(default=[])
+    udp_ports: Optional[List[int]] = attr.ib(default=[])
+
+    @classmethod
+    def create(cls, name: str, port_config: List[str]):
+        tcp_list = []
+        udp_list = []
+        tcp_ports = []
+        udp_ports = []
+        for spec in port_config:
+            port_spec = spec.split('/')
+            port_nums = port_spec[0]
+            if len(port_spec) > 1:
+                port_proto = port_spec[1]
+            else:
+                port_proto = 'tcp'
+            if port_proto == 'tcp':
+                tcp_list.append(port_nums)
+            else:
+                udp_list.append(port_nums)
+        for ports in tcp_list:
+            port_split = ports.split('-')
+            if len(port_split) > 1:
+                tcp_ports.extend(list(range(int(port_split[0]), int(port_split[1])+1)))
+            else:
+                tcp_ports.append(int(port_split[0]))
+        for ports in udp_list:
+            port_split = ports.split('-')
+            if len(port_split) > 1:
+                udp_ports.extend(list(range(int(port_split[0]), int(port_split[1])+1)))
+            else:
+                udp_ports.append(int(port_split[0]))
+        tcp_ports.sort()
+        udp_ports.sort()
+
+        return cls(
+            name,
+            tcp_ports,
+            udp_ports
+        )
+
+
+@attr.s
+class PortSettingSet:
+    config: Optional[List[PortSettings]] = attr.ib(default=[])
+
+    @classmethod
+    def create(cls):
+        profile = []
+        with open(C.NODE_PORT_PROFILE, "r") as f:
+            try:
+                for build, settings in yaml.safe_load(f).items():
+                    port_settings = PortSettings.create(build, settings.get('ports', []))
+                    profile.append(port_settings)
+                return cls(
+                    profile
+                )
+            except yaml.YAMLError as err:
+                raise RuntimeError(f"Can not open port config file {C.NODE_PORT_PROFILE}: {err}")
+
+    def get(self, name: str):
+        return next((o for o in self.config if o.build == name), None)
+
+    def items(self):
+        return self.config

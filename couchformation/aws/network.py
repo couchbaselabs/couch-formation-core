@@ -14,7 +14,7 @@ from couchformation.aws.driver.nsg import SecurityGroup
 from couchformation.aws.driver.route import RouteTable
 from couchformation.aws.driver.dns import DNS
 import couchformation.aws.driver.constants as C
-from couchformation.config import get_state_file, get_state_dir
+from couchformation.config import get_state_file, get_state_dir, PortSettingSet
 from couchformation.ssh import SSHUtil
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
@@ -40,6 +40,8 @@ class AWSNetwork(object):
         self.ssh_key = parameters.get('ssh_key')
         self.cloud = parameters.get('cloud')
         self.domain = parameters.get('domain')
+        self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
+        self.build_ports = PortSettingSet().create().items()
 
         filename = get_state_file(self.project, f"network-{self.region}")
 
@@ -83,6 +85,19 @@ class AWSNetwork(object):
             if result is None:
                 logger.warning(f"Removing stale state entry for security group {self.state['security_group_id']}")
                 del self.state['security_group_id']
+        for build_port_cfg in self.build_ports:
+            build_name = build_port_cfg.build
+            state_key_name = f"{build_name}_security_group_id"
+            if self.state.get(state_key_name):
+                result = SecurityGroup(self.parameters).details(self.state[state_key_name])
+                if result is None:
+                    logger.warning(f"Removing stale state entry for security group {self.state[state_key_name]}")
+                    del self.state[state_key_name]
+        if self.state.get('win_security_group_id'):
+            result = SecurityGroup(self.parameters).details(self.state['win_security_group_id'])
+            if result is None:
+                logger.warning(f"Removing stale state entry for security group {self.state['win_security_group_id']}")
+                del self.state['win_security_group_id']
         if self.state.get('vpc_id'):
             result = Network(self.parameters).details(self.state['vpc_id'])
             if result is None:
@@ -137,20 +152,31 @@ class AWSNetwork(object):
             if not self.state.get('security_group_id'):
                 sg_id = SecurityGroup(self.parameters).create(self.sg_name, f"Couch Formation project {self.project}", vpc_id)
                 SecurityGroup(self.parameters).add_ingress(sg_id, "-1", 0, 0, vpc_cidr)
-                SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 22, 22, "0.0.0.0/0")
-                SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 8091, 8097, "0.0.0.0/0")
-                SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 9123, 9123, "0.0.0.0/0")
-                SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 9140, 9140, "0.0.0.0/0")
-                SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 11210, 11210, "0.0.0.0/0")
-                SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 11280, 11280, "0.0.0.0/0")
-                SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 11207, 11207, "0.0.0.0/0")
-                SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 18091, 18097, "0.0.0.0/0")
-                SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 4984, 4986, "0.0.0.0/0")
-                SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 3389, 3389, "0.0.0.0/0")
-                SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 5985, 5985, "0.0.0.0/0")
-                SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 5986, 5986, "0.0.0.0/0")
+                SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 22, 22, self.allow)
                 self.state['security_group_id'] = sg_id
                 logger.info(f"Created security group {sg_id}")
+
+            for build_port_cfg in self.build_ports:
+                build_name = build_port_cfg.build
+                state_key_name = f"{build_name}_security_group_id"
+                build_sg_name = f"{self.project}-{build_name}-sg"
+                if not self.state.get(state_key_name):
+                    build_sg_id = SecurityGroup(self.parameters).create(build_sg_name, f"Couch Formation build type {build_name}", vpc_id)
+                    for tcp_port in build_port_cfg.tcp_ports:
+                        SecurityGroup(self.parameters).add_ingress(build_sg_id, "tcp", tcp_port, tcp_port, self.allow)
+                    for udp_port in build_port_cfg.udp_ports:
+                        SecurityGroup(self.parameters).add_ingress(build_sg_id, "udp", udp_port, udp_port, self.allow)
+                    self.state[state_key_name] = build_sg_id
+                    logger.info(f"Created {build_name} build security group {build_sg_id}")
+
+            if not self.state.get('win_security_group_id'):
+                win_sg_name = f"{self.project}-win-sg"
+                win_sg_id = SecurityGroup(self.parameters).create(win_sg_name, "Couch Formation Windows OS ports", vpc_id)
+                SecurityGroup(self.parameters).add_ingress(win_sg_id, "tcp", 3389, 3389, self.allow)
+                SecurityGroup(self.parameters).add_ingress(win_sg_id, "tcp", 5985, 5985, self.allow)
+                SecurityGroup(self.parameters).add_ingress(win_sg_id, "tcp", 5986, 5986, self.allow)
+                self.state['win_security_group_id'] = win_sg_id
+                logger.info(f"Created win security group {win_sg_id}")
 
             if not self.state.get('ssh_key'):
                 ssh_key_name = SSHKey(self.parameters).create(self.key_name, ssh_pub_key_text)
@@ -250,6 +276,21 @@ class AWSNetwork(object):
                 del self.state['security_group_id']
                 logger.info(f"Removing security group {sg_id}")
 
+            for build_port_cfg in self.build_ports:
+                build_name = build_port_cfg.build
+                state_key_name = f"{build_name}_security_group_id"
+                if self.state.get(state_key_name):
+                    sg_id = self.state.get(state_key_name)
+                    SecurityGroup(self.parameters).delete(sg_id)
+                    del self.state[state_key_name]
+                    logger.info(f"Removing security group {sg_id}")
+
+            if self.state.get('win_security_group_id'):
+                sg_id = self.state.get('win_security_group_id')
+                SecurityGroup(self.parameters).delete(sg_id)
+                del self.state['win_security_group_id']
+                logger.info(f"Removing security group {sg_id}")
+
             if self.state.get('vpc_id'):
                 vpc_id = self.state.get('vpc_id')
                 Network(self.parameters).delete(vpc_id)
@@ -314,6 +355,14 @@ class AWSNetwork(object):
     def security_group_id(self):
         return self.state.get('security_group_id')
 
+    def build_security_group_id(self, build_name: str):
+        state_key_name = f"{build_name}_security_group_id"
+        return self.state.get(state_key_name)
+
+    @property
+    def win_security_group_id(self):
+        return self.state.get('win_security_group_id')
+
     @property
     def zones(self):
         return self.state.list_get('zone')
@@ -329,6 +378,10 @@ class AWSNetwork(object):
     @property
     def private_zone(self):
         return self.state.get('private_hosted_zone')
+
+    @property
+    def vpc_id(self):
+        return self.state.get('vpc_id')
 
     def add_service(self, name):
         self.state.list_add('services', name)

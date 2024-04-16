@@ -12,8 +12,9 @@ from couchformation.aws.driver.instance import Instance
 from couchformation.aws.driver.base import CloudBase
 from couchformation.aws.driver.constants import aws_storage_matrix, aws_arch_matrix, PlacementType
 from couchformation.aws.driver.dns import DNS
+from couchformation.aws.driver.nsg import SecurityGroup
 from couchformation.aws.network import AWSNetwork
-from couchformation.config import get_state_file, get_state_dir
+from couchformation.config import get_state_file, get_state_dir, PortSettings, PortSettingSet
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import FileManager, Synchronize
@@ -33,6 +34,7 @@ class AWSDeployment(object):
         self.parameters = parameters
         self.name = parameters.get('name')
         self.project = parameters.get('project')
+        self.build = parameters.get('build')
         self.region = parameters.get('region')
         self.zone = parameters.get('zone')
         self.auth_mode = parameters.get('auth_mode')
@@ -45,11 +47,14 @@ class AWSDeployment(object):
         self.cloud = parameters.get('cloud')
         self.number = parameters.get('number')
         self.machine_type = parameters.get('machine_type')
+        self.ports = parameters.get('ports')
+        self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
         self.volume_size = parameters.get('volume_size') if parameters.get('volume_size') else "256"
         self.volume_iops = parameters.get('volume_iops') if parameters.get('volume_iops') \
             else next((aws_storage_matrix[s] for s in aws_storage_matrix if s >= int(self.volume_size)), "3000")
         self.services = parameters.get('services') if parameters.get('services') else "default"
         self.node_name = f"{self.name}-node-{self.number:02d}"
+        self.node_sg_name = f"{self.node_name}-port-sg"
 
         filename = get_state_file(self.project, self.name)
 
@@ -74,10 +79,16 @@ class AWSDeployment(object):
             if result is None:
                 logger.warning(f"Removing stale state entry for instance {self.state['instance_id']}")
                 del self.state['instance_id']
+        if self.state.get('node_security_group_id'):
+            result = SecurityGroup(self.parameters).details(self.state['node_security_group_id'])
+            if result is None:
+                logger.warning(f"Removing stale state entry for security group {self.state['node_security_group_id']}")
+                del self.state['node_security_group_id']
 
     def deploy(self):
         self.check_state()
         subnet_list = []
+        nsg_list = []
 
         if self.state.get('instance_id'):
             logger.info(f"Node {self.node_name} already exists")
@@ -85,6 +96,7 @@ class AWSDeployment(object):
 
         ssh_key_name = self.aws_network.ssh_key_id
         sg_id = self.aws_network.security_group_id
+        nsg_list.append(sg_id)
 
         for n, zone_state in enumerate(self.aws_network.zones):
             subnet_list.append(dict(
@@ -145,7 +157,32 @@ class AWSDeployment(object):
         else:
             host_id = None
 
+        if self.ports:
+            if not self.state.get('node_security_group_id'):
+                port_cfg = PortSettings().create(self.name, self.ports.split(','))
+                vpc_id = self.aws_network.vpc_id
+                port_sg_id = SecurityGroup(self.parameters).create(self.node_sg_name, f"Couch Formation node {self.node_name}", vpc_id)
+                for tcp_port in port_cfg.tcp_ports:
+                    SecurityGroup(self.parameters).add_ingress(port_sg_id, "tcp", tcp_port, tcp_port, self.allow)
+                for udp_port in port_cfg.udp_ports:
+                    SecurityGroup(self.parameters).add_ingress(port_sg_id, "udp", udp_port, udp_port, self.allow)
+                self.state['node_security_group_id'] = port_sg_id
+                logger.info(f"Created service port security group {port_sg_id}")
+            else:
+                port_sg_id = self.state.get('node_security_group_id')
+            logger.info(f"Assigning service port security group {port_sg_id}")
+            nsg_list.append(port_sg_id)
+
+        build_ports = PortSettingSet().create().get(self.build)
+        if build_ports:
+            build_sg_id = self.aws_network.build_security_group_id(self.build)
+            logger.info(f"Assigning build security group {build_sg_id}")
+            nsg_list.append(build_sg_id)
+
         if image['os_id'] == 'windows':
+            win_sg_id = self.aws_network.win_security_group_id
+            logger.info(f"Assigning windows security group {win_sg_id}")
+            nsg_list.append(win_sg_id)
             enable_winrm = True
         else:
             enable_winrm = False
@@ -154,7 +191,7 @@ class AWSDeployment(object):
         instance_id = Instance(self.parameters).run(self.node_name,
                                                     image['name'],
                                                     ssh_key_name,
-                                                    sg_id,
+                                                    nsg_list,
                                                     subnet['subnet_id'],
                                                     subnet['zone'],
                                                     swap_size=machine_ram,
@@ -215,17 +252,23 @@ class AWSDeployment(object):
         if self.state.get('instance_id'):
             instance_id = self.state['instance_id']
             Instance(self.parameters).terminate(instance_id)
-            if self.state.get('host_id'):
-                host_id = self.state.get('host_id')
-                host = Instance(self.parameters).get_host_by_id(host_id)
-                if host['age'] >= 24:
-                    Instance(self.parameters).release_host(host_id)
-                    del self.state['host_id']
-                else:
-                    logger.warning(f"Can not remove dedicated host {host_id} age {host['age']} hrs is less than 24")
-            self.state.clear()
-            self.aws_network.remove_service(self.node_name)
             logger.info(f"Removed instance {instance_id}")
+        if self.state.get('host_id'):
+            host_id = self.state.get('host_id')
+            host = Instance(self.parameters).get_host_by_id(host_id)
+            if host['age'] >= 24:
+                Instance(self.parameters).release_host(host_id)
+                del self.state['host_id']
+                logger.info(f"Released host {host_id}")
+            else:
+                logger.warning(f"Can not remove dedicated host {host_id} age {host['age']} hrs is less than 24")
+        if self.state.get('node_security_group_id'):
+            sg_id = self.state.get('node_security_group_id')
+            SecurityGroup(self.parameters).delete(sg_id)
+            del self.state['node_security_group_id']
+            logger.info(f"Removing security group {sg_id}")
+        self.state.clear()
+        self.aws_network.remove_service(self.node_name)
 
     def info(self):
         return self.state.as_dict

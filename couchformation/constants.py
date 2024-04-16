@@ -23,6 +23,7 @@ CONTAINER_PROFILES = os.path.join(DATA_DIRECTORY, "container_profiles.yaml")
 CLOUD_PROFILES = os.path.join(DATA_DIRECTORY, "cloud_profiles.yaml")
 BUILD_PROFILES = os.path.join(DATA_DIRECTORY, "build_profiles.yaml")
 OPTION_HELP_PROFILE = os.path.join(DATA_DIRECTORY, "option_help.yaml")
+NODE_PORT_PROFILE = os.path.join(DATA_DIRECTORY, "node_ports.yaml")
 PLAYBOOK_DIR = os.path.join(DATA_DIRECTORY, "playbooks")
 
 METADATA = "metadata.db"
