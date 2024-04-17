@@ -8,9 +8,7 @@ from couchformation.config import get_state_file, get_state_dir
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import FileManager, Synchronize
 from couchformation.capella.driver.cb_capella import Capella, CapellaCluster, AllowedCIDR, Credentials, AppService
-import couchformation.constants as C
 from couchformation.util import PasswordUtility
-
 
 logger = logging.getLogger('couchformation.capella.node')
 logger.addHandler(logging.NullHandler())
@@ -43,7 +41,7 @@ class CapellaDeployment(object):
         self.state_file = get_state_file(self.project, self.name)
         self.state_dir = get_state_dir(self.project, self.name)
 
-        with Synchronize(C.GLOBAL_LOCK):
+        with Synchronize():
             try:
                 FileManager().make_dir(self.state_dir)
             except Exception as err:

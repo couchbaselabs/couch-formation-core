@@ -9,15 +9,17 @@ import string
 import random
 import tarfile
 import hashlib
-from typing import Union, List
+import threading
+from typing import Union, List, Callable
 from uuid import UUID
 from shutil import copyfile
-from multiprocessing import Lock
+from functools import wraps
 from couchformation.provisioner.shell import RunShellCommand
 from couchformation.exception import FatalError
 
 logger = logging.getLogger('couchformation.util')
 logger.addHandler(logging.NullHandler())
+lock = threading.Lock()
 
 
 class FileManagerError(FatalError):
@@ -53,6 +55,16 @@ def progress_bar(iteration, total, decimals=1, length=100, fill='#', end="\r"):
     print(f'\rProgress: |{bar}| {percent}% Complete', end=end)
     if iteration == total:
         print()
+
+
+def synchronize() -> Callable:
+    def lock_handler(func):
+        @wraps(func)
+        def f_wrapper(*args, **kwargs):
+            with lock:
+                return func(*args, **kwargs)
+        return f_wrapper
+    return lock_handler
 
 
 class FileManager(object):
@@ -136,14 +148,14 @@ class UUIDGen(object):
 
 class Synchronize(object):
 
-    def __init__(self, lock: Lock):
-        self._lock = lock
+    def __init__(self):
+        pass
 
     def __enter__(self):
-        self._lock.acquire()
+        lock.acquire()
 
     def __exit__(self, *args):
-        self._lock.release()
+        lock.release()
 
 
 class PasswordUtility(object):

@@ -5,7 +5,6 @@ import os.path
 import re
 import logging
 import time
-import threading
 from itertools import cycle, islice
 from couchformation.aws.driver.image import Image
 from couchformation.aws.driver.machine import MachineType
@@ -19,11 +18,9 @@ from couchformation.config import get_state_file, get_state_dir, PortSettingSet
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import FileManager, Synchronize
-import couchformation.constants as C
 
 logger = logging.getLogger('couchformation.aws.node')
 logger.addHandler(logging.NullHandler())
-lock = threading.Lock()
 
 
 class AWSNodeError(FatalError):
@@ -61,7 +58,7 @@ class AWSDeployment(object):
 
         filename = get_state_file(self.project, self.name)
 
-        with Synchronize(C.GLOBAL_LOCK):
+        with Synchronize():
             try:
                 state_dir = get_state_dir(self.project, self.name)
                 if not os.path.exists(state_dir):
@@ -161,23 +158,20 @@ class AWSDeployment(object):
             host_id = None
 
         if self.ports:
-            with lock:
-                port_sg_id = self.aws_network.create_node_group_sg(self.name, self.group, self.ports.split(','))
-                logger.info(f"Assigning service group security group {port_sg_id}")
-                nsg_list.append(port_sg_id)
+            port_sg_id = self.aws_network.create_node_group_sg(self.name, self.group, self.ports.split(','))
+            logger.info(f"Assigning service group security group {port_sg_id}")
+            nsg_list.append(port_sg_id)
 
         build_ports = PortSettingSet().create().get(self.build)
         if build_ports:
-            with lock:
-                build_sg_id = self.aws_network.create_build_sg(self.build)
-                logger.info(f"Assigning build security group {build_sg_id}")
-                nsg_list.append(build_sg_id)
+            build_sg_id = self.aws_network.create_build_sg(self.build)
+            logger.info(f"Assigning build security group {build_sg_id}")
+            nsg_list.append(build_sg_id)
 
         if image['os_id'] == 'windows':
-            with lock:
-                win_sg_id = self.aws_network.create_win_sg()
-                logger.info(f"Assigning windows security group {win_sg_id}")
-                nsg_list.append(win_sg_id)
+            win_sg_id = self.aws_network.create_win_sg()
+            logger.info(f"Assigning windows security group {win_sg_id}")
+            nsg_list.append(win_sg_id)
             enable_winrm = True
         else:
             enable_winrm = False

@@ -19,7 +19,7 @@ from couchformation.config import get_state_file, get_state_dir, PortSettingSet,
 from couchformation.ssh import SSHUtil
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
-from couchformation.util import FileManager
+from couchformation.util import FileManager, synchronize
 
 logger = logging.getLogger('couchformation.aws.network')
 logger.addHandler(logging.NullHandler())
@@ -130,6 +130,7 @@ class AWSNetwork(object):
                 logger.warning(f"Removing stale state entry for private hosted domain {self.state['private_hosted_zone']}")
                 del self.state['private_hosted_zone']
 
+    @synchronize()
     def create_vpc(self):
         self.check_state()
         cidr_util = NetworkDriver()
@@ -232,6 +233,7 @@ class AWSNetwork(object):
         except Exception as err:
             raise AWSNetworkError(f"Error creating VPC: {err}")
 
+    @synchronize()
     def create_build_sg(self, build_name: str):
         vpc_id = self.vpc_id
         for build_port_cfg in self.build_ports:
@@ -251,6 +253,7 @@ class AWSNetwork(object):
                 build_sg_id = self.state.get(state_key_name)
             return build_sg_id
 
+    @synchronize()
     def create_win_sg(self):
         vpc_id = self.vpc_id
         if not self.state.get('win_security_group_id'):
@@ -265,6 +268,7 @@ class AWSNetwork(object):
             win_sg_id = self.state.get('win_security_group_id')
         return win_sg_id
 
+    @synchronize()
     def create_node_group_sg(self, service: str, group: int, ports: List[str]):
         vpc_id = self.vpc_id
         state_key_name = f"{service}_group_{group}_sg_id"
@@ -282,6 +286,7 @@ class AWSNetwork(object):
             port_sg_id = self.state.get(state_key_name)
         return port_sg_id
 
+    @synchronize()
     def destroy_vpc(self):
         if self.state.list_len('services') > 0:
             logger.info(f"Active services, leaving project network in place")

@@ -18,7 +18,6 @@ from couchformation.ssh import SSHUtil
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import FileManager, Synchronize
-import couchformation.constants as C
 from couchformation.util import PasswordUtility
 
 logger = logging.getLogger('couchformation.azure.node')
@@ -60,7 +59,7 @@ class AzureDeployment(object):
 
         filename = get_state_file(self.project, self.name)
 
-        with Synchronize(C.GLOBAL_LOCK):
+        with Synchronize():
             try:
                 state_dir = get_state_dir(self.project, self.name)
                 FileManager().make_dir(state_dir)

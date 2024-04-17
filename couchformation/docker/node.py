@@ -9,8 +9,6 @@ from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import FileManager, Synchronize
 from couchformation.network import NetworkUtil
-import couchformation.constants as C
-
 
 logger = logging.getLogger('couchformation.docker.node')
 logger.addHandler(logging.NullHandler())
@@ -35,7 +33,7 @@ class DockerDeployment(object):
 
         filename = get_state_file(self.project, self.name)
 
-        with Synchronize(C.GLOBAL_LOCK):
+        with Synchronize():
             try:
                 state_dir = get_state_dir(self.project, self.name)
                 FileManager().make_dir(state_dir)
