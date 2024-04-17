@@ -5,6 +5,7 @@ import os.path
 import re
 import logging
 import time
+import threading
 from itertools import cycle, islice
 from couchformation.aws.driver.image import Image
 from couchformation.aws.driver.machine import MachineType
@@ -22,6 +23,7 @@ import couchformation.constants as C
 
 logger = logging.getLogger('couchformation.aws.node')
 logger.addHandler(logging.NullHandler())
+lock = threading.Lock()
 
 
 class AWSNodeError(FatalError):
@@ -159,20 +161,23 @@ class AWSDeployment(object):
             host_id = None
 
         if self.ports:
-            port_sg_id = self.aws_network.create_node_group_sg(self.name, self.group, self.ports.split(','))
-            logger.info(f"Assigning service group security group {port_sg_id}")
-            nsg_list.append(port_sg_id)
+            with lock:
+                port_sg_id = self.aws_network.create_node_group_sg(self.name, self.group, self.ports.split(','))
+                logger.info(f"Assigning service group security group {port_sg_id}")
+                nsg_list.append(port_sg_id)
 
         build_ports = PortSettingSet().create().get(self.build)
         if build_ports:
-            build_sg_id = self.aws_network.create_build_sg(self.build)
-            logger.info(f"Assigning build security group {build_sg_id}")
-            nsg_list.append(build_sg_id)
+            with lock:
+                build_sg_id = self.aws_network.create_build_sg(self.build)
+                logger.info(f"Assigning build security group {build_sg_id}")
+                nsg_list.append(build_sg_id)
 
         if image['os_id'] == 'windows':
-            win_sg_id = self.aws_network.create_win_sg()
-            logger.info(f"Assigning windows security group {win_sg_id}")
-            nsg_list.append(win_sg_id)
+            with lock:
+                win_sg_id = self.aws_network.create_win_sg()
+                logger.info(f"Assigning windows security group {win_sg_id}")
+                nsg_list.append(win_sg_id)
             enable_winrm = True
         else:
             enable_winrm = False
