@@ -6,7 +6,7 @@ import warnings
 import json
 from overrides import override
 from couchformation.cli.cli import CLI
-import couchformation.kvdb as kvdb
+from couchformation.kvdb import KeyValueStore
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger()
@@ -20,15 +20,24 @@ class DBDumpCLI(CLI):
     @override()
     def local_args(self):
         self.parser.add_argument('-j', '--json', action='store_true', help="Output JSON")
+        self.parser.add_argument('-R', '--regexp', action='store', help="Regexp filter", default=".*")
+        self.parser.add_argument('-K', '--keyexp', action='store', help="Key regexp filter")
 
     def run(self):
         for file in self.remainder:
-            for doc in kvdb.documents(file):
+            db = KeyValueStore(file)
+            for doc in db.doc_id_match(self.options.regexp):
+                document = KeyValueStore(db.file_name, doc)
+                if len(document) == 0:
+                    continue
                 if self.options.json:
-                    print(json.dumps(doc.as_dict, indent=2))
+                    print(json.dumps(document.as_dict, indent=2))
+                elif self.options.keyexp:
+                    for value in document.key_match(self.options.keyexp):
+                        print(value)
                 else:
-                    print(f"Document: {doc.document_id}")
-                    for key, value in doc.items():
+                    print(f"Document: {doc}")
+                    for key, value in document.items():
                         if not key:
                             key = ""
                         print(f"{key:<12} = {value}")

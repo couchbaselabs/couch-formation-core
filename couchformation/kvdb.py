@@ -1,6 +1,7 @@
 ##
 ##
 
+import re
 import os
 import json
 import logging
@@ -33,6 +34,7 @@ class KeyValueStore(UserDict):
         self.tablename = tablename
         self.conn, self.cursor = self._connect()
         self._table(self.tablename)
+        self.conn.create_function('REGEXP', 2, lambda exp, item: re.search(exp, item) is not None)
 
     def _table(self, tablename):
         self.conn.execute(f"""CREATE TABLE IF NOT EXISTS \"{tablename}\" (key TEXT PRIMARY KEY, value BLOB)""")
@@ -214,6 +216,21 @@ class KeyValueStore(UserDict):
         self.cursor.execute(f"""SELECT name FROM sqlite_master WHERE type=\"table\" AND name LIKE '{text}%'""")
         res = self.cursor.fetchall()
         return [name[0] for name in res]
+
+    def doc_id_match(self, pattern):
+        self.cursor.execute(f"""SELECT name FROM sqlite_master WHERE type=\"table\" AND REGEXP(?, name)""", (pattern,))
+        res = self.cursor.fetchall()
+        return [name[0] for name in res]
+
+    def key_match(self, pattern):
+        self.cursor.execute(f"""SELECT key FROM \"{self.tablename}\" WHERE REGEXP(?, key)""", (pattern,))
+        res = self.cursor.fetchall()
+        return [value[0] for value in res]
+
+    def value_match(self, pattern):
+        self.cursor.execute(f"""SELECT value FROM \"{self.tablename}\" WHERE REGEXP(?, value)""", (pattern,))
+        res = self.cursor.fetchall()
+        return [value[0] for value in res]
 
     def document_exists(self, name):
         try:

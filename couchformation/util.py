@@ -8,6 +8,7 @@ import collections
 import string
 import random
 import tarfile
+import hashlib
 from typing import Union, List
 from uuid import UUID
 from shutil import copyfile
@@ -127,6 +128,10 @@ class UUIDGen(object):
     @property
     def uuid(self):
         return self._uuid
+
+    @staticmethod
+    def get_project_uid(project_name):
+        return hashlib.md5(f"{uuid.getnode()}-{project_name}".encode()).hexdigest()[:10]
 
 
 class Synchronize(object):

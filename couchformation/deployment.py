@@ -14,7 +14,7 @@ from couchformation.exception import FatalError
 from couchformation.config import BaseConfig, NodeConfig, Parameters, AuthMode, get_project_dir
 from couchformation.util import FileManager, dict_merge, dict_merge_not_none
 from couchformation.kvdb import KeyValueStore
-from couchformation.util import PasswordUtility
+from couchformation.util import PasswordUtility, UUIDGen
 
 DEPLOYMENT = "deployment.db"
 logger = logging.getLogger('couchformation.deployment')
@@ -337,6 +337,10 @@ class NodeGroup(object):
         self.net = KeyValueStore(network)
         self.meta = KeyValueStore(metadata)
         self.credentials = KeyValueStore(credentials)
+
+        self.meta.document('config')
+        if not self.meta['project_uid']:
+            self.meta['project_uid'] = UUIDGen().get_project_uid(self.project)
 
     def create_network(self, parameters: argparse.Namespace, region, group=1):
         document = f"network:{self.cloud}:{region}"

@@ -14,7 +14,7 @@ from couchformation.aws.driver.constants import aws_storage_matrix, aws_arch_mat
 from couchformation.aws.driver.dns import DNS
 from couchformation.aws.driver.nsg import SecurityGroup
 from couchformation.aws.network import AWSNetwork
-from couchformation.config import get_state_file, get_state_dir, PortSettings, PortSettingSet
+from couchformation.config import get_state_file, get_state_dir, PortSettingSet
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import FileManager, Synchronize
@@ -45,6 +45,7 @@ class AWSDeployment(object):
         self.os_arch = parameters.get('os_arch') if parameters.get('os_arch') else 'x86_64'
         self.feature = parameters.get('feature')
         self.cloud = parameters.get('cloud')
+        self.group = parameters.get('group')
         self.number = parameters.get('number')
         self.machine_type = parameters.get('machine_type')
         self.ports = parameters.get('ports')
@@ -158,29 +159,18 @@ class AWSDeployment(object):
             host_id = None
 
         if self.ports:
-            if not self.state.get('node_security_group_id'):
-                port_cfg = PortSettings().create(self.name, self.ports.split(','))
-                vpc_id = self.aws_network.vpc_id
-                port_sg_id = SecurityGroup(self.parameters).create(self.node_sg_name, f"Couch Formation node {self.node_name}", vpc_id)
-                for tcp_port in port_cfg.tcp_ports:
-                    SecurityGroup(self.parameters).add_ingress(port_sg_id, "tcp", tcp_port, tcp_port, self.allow)
-                for udp_port in port_cfg.udp_ports:
-                    SecurityGroup(self.parameters).add_ingress(port_sg_id, "udp", udp_port, udp_port, self.allow)
-                self.state['node_security_group_id'] = port_sg_id
-                logger.info(f"Created service port security group {port_sg_id}")
-            else:
-                port_sg_id = self.state.get('node_security_group_id')
-            logger.info(f"Assigning service port security group {port_sg_id}")
+            port_sg_id = self.aws_network.create_node_group_sg(self.name, self.group, self.ports.split(','))
+            logger.info(f"Assigning service group security group {port_sg_id}")
             nsg_list.append(port_sg_id)
 
         build_ports = PortSettingSet().create().get(self.build)
         if build_ports:
-            build_sg_id = self.aws_network.build_security_group_id(self.build)
+            build_sg_id = self.aws_network.create_build_sg(self.build)
             logger.info(f"Assigning build security group {build_sg_id}")
             nsg_list.append(build_sg_id)
 
         if image['os_id'] == 'windows':
-            win_sg_id = self.aws_network.win_security_group_id
+            win_sg_id = self.aws_network.create_win_sg()
             logger.info(f"Assigning windows security group {win_sg_id}")
             nsg_list.append(win_sg_id)
             enable_winrm = True
