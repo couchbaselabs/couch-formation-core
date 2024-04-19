@@ -255,7 +255,7 @@ class GCPNetwork(object):
     def create_node_group_sg(self, service: str, group: int, ports: List[str]):
         vpc_name = self.vpc_name
         state_key_name = f"firewall_{service}_group_{group}"
-        build_fw_name = f"firewall_{service}_group_{group}"
+        build_fw_name = f"{vpc_name}-fw-{service}-{group}"
         if not self.state.get(state_key_name):
             port_cfg = PortSettings().create(self.name, ports)
             tcp_port_list = [str(tcp_port) for tcp_port in port_cfg.tcp_ports]
