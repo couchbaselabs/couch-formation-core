@@ -99,6 +99,11 @@ class MachineType(CloudBase):
         machine_list = self.get_machine_types(architecture)
         return next((m for m in machine_list if m['machine_type'] == name), None)
 
+    def get_next_machine(self, name: str, architecture: str = 'x86_64'):
+        machine_list = self.get_machine_types(architecture)
+        index = next((i for (i, d) in enumerate(machine_list) if d['name'] == name), 0)
+        return machine_list[index + 1]
+
     def details(self, instance_type: str) -> dict:
         try:
             result = self.ec2_client.describe_instance_types(InstanceTypes=[instance_type])

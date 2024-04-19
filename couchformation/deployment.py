@@ -96,6 +96,12 @@ class MetadataManager(object):
         self.network = os.path.join(self.project_dir, C.NETWORK)
 
     @property
+    def project_uid(self):
+        meta = KeyValueStore(self.metadata)
+        meta.document('config')
+        return meta.get('project_uid')
+
+    @property
     def exists(self):
         return os.path.exists(self.metadata)
 
@@ -340,7 +346,10 @@ class NodeGroup(object):
 
         self.meta.document('config')
         if not self.meta['project_uid']:
-            self.meta['project_uid'] = UUIDGen().get_project_uid(self.project)
+            self.project_uid = UUIDGen().get_project_uid(self.project)
+            self.meta['project_uid'] = self.project_uid
+        else:
+            self.project_uid = self.meta['project_uid']
 
     def create_network(self, parameters: argparse.Namespace, region, group=1):
         document = f"network:{self.cloud}:{region}"

@@ -16,10 +16,11 @@ from couchformation.aws.driver.route import RouteTable
 from couchformation.aws.driver.dns import DNS
 import couchformation.aws.driver.constants as C
 from couchformation.config import get_state_file, get_state_dir, PortSettingSet, PortSettings
+from couchformation.deployment import MetadataManager
 from couchformation.ssh import SSHUtil
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
-from couchformation.util import FileManager, synchronize
+from couchformation.util import FileManager, synchronize, UUIDGen
 
 logger = logging.getLogger('couchformation.aws.network')
 logger.addHandler(logging.NullHandler())
@@ -58,11 +59,13 @@ class AWSNetwork(object):
 
         self.aws_network = Network(self.parameters)
 
-        self.vpc_name = f"{self.project}-vpc"
-        self.ig_name = f"{self.project}-gw"
-        self.rt_name = f"{self.project}-rt"
-        self.sg_name = f"{self.project}-sg"
-        self.key_name = f"{self.project}-key"
+        project_uid = MetadataManager(self.project).project_uid
+        self.asset_prefix = f"cf-{project_uid}"
+        self.vpc_name = f"{self.asset_prefix}-vpc"
+        self.ig_name = f"{self.asset_prefix}-gw"
+        self.rt_name = f"{self.asset_prefix}-rt"
+        self.sg_name = f"{self.asset_prefix}-sg"
+        self.key_name = f"{self.asset_prefix}-key"
 
     def check_state(self):
         for n, zone_state in reversed(list(enumerate(self.state.list_get('zone')))):
@@ -193,7 +196,7 @@ class AWSNetwork(object):
                     network_cidr = next(subnet_cycle)
                     if not self.state.list_exists('zone', network_cidr):
                         break
-                subnet_name = f"{self.project}-subnet-{n+1:02d}"
+                subnet_name = f"{self.asset_prefix}-subnet-{n+1:02d}"
                 subnet_id = Subnet(self.parameters).create(subnet_name, vpc_id, zone, network_cidr)
                 RouteTable(self.parameters).associate(rt_id, subnet_id)
                 self.state.list_add('zone', zone, network_cidr, subnet_id)
@@ -240,7 +243,7 @@ class AWSNetwork(object):
             if build_port_cfg.build != build_name:
                 continue
             state_key_name = f"{build_name}_security_group_id"
-            build_sg_name = f"{self.project}-{build_name}-sg"
+            build_sg_name = f"{self.asset_prefix}-{build_name}-sg"
             if not self.state.get(state_key_name):
                 build_sg_id = SecurityGroup(self.parameters).create(build_sg_name, f"Couch Formation build type {build_name}", vpc_id)
                 for tcp_port in build_port_cfg.tcp_ports:
@@ -257,7 +260,7 @@ class AWSNetwork(object):
     def create_win_sg(self):
         vpc_id = self.vpc_id
         if not self.state.get('win_security_group_id'):
-            win_sg_name = f"{self.project}-win-sg"
+            win_sg_name = f"{self.asset_prefix}-win-sg"
             win_sg_id = SecurityGroup(self.parameters).create(win_sg_name, "Couch Formation Windows OS ports", vpc_id)
             SecurityGroup(self.parameters).add_ingress(win_sg_id, "tcp", 3389, 3389, self.allow)
             SecurityGroup(self.parameters).add_ingress(win_sg_id, "tcp", 5985, 5985, self.allow)
@@ -272,7 +275,8 @@ class AWSNetwork(object):
     def create_node_group_sg(self, service: str, group: int, ports: List[str]):
         vpc_id = self.vpc_id
         state_key_name = f"{service}_group_{group}_sg_id"
-        build_sg_name = f"{service}-group-{group}-sg"
+        service_code = UUIDGen().text_hash(f"{service}-group-{group}")
+        build_sg_name = f"{self.asset_prefix}-{service_code}-sg"
         if not self.state.get(state_key_name):
             port_cfg = PortSettings().create(self.name, ports)
             port_sg_id = SecurityGroup(self.parameters).create(build_sg_name, f"Couch Formation service {service} group {group}", vpc_id)

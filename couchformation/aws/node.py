@@ -14,10 +14,11 @@ from couchformation.aws.driver.constants import aws_storage_matrix, aws_arch_mat
 from couchformation.aws.driver.dns import DNS
 from couchformation.aws.driver.nsg import SecurityGroup
 from couchformation.aws.network import AWSNetwork
+from couchformation.deployment import MetadataManager
 from couchformation.config import get_state_file, get_state_dir, PortSettingSet
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
-from couchformation.util import FileManager, Synchronize
+from couchformation.util import FileManager, Synchronize, UUIDGen
 
 logger = logging.getLogger('couchformation.aws.node')
 logger.addHandler(logging.NullHandler())
@@ -53,8 +54,12 @@ class AWSDeployment(object):
         self.volume_iops = parameters.get('volume_iops') if parameters.get('volume_iops') \
             else next((aws_storage_matrix[s] for s in aws_storage_matrix if s >= int(self.volume_size)), "3000")
         self.services = parameters.get('services') if parameters.get('services') else "default"
+
+        project_uid = MetadataManager(self.project).project_uid
+        self.asset_prefix = f"cf-{project_uid}"
         self.node_name = f"{self.name}-node-{self.number:02d}"
-        self.node_sg_name = f"{self.node_name}-port-sg"
+        node_code = UUIDGen().text_hash(self.node_name)
+        self.node_encoded = f"{self.asset_prefix}-{node_code}-node"
 
         filename = get_state_file(self.project, self.name)
 
@@ -177,7 +182,7 @@ class AWSDeployment(object):
             enable_winrm = False
 
         logger.info(f"Creating node {self.node_name}")
-        instance_id = Instance(self.parameters).run(self.node_name,
+        instance_id = Instance(self.parameters).run(self.node_encoded,
                                                     image['name'],
                                                     ssh_key_name,
                                                     nsg_list,
@@ -192,7 +197,7 @@ class AWSDeployment(object):
                                                     enable_winrm=enable_winrm)
 
         self.state['instance_id'] = instance_id
-        self.state['name'] = self.node_name
+        self.state['name'] = self.node_encoded
         self.state['services'] = services
         self.state['zone'] = subnet['zone']
         self.aws_network.add_service(self.node_name)

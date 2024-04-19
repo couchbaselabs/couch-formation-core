@@ -145,6 +145,10 @@ class UUIDGen(object):
     def get_project_uid(project_name):
         return hashlib.md5(f"{uuid.getnode()}-{project_name}".encode()).hexdigest()[:10]
 
+    @staticmethod
+    def text_hash(text):
+        return hashlib.md5(text.encode()).hexdigest()[:8]
+
 
 class Synchronize(object):
 
