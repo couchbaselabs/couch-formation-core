@@ -35,7 +35,7 @@ class Firewall(CloudBase):
         else:
             return firewall_list
 
-    def create_ingress(self, name: str, network: str, cidr: str, protocol: str, ports: Union[List[str], None] = None) -> str:
+    def create_ingress(self, name: str, network: str, cidr: str, protocol: str = "tcp", ports: Union[List[str], None] = None, udp_ports: Union[List[str], None] = None) -> str:
         operation = {}
         firewall_body = {
             "sourceRanges": [
@@ -53,6 +53,11 @@ class Firewall(CloudBase):
         if ports:
             firewall_body['allowed'][0]['ports'] = []
             firewall_body['allowed'][0]['ports'].extend(ports)
+        if udp_ports:
+            firewall_body['allowed'].append(dict(
+                IPProtocol="udp",
+                ports=udp_ports
+            ))
         try:
             request = self.gcp_client.firewalls().insert(project=self.gcp_project, body=firewall_body)
             operation = request.execute()

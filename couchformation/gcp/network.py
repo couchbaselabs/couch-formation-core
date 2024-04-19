@@ -6,17 +6,18 @@ import logging
 import random
 import string
 from itertools import cycle
+from typing import List
 from couchformation.network import NetworkDriver
 from couchformation.gcp.driver.network import Network, Subnet
 from couchformation.gcp.driver.firewall import Firewall
 from couchformation.gcp.driver.dns import DNS
 from couchformation.gcp.driver.base import CloudBase
 import couchformation.gcp.driver.constants as C
-from couchformation.config import get_state_file, get_state_dir
+from couchformation.config import get_state_file, get_state_dir, PortSettingSet, PortSettings
+from couchformation.deployment import MetadataManager
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
-from couchformation.util import FileManager
-
+from couchformation.util import FileManager, synchronize
 
 logger = logging.getLogger('couchformation.gcp.network')
 logger.addHandler(logging.NullHandler())
@@ -38,6 +39,8 @@ class GCPNetwork(object):
         self.ssh_key = parameters.get('ssh_key')
         self.cloud = parameters.get('cloud')
         self.domain = parameters.get('domain')
+        self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
+        self.build_ports = PortSettingSet().create().items()
 
         filename = get_state_file(self.project, f"network-{self.region}")
 
@@ -54,8 +57,10 @@ class GCPNetwork(object):
         self.gcp_network = Network(self.parameters)
         self.gcp_base = CloudBase(self.parameters)
 
-        self.vpc_name = f"{self.project}-vpc"
-        self.subnet_name = f"{self.project}-subnet-01"
+        project_uid = MetadataManager(self.project).project_uid
+        self.asset_prefix = f"cf-{project_uid}"
+        self.vpc_name = f"{self.asset_prefix}-vpc"
+        self.subnet_name = f"{self.asset_prefix}-subnet-01"
         self.firewall_default = f"{self.vpc_name}-fw-default"
         self.firewall_cbs = f"{self.vpc_name}-fw-cbs"
         self.firewall_ssh = f"{self.vpc_name}-fw-ssh"
@@ -106,6 +111,7 @@ class GCPNetwork(object):
                 logger.warning(f"Removing stale state entry for private managed zone {self.state['private_hosted_zone']}")
                 del self.state['private_hosted_zone']
 
+    @synchronize()
     def create_vpc(self):
         self.check_state()
         cidr_util = NetworkDriver()
@@ -217,6 +223,48 @@ class GCPNetwork(object):
         except Exception as err:
             raise GCPNetworkError(f"Error creating network: {err}")
 
+    @synchronize()
+    def create_build_sg(self, build_name: str):
+        vpc_name = self.vpc_name
+        for build_port_cfg in self.build_ports:
+            if build_port_cfg.build != build_name:
+                continue
+            state_key_name = f"firewall_{build_name}"
+            build_fw_name = f"{vpc_name}-fw-{build_name}"
+            if not self.state.get(state_key_name):
+                tcp_port_list = [str(tcp_port) for tcp_port in build_port_cfg.tcp_ports]
+                udp_port_list = [str(udp_port) for udp_port in build_port_cfg.udp_ports]
+                Firewall(self.parameters).create_ingress(build_fw_name, vpc_name, self.allow, ports=tcp_port_list, udp_ports=udp_port_list)
+                self.state[state_key_name] = build_fw_name
+                logger.info(f"Created firewall rule {build_fw_name}")
+
+    @synchronize()
+    def create_win_sg(self):
+        vpc_name = self.vpc_name
+        if not self.state.get('firewall_win'):
+            win_fw_name = f"{self.vpc_name}-fw-win"
+            Firewall(self.parameters).create_ingress(win_fw_name, vpc_name, self.allow, "tcp", [
+                "3389",
+                "5985",
+                "5986"
+            ])
+            self.state['firewall_win'] = win_fw_name
+            logger.info(f"Created firewall rule {win_fw_name}")
+
+    @synchronize()
+    def create_node_group_sg(self, service: str, group: int, ports: List[str]):
+        vpc_name = self.vpc_name
+        state_key_name = f"firewall_{service}_group_{group}"
+        build_fw_name = f"firewall_{service}_group_{group}"
+        if not self.state.get(state_key_name):
+            port_cfg = PortSettings().create(self.name, ports)
+            tcp_port_list = [str(tcp_port) for tcp_port in port_cfg.tcp_ports]
+            udp_port_list = [str(udp_port) for udp_port in port_cfg.udp_ports]
+            Firewall(self.parameters).create_ingress(build_fw_name, vpc_name, self.allow, ports=tcp_port_list, udp_ports=udp_port_list)
+            self.state[state_key_name] = build_fw_name
+            logger.info(f"Created firewall rule {build_fw_name}")
+
+    @synchronize()
     def destroy_vpc(self):
         if self.state.list_len('services') > 0:
             logger.info(f"Active services, leaving project network in place")
