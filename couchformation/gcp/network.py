@@ -67,21 +67,30 @@ class GCPNetwork(object):
         self.firewall_rdp = f"{self.vpc_name}-fw-rdp"
 
     def check_state(self):
-        if self.state.get('firewall_rdp'):
-            result = Firewall(self.parameters).details(self.state['firewall_rdp'])
+        if self.state.get('firewall_win'):
+            result = Firewall(self.parameters).details(self.state['firewall_win'])
             if result is None:
-                logger.warning(f"Removing stale state entry for firewall entry {self.state['firewall_rdp']}")
-                del self.state['firewall_rdp']
+                logger.warning(f"Removing stale state entry for firewall entry {self.state['firewall_win']}")
+                del self.state['firewall_win']
         if self.state.get('firewall_ssh'):
             result = Firewall(self.parameters).details(self.state['firewall_ssh'])
             if result is None:
                 logger.warning(f"Removing stale state entry for firewall entry {self.state['firewall_ssh']}")
                 del self.state['firewall_ssh']
-        if self.state.get('firewall_cbs'):
-            result = Firewall(self.parameters).details(self.state['firewall_cbs'])
-            if result is None:
-                logger.warning(f"Removing stale state entry for firewall entry {self.state['firewall_cbs']}")
-                del self.state['firewall_cbs']
+        for build_port_cfg in self.build_ports:
+            build_name = build_port_cfg.build
+            state_key_name = f"firewall_{build_name}"
+            if self.state.get(state_key_name):
+                result = Firewall(self.parameters).details(self.state[state_key_name])
+                if result is None:
+                    logger.warning(f"Removing stale state entry for firewall entry {self.state[state_key_name]}")
+                    del self.state[state_key_name]
+        for group_sg_key in self.state.key_match('firewall_.*_group_.*'):
+            if self.state.get(group_sg_key):
+                result = Firewall(self.parameters).details(self.state[group_sg_key])
+                if result is None:
+                    logger.warning(f"Removing stale state entry for firewall entry {self.state[group_sg_key]}")
+                    del self.state[group_sg_key]
         if self.state.get('firewall_default'):
             result = Firewall(self.parameters).details(self.state['firewall_default'])
             if result is None:
@@ -155,33 +164,10 @@ class GCPNetwork(object):
                 self.state['firewall_default'] = self.firewall_default
                 logger.info(f"Created firewall rule {self.firewall_default}")
 
-            if not self.state.get('firewall_cbs'):
-                Firewall(self.parameters).create_ingress(self.firewall_cbs, self.vpc_name, "0.0.0.0/0", "tcp", [
-                    "8091-8097",
-                    "9123",
-                    "9140",
-                    "11210",
-                    "11280",
-                    "11207",
-                    "18091-18097",
-                    "4984-4986"
-                ])
-                self.state['firewall_cbs'] = self.firewall_cbs
-                logger.info(f"Created firewall rule {self.firewall_cbs}")
-
             if not self.state.get('firewall_ssh'):
                 Firewall(self.parameters).create_ingress(self.firewall_ssh, self.vpc_name, "0.0.0.0/0", "tcp", ["22"])
                 self.state['firewall_ssh'] = self.firewall_ssh
                 logger.info(f"Created firewall rule {self.firewall_ssh}")
-
-            if not self.state.get('firewall_rdp'):
-                Firewall(self.parameters).create_ingress(self.firewall_rdp, self.vpc_name, "0.0.0.0/0", "tcp", [
-                    "3389",
-                    "5985",
-                    "5986"
-                ])
-                self.state['firewall_rdp'] = self.firewall_rdp
-                logger.info(f"Created firewall rule {self.firewall_rdp}")
 
             for n, zone in enumerate(zone_list):
                 if self.state.list_exists('zone', zone):
@@ -272,11 +258,11 @@ class GCPNetwork(object):
 
         try:
 
-            if self.state.get('firewall_rdp'):
-                firewall_rdp = self.state.get('firewall_rdp')
-                Firewall(self.parameters).delete(firewall_rdp)
-                del self.state['firewall_rdp']
-                logger.info(f"Removed firewall rule {firewall_rdp}")
+            if self.state.get('firewall_win'):
+                firewall_win = self.state.get('firewall_win')
+                Firewall(self.parameters).delete(firewall_win)
+                del self.state['firewall_win']
+                logger.info(f"Removed firewall rule {firewall_win}")
 
             if self.state.get('firewall_ssh'):
                 firewall_ssh = self.state.get('firewall_ssh')
@@ -284,11 +270,21 @@ class GCPNetwork(object):
                 del self.state['firewall_ssh']
                 logger.info(f"Removed firewall rule {firewall_ssh}")
 
-            if self.state.get('firewall_cbs'):
-                firewall_cbs = self.state.get('firewall_cbs')
-                Firewall(self.parameters).delete(firewall_cbs)
-                del self.state['firewall_cbs']
-                logger.info(f"Removed firewall rule {firewall_cbs}")
+            for build_port_cfg in self.build_ports:
+                build_name = build_port_cfg.build
+                state_key_name = f"firewall_{build_name}"
+                if self.state.get(state_key_name):
+                    firewall_rule = self.state.get(state_key_name)
+                    Firewall(self.parameters).delete(firewall_rule)
+                    del self.state[state_key_name]
+                    logger.info(f"Removing firewall rule {firewall_rule}")
+
+            for group_sg_key in self.state.key_match('firewall_.*_group_.*'):
+                if self.state.get(group_sg_key):
+                    firewall_rule = self.state.get(group_sg_key)
+                    Firewall(self.parameters).delete(firewall_rule)
+                    del self.state[group_sg_key]
+                    logger.info(f"Removing firewall rule {firewall_rule}")
 
             if self.state.get('firewall_default'):
                 firewall_default = self.state.get('firewall_default')

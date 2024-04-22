@@ -129,7 +129,7 @@ class TestMainGCP(unittest.TestCase):
         instance_link = Instance(self.parameters).run(node_name,
                                                       image['image_project'],
                                                       image['name'],
-                                                      base.gcp_account_email,
+                                                      base.service_account_email,
                                                       zone_list[0],
                                                       vpc_name,
                                                       subnet_name,

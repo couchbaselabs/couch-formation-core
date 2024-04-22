@@ -12,11 +12,12 @@ from couchformation.gcp.driver.disk import Disk
 from couchformation.gcp.driver.image import Image
 from couchformation.gcp.driver.dns import DNS
 from couchformation.gcp.network import GCPNetwork
-from couchformation.config import get_state_file, get_state_dir
+from couchformation.deployment import MetadataManager
+from couchformation.config import get_state_file, get_state_dir, PortSettingSet
 from couchformation.ssh import SSHUtil
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
-from couchformation.util import FileManager, Synchronize
+from couchformation.util import FileManager, Synchronize, UUIDGen
 
 logger = logging.getLogger('couchformation.gcp.node')
 logger.addHandler(logging.NullHandler())
@@ -32,6 +33,7 @@ class GCPDeployment(object):
         self.parameters = parameters
         self.name = parameters.get('name')
         self.project = parameters.get('project')
+        self.build = parameters.get('build')
         self.region = parameters.get('region')
         self.zone = parameters.get('zone')
         self.auth_mode = parameters.get('auth_mode')
@@ -41,13 +43,22 @@ class GCPDeployment(object):
         self.os_version = parameters.get('os_version')
         self.feature = parameters.get('feature')
         self.cloud = parameters.get('cloud')
+        self.group = parameters.get('group')
         self.number = parameters.get('number')
         self.machine_type = parameters.get('machine_type')
+        self.ports = parameters.get('ports')
         self.volume_size = parameters.get('volume_size') if parameters.get('volume_size') else "256"
         self.services = parameters.get('services') if parameters.get('services') else "default"
+
+        project_uid = MetadataManager(self.project).project_uid
+        self.asset_prefix = f"cf-{project_uid}"
         self.node_name = f"{self.name}-node-{self.number:02d}"
         self.swap_disk = f"{self.name}-swap-{self.number:02d}"
         self.data_disk = f"{self.name}-data-{self.number:02d}"
+        node_code = UUIDGen().text_hash(self.node_name)
+        self.node_encoded = f"{self.asset_prefix}-{node_code}-node"
+        self.swap_encoded = f"{self.asset_prefix}-{node_code}-swap"
+        self.data_encoded = f"{self.asset_prefix}-{node_code}-data"
 
         filename = get_state_file(self.project, self.name)
 
@@ -65,7 +76,8 @@ class GCPDeployment(object):
         self.gcp_base = CloudBase(self.parameters)
 
         self.gcp_project = self.gcp_base.gcp_project
-        self.gcp_account_email = self.gcp_base.gcp_account_email
+        self.service_account_email = self.gcp_base.service_account_email
+        self.account_email = self.gcp_base.account_email
 
     def check_state(self):
         if self.state.get('instance_id'):
@@ -140,40 +152,58 @@ class GCPDeployment(object):
         else:
             virtualization = False
 
-        Disk(self.parameters).create(self.swap_disk, subnet['zone'], machine_ram)
-        self.state['swap_disk'] = self.swap_disk
-        Disk(self.parameters).create(self.data_disk, subnet['zone'], volume_size)
-        self.state['data_disk'] = self.data_disk
+        if self.ports:
+            self.gcp_network.create_node_group_sg(self.name, self.group, self.ports.split(','))
+            logger.info("Requesting service group firewall rule")
 
-        logger.info(f"Creating node {self.node_name}")
-        Instance(self.parameters).run(self.node_name,
+        build_ports = PortSettingSet().create().get(self.build)
+        if build_ports:
+            self.gcp_network.create_build_sg(self.build)
+            logger.info(f"Requesting build {self.build} firewall rule")
+
+        if image['os_id'] == 'windows':
+            self.gcp_network.create_win_sg()
+            logger.info("Requesting windows firewall rule")
+
+        logger.info(f"Creating disk {self.swap_encoded} ({self.swap_disk})")
+        Disk(self.parameters).create(self.swap_encoded, subnet['zone'], machine_ram)
+        self.state['swap_disk'] = self.swap_encoded
+
+        logger.info(f"Creating disk {self.data_encoded} ({self.data_disk})")
+        Disk(self.parameters).create(self.data_encoded, subnet['zone'], volume_size)
+        self.state['data_disk'] = self.data_encoded
+
+        logger.info(f"Creating node {self.node_encoded} ({self.node_name})")
+        Instance(self.parameters).run(self.node_encoded,
                                       image['image_project'],
                                       image['name'],
-                                      self.gcp_base.gcp_account_email,
+                                      self.service_account_email,
                                       subnet['zone'],
                                       vpc_name,
                                       subnet_name,
                                       image['os_user'],
                                       ssh_pub_key_text,
-                                      self.swap_disk,
-                                      self.data_disk,
+                                      self.swap_encoded,
+                                      self.data_encoded,
                                       machine_type=machine_name,
                                       virtualization=virtualization)
 
-        self.state['instance_id'] = self.node_name
-        self.state['name'] = self.node_name
+        self.state['instance_id'] = self.node_encoded
+        self.state['name'] = self.node_encoded
         self.state['services'] = services
         self.state['zone'] = subnet['zone']
         self.gcp_network.add_service(self.node_name)
 
         while True:
             try:
-                instance_details = Instance(self.parameters).details(self.node_name, subnet['zone'])
+                instance_details = Instance(self.parameters).details(self.node_encoded, subnet['zone'])
                 self.state['public_ip'] = instance_details['networkInterfaces'][0]['accessConfigs'][0]['natIP']
                 self.state['private_ip'] = instance_details['networkInterfaces'][0]['networkIP']
                 break
             except KeyError:
                 time.sleep(1)
+            except TypeError:
+                raise GCPNodeError(f"Failed to properly start node {self.node_encoded} - try removing and recreating service")
 
         if self.gcp_network.public_zone and self.gcp_network.domain_name and not self.state.get('public_hostname'):
             host_name = f"{self.node_name}.{self.gcp_network.domain_name}"
@@ -189,13 +219,13 @@ class GCPDeployment(object):
 
         if image['os_id'] == 'windows':
             password = Instance(self.parameters).gen_password(image['os_user'],
-                                                              self.node_name,
+                                                              self.node_encoded,
                                                               subnet['zone'],
-                                                              self.gcp_base.gcp_account_email,
+                                                              self.account_email,
                                                               self.ssh_key)
             self.state['host_password'] = password
 
-        logger.info(f"Created instance {self.node_name}")
+        logger.info(f"Created instance {self.node_encoded}")
         return self.state.as_dict
 
     def destroy(self):

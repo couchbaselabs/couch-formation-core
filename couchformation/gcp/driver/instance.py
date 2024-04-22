@@ -27,7 +27,7 @@ class Instance(CloudBase):
             name: str,
             image_project: str,
             image_name: str,
-            sa_email,
+            sa_email: Union[str, None],
             zone: str,
             vpc: str,
             subnet: str,
@@ -53,14 +53,6 @@ class Instance(CloudBase):
                             "type": "ONE_TO_ONE_NAT",
                             "networkTier": "PREMIUM"
                         }
-                    ]
-                }
-            ],
-            "serviceAccounts": [
-                {
-                    "email": sa_email,
-                    "scopes": [
-                        "https://www.googleapis.com/auth/cloud-platform"
                     ]
                 }
             ],
@@ -97,6 +89,18 @@ class Instance(CloudBase):
                 "advancedMachineFeatures": {
                     "enableNestedVirtualization": True
                 }
+            })
+
+        if sa_email:
+            instance_body.update({
+                "serviceAccounts": [
+                    {
+                        "email": sa_email,
+                        "scopes": [
+                            "https://www.googleapis.com/auth/cloud-platform"
+                        ]
+                    }
+                ]
             })
 
         try:

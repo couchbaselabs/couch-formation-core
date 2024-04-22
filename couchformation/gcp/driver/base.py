@@ -1,16 +1,17 @@
 ##
 ##
+
 import os.path
 import socket
 import logging
 import json
 import time
+import base64
 import googleapiclient.discovery
 import googleapiclient.errors
-import google.oauth2.credentials
 import google.auth
+import google.auth.transport.requests
 from google.cloud import storage
-from google.cloud import dns
 from google.oauth2 import service_account
 from couchformation.config import AuthMode
 from couchformation.exception import FatalError, NonFatalError
@@ -43,25 +44,22 @@ class CloudBase(object):
         self.gcp_project = None
         self.gcp_region = None
         self.gcp_account_file = None
-        self.gcp_account_email = None
+        self._service_account_email = None
+        self._user_account_email = None
         self.gcp_zone_list = []
         self.gcp_zone = None
 
         socket.setdefaulttimeout(120)
 
         if not parameters.get('auth_mode') or AuthMode[parameters.get('auth_mode')] == AuthMode.default:
-            self.credentials, self.gcp_project, self.gcp_account_email = self.default_auth()
+            self.credentials, self.gcp_project, self._service_account_email, self._user_account_email = self.default_auth()
         elif AuthMode[parameters.get('auth_mode')] == AuthMode.file:
-            self.credentials, self.gcp_project, self.gcp_account_email = self.file_auth()
+            self.credentials, self.gcp_project, self._service_account_email = self.file_auth()
         else:
             raise GCPDriverError(f"Unsupported auth mode {parameters.get('auth_mode')}")
 
         self.gcp_client = googleapiclient.discovery.build('compute', 'v1', credentials=self.credentials)
         self.dns_client = googleapiclient.discovery.build('dns', 'v1', credentials=self.credentials)
-        # self.dns_client = dns.Client(project=self.gcp_project, credentials=self.credentials)
-
-        if not self.gcp_account_email:
-            raise GCPDriverError(f"can not determine account email")
 
         if not self.gcp_project:
             raise GCPDriverError(f"can not determine GCP project")
@@ -85,10 +83,24 @@ class CloudBase(object):
         try:
             credentials, project_id = google.auth.default()
             if hasattr(credentials, "service_account_email"):
-                account_email = credentials.service_account_email
+                service_account_email = credentials.service_account_email
+                account_email = None
+            elif hasattr(credentials, "signer_email"):
+                service_account_email = credentials.signer_email
+                account_email = None
             else:
-                account_email = credentials.signer_email
-            return credentials, project_id, account_email
+                service_account_email = None
+                request = google.auth.transport.requests.Request()
+                credentials.refresh(request=request)
+                token_payload = credentials.id_token.split('.')[1]
+                input_bytes = token_payload.encode('utf-8')
+                rem = len(input_bytes) % 4
+                if rem > 0:
+                    input_bytes += b"=" * (4 - rem)
+                json_data = base64.urlsafe_b64decode(input_bytes).decode('utf-8')
+                token_data = json.loads(json_data)
+                account_email = token_data.get('email')
+            return credentials, project_id, service_account_email, account_email
         except Exception as err:
             raise GCPDriverError(f"error connecting to GCP: {err}")
 
@@ -143,6 +155,18 @@ class CloudBase(object):
     @property
     def project(self):
         return self.gcp_project
+
+    @property
+    def service_account_email(self):
+        return self._service_account_email
+
+    @property
+    def login_account_email(self):
+        return self._user_account_email
+
+    @property
+    def account_email(self):
+        return self._service_account_email if self._service_account_email else self._user_account_email
 
     @staticmethod
     def process_labels(struct: dict) -> dict:
