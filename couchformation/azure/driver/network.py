@@ -2,6 +2,7 @@
 ##
 
 import logging
+import re
 from typing import Union, List
 from azure.core.exceptions import ResourceNotFoundError
 from couchformation.azure.driver.base import CloudBase, AzureDriverError, EmptyResultSet
@@ -294,11 +295,19 @@ class SecurityGroup(CloudBase):
                  ports: list,
                  priority: int,
                  resource_group: str,
+                 protocol: str = "Tcp",
                  source: Union[list, None] = None) -> None:
+        nsg_info = self.details(nsg_name, resource_group)
+        if not nsg_info:
+            raise AzureDriverError(f"can not find NSG {nsg_name} in {resource_group}")
         if source:
             default_source = None
         else:
             default_source = "*"
+        protocol = protocol.lower().capitalize()
+        if priority == 0:
+            count = len(nsg_info.get('rules', []))
+            priority = (count + 101)
         parameters = {
             "description": "Cloud Formation Managed",
             "access": "Allow",
@@ -306,7 +315,7 @@ class SecurityGroup(CloudBase):
             "destination_port_ranges": ports,
             "direction": "Inbound",
             "priority": priority,
-            "protocol": "Tcp",
+            "protocol": protocol,
             "source_address_prefix": default_source,
             "source_address_prefixes": source,
             "source_port_range": "*",
@@ -326,6 +335,16 @@ class SecurityGroup(CloudBase):
             return None
         except Exception as err:
             raise AzureDriverError(f"error getting network security group: {err}")
+
+    def search_rules(self, name: str, resource_group: str, pattern: str) -> List[dict]:
+        rules = []
+        nsg_info = self.details(name, resource_group)
+        if not nsg_info:
+            raise AzureDriverError(f"can not find NSG {name} in {resource_group}")
+        for rule in nsg_info.get('rules', []):
+            if re.search(pattern, rule['name']):
+                rules.append(rule)
+        return rules
 
     def details(self, name: str, resource_group: str) -> Union[dict, None]:
         try:

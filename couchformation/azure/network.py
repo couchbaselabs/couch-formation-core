@@ -6,16 +6,18 @@ import logging
 import random
 import string
 from itertools import cycle
+from typing import List
 from couchformation.network import NetworkDriver
 from couchformation.azure.driver.network import Network, Subnet, SecurityGroup
 from couchformation.azure.driver.base import CloudBase
 from couchformation.azure.driver.dns import DNS
 from couchformation.azure.driver.private_dns import PrivateDNS
 import couchformation.azure.driver.constants as C
-from couchformation.config import get_state_file, get_state_dir
+from couchformation.config import get_state_file, get_state_dir, PortSettingSet, PortSettings
+from couchformation.deployment import MetadataManager
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
-from couchformation.util import FileManager
+from couchformation.util import FileManager, synchronize
 
 
 logger = logging.getLogger('couchformation.azure.network')
@@ -38,6 +40,8 @@ class AzureNetwork(object):
         self.ssh_key = parameters.get('ssh_key')
         self.cloud = parameters.get('cloud')
         self.domain = parameters.get('domain')
+        self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
+        self.build_ports = PortSettingSet().create().items()
 
         filename = get_state_file(self.project, f"network-{self.region}")
 
@@ -54,11 +58,13 @@ class AzureNetwork(object):
         self.az_network = Network(self.parameters)
         self.az_base = CloudBase(self.parameters)
 
-        self.rg_name = f"{self.project}-rg"
-        self.vpc_name = f"{self.project}-vpc"
-        self.nsg_name = f"{self.project}-nsg"
-        self.subnet_name = f"{self.project}-subnet-01"
-        self.vnet_dns_link_name = f"{self.project}-dns-link"
+        project_uid = MetadataManager(self.project).project_uid
+        self.asset_prefix = f"cf-{project_uid}"
+        self.rg_name = f"{self.asset_prefix}-rg"
+        self.vpc_name = f"{self.asset_prefix}-vpc"
+        self.nsg_name = f"{self.asset_prefix}-nsg"
+        self.subnet_name = f"{self.asset_prefix}-subnet-01"
+        self.vnet_dns_link_name = f"{self.asset_prefix}-dns-link"
 
     def check_state(self):
         if self.state.get('resource_group'):
@@ -84,6 +90,11 @@ class AzureNetwork(object):
                 logger.warning(f"Removing stale state entry for security group {self.state['network_security_group']}")
                 del self.state['network_security_group']
                 del self.state['network_security_group_id']
+        for sg_rule_key in self.state.key_match('rule_.*'):
+            result = SecurityGroup(self.parameters).search_rules(self.state['network_security_group'], rg_name, self.state.get(sg_rule_key))
+            if result is None:
+                logger.warning(f"Removing stale state entry for security group rule {self.state[sg_rule_key]}")
+                del self.state[sg_rule_key]
         if self.state.get('network'):
             result = Network(self.parameters).details(self.state['network'], rg_name)
             if result is None:
@@ -113,6 +124,7 @@ class AzureNetwork(object):
                 del self.state['resource_group']
                 del self.state['zone']
 
+    @synchronize()
     def create_vpc(self):
         self.check_state()
         cidr_util = NetworkDriver()
@@ -150,23 +162,9 @@ class AzureNetwork(object):
                 nsg_resource = SecurityGroup(self.parameters).create(self.nsg_name, self.rg_name)
                 nsg_resource_id = nsg_resource.id
                 SecurityGroup(self.parameters).add_rule("AllowSSH", self.nsg_name, ["22"], 100, self.rg_name)
-                SecurityGroup(self.parameters).add_rule("AllowRDP", self.nsg_name, [
-                    "3389",
-                    "5985",
-                    "5986"
-                ], 101, self.rg_name)
-                SecurityGroup(self.parameters).add_rule("AllowCB", self.nsg_name, [
-                    "8091-8097",
-                    "9123",
-                    "9140",
-                    "11210",
-                    "11280",
-                    "11207",
-                    "18091-18097",
-                    "4984-4986"
-                ], 102, self.rg_name)
                 self.state['network_security_group'] = self.nsg_name
                 self.state['network_security_group_id'] = nsg_resource_id
+                logger.info(f"Created network security group {self.nsg_name}")
             else:
                 nsg_resource_id = self.state['network_security_group_id']
 
@@ -184,6 +182,7 @@ class AzureNetwork(object):
                 subnet_id = subnet_resource.id
                 self.state['subnet'] = self.subnet_name
                 self.state['subnet_id'] = subnet_id
+                logger.info(f"Created subnet {self.subnet_name}")
             else:
                 subnet_id = self.state['subnet_id']
                 self.subnet_name = self.state['subnet']
@@ -235,6 +234,53 @@ class AzureNetwork(object):
         except Exception as err:
             raise AzureNetworkError(f"Error creating network: {err}")
 
+    @synchronize()
+    def create_build_sg(self, build_name: str):
+        nsg_name = self.network_security_group
+        rg_name = self.resource_group
+        for build_port_cfg in self.build_ports:
+            if build_port_cfg.build != build_name:
+                continue
+            state_key_name = f"rule_{build_name}"
+            build_rule_name = f"Allow{build_name.upper()}"
+            if not self.state.get(state_key_name):
+                tcp_port_list = [str(tcp_port) for tcp_port in build_port_cfg.tcp_ports]
+                udp_port_list = [str(udp_port) for udp_port in build_port_cfg.udp_ports]
+                if len(tcp_port_list) > 0:
+                    SecurityGroup(self.parameters).add_rule(f"{build_rule_name}_TCP", nsg_name, tcp_port_list, 0, rg_name, "tcp")
+                if len(udp_port_list) > 0:
+                    SecurityGroup(self.parameters).add_rule(f"{build_rule_name}_UDP", nsg_name, udp_port_list, 0, rg_name, "udp")
+                self.state[state_key_name] = build_rule_name
+                logger.info(f"Added NSG rule {build_rule_name}")
+
+    @synchronize()
+    def create_win_sg(self):
+        nsg_name = self.network_security_group
+        rg_name = self.resource_group
+        if not self.state.get('rule_win_rdp'):
+            rule_name = "AllowRDP"
+            SecurityGroup(self.parameters).add_rule(rule_name, nsg_name, ["3389", "5985", "5986"], 0, rg_name, "tcp")
+            self.state['rule_win_rdp'] = rule_name
+            logger.info(f"Added NSG rule {rule_name}")
+
+    @synchronize()
+    def create_node_group_sg(self, service: str, group: int, ports: List[str]):
+        nsg_name = self.network_security_group
+        rg_name = self.resource_group
+        state_key_name = f"rule_{service}_group_{group}"
+        rule_name = f"Allow{service.upper()}{group:02d}"
+        if not self.state.get(state_key_name):
+            port_cfg = PortSettings().create(self.name, ports)
+            tcp_port_list = [str(tcp_port) for tcp_port in port_cfg.tcp_ports]
+            udp_port_list = [str(udp_port) for udp_port in port_cfg.udp_ports]
+            if len(tcp_port_list) > 0:
+                SecurityGroup(self.parameters).add_rule(f"{rule_name}_TCP", nsg_name, tcp_port_list, 0, rg_name, "tcp")
+            if len(udp_port_list) > 0:
+                SecurityGroup(self.parameters).add_rule(f"{rule_name}_UDP", nsg_name, udp_port_list, 0, rg_name, "udp")
+            self.state[state_key_name] = rule_name
+            logger.info(f"Added NSG rule {rule_name}")
+
+    @synchronize()
     def destroy_vpc(self):
         if self.state.list_len('services') > 0:
             logger.info(f"Active services, leaving project network in place")
@@ -270,6 +316,11 @@ class AzureNetwork(object):
                 del self.state['network_security_group']
                 del self.state['network_security_group_id']
                 logger.info(f"Removed network security group {nsg_name}")
+
+            for sg_rule_key in self.state.key_match('rule_.*'):
+                rule_name = self.state.get(sg_rule_key)
+                del self.state[sg_rule_key]
+                logger.info(f"Removed security group rule {rule_name}")
 
             for n, zone_state in reversed(list(enumerate(self.state.list_get('zone')))):
                 self.state.list_remove('zone', zone_state[0])
@@ -338,6 +389,10 @@ class AzureNetwork(object):
     @property
     def subnet(self):
         return self.state.get('subnet')
+
+    @property
+    def network_security_group(self):
+        return self.state.get('network_security_group')
 
     @property
     def resource_group(self):

@@ -13,11 +13,12 @@ from couchformation.azure.driver.image import Image
 from couchformation.azure.driver.dns import DNS
 from couchformation.azure.driver.private_dns import PrivateDNS
 from couchformation.azure.network import AzureNetwork
-from couchformation.config import get_state_file, get_state_dir
+from couchformation.deployment import MetadataManager
+from couchformation.config import get_state_file, get_state_dir, PortSettingSet
 from couchformation.ssh import SSHUtil
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
-from couchformation.util import FileManager, Synchronize
+from couchformation.util import FileManager, Synchronize, UUIDGen
 from couchformation.util import PasswordUtility
 
 logger = logging.getLogger('couchformation.azure.node')
@@ -34,6 +35,7 @@ class AzureDeployment(object):
         self.parameters = parameters
         self.name = parameters.get('name')
         self.project = parameters.get('project')
+        self.build = parameters.get('build')
         self.region = parameters.get('region')
         self.zone = parameters.get('zone')
         self.auth_mode = parameters.get('auth_mode')
@@ -43,19 +45,31 @@ class AzureDeployment(object):
         self.os_version = parameters.get('os_version')
         self.feature = parameters.get('feature')
         self.cloud = parameters.get('cloud')
+        self.group = parameters.get('group')
         self.number = parameters.get('number')
         self.machine_type = parameters.get('machine_type')
+        self.ports = parameters.get('ports')
         self.ultra = parameters.get('ultra') if parameters.get('ultra') else False
         self.password = parameters.get('password') if parameters.get('password') else PasswordUtility().generate(16)
         self.volume_size = parameters.get('volume_size') if parameters.get('volume_size') else "256"
         self.services = parameters.get('services') if parameters.get('services') else "default"
-        self.rg_name = f"{self.project}-rg"
+
+        project_uid = MetadataManager(self.project).project_uid
+        self.asset_prefix = f"cf-{project_uid}"
+        self.rg_name = f"{self.asset_prefix}-rg"
         self.node_name = f"{self.name}-node-{self.number:02d}"
         self.boot_disk = f"{self.name}-boot-{self.number:02d}"
         self.swap_disk = f"{self.name}-swap-{self.number:02d}"
         self.data_disk = f"{self.name}-data-{self.number:02d}"
         self.node_pub_ip = f"{self.name}-node-{self.number:02d}-pub-ip"
         self.node_nic = f"{self.name}-node-{self.number:02d}-nic"
+        node_code = UUIDGen().text_hash(self.node_name)
+        self.node_encoded = f"{self.asset_prefix}-{node_code}-node"
+        self.boot_encoded = f"{self.asset_prefix}-{node_code}-boot"
+        self.swap_encoded = f"{self.asset_prefix}-{node_code}-swap"
+        self.data_encoded = f"{self.asset_prefix}-{node_code}-data"
+        self.pub_ip_encoded = f"{self.asset_prefix}-{node_code}-pub-ip"
+        self.nic_encoded = f"{self.asset_prefix}-{node_code}-nic"
 
         filename = get_state_file(self.project, self.name)
 
@@ -166,29 +180,42 @@ class AzureDeployment(object):
         machine_ram = int(machine['memory'] / 1024)
         logger.info(f"Selecting machine type {machine_name}")
 
-        logger.info(f"Creating disk {self.swap_disk}")
-        swap_resource = Disk(self.parameters).create(rg_name, azure_location, subnet['zone'], machine_ram, self.swap_disk, self.ultra)
-        self.state['swap_disk'] = self.swap_disk
+        if self.ports:
+            self.az_network.create_node_group_sg(self.name, self.group, self.ports.split(','))
+            logger.info("Requesting service group firewall rule")
 
-        logger.info(f"Creating disk {self.data_disk}")
-        data_resource = Disk(self.parameters).create(rg_name, azure_location, subnet['zone'], volume_size, self.data_disk, self.ultra)
-        self.state['data_disk'] = self.data_disk
+        build_ports = PortSettingSet().create().get(self.build)
+        if build_ports:
+            self.az_network.create_build_sg(self.build)
+            logger.info(f"Requesting build {self.build} firewall rule")
 
-        logger.info(f"Creating public IP {self.node_pub_ip}")
-        pub_ip_resource = Network(self.parameters).create_pub_ip(self.node_pub_ip, rg_name)
-        self.state['node_pub_ip'] = self.node_pub_ip
+        if image['os_id'] == 'windows':
+            self.az_network.create_win_sg()
+            logger.info("Requesting windows firewall rule")
 
-        logger.info(f"Creating NIC {self.node_nic}")
-        nic_resource = Network(self.parameters).create_nic(self.node_nic, subnet['subnet_id'], subnet['zone'], pub_ip_resource.id, rg_name)
-        self.state['node_nic'] = self.node_nic
+        logger.info(f"Creating disk {self.swap_encoded} ({self.swap_disk})")
+        swap_resource = Disk(self.parameters).create(rg_name, azure_location, subnet['zone'], machine_ram, self.swap_encoded, self.ultra)
+        self.state['swap_disk'] = self.swap_encoded
+
+        logger.info(f"Creating disk {self.data_encoded} ({self.data_disk})")
+        data_resource = Disk(self.parameters).create(rg_name, azure_location, subnet['zone'], volume_size, self.data_encoded, self.ultra)
+        self.state['data_disk'] = self.data_encoded
+
+        logger.info(f"Creating public IP {self.pub_ip_encoded} ({self.node_pub_ip})")
+        pub_ip_resource = Network(self.parameters).create_pub_ip(self.pub_ip_encoded, rg_name)
+        self.state['node_pub_ip'] = self.pub_ip_encoded
+
+        logger.info(f"Creating NIC {self.nic_encoded} ({self.node_nic})")
+        nic_resource = Network(self.parameters).create_nic(self.nic_encoded, subnet['subnet_id'], subnet['zone'], pub_ip_resource.id, rg_name)
+        self.state['node_nic'] = self.nic_encoded
 
         if image['os_id'] == 'windows' and not self.state['host_password']:
             self.state['host_password'] = self.password
         elif self.state['host_password']:
             self.password = self.state['host_password']
 
-        logger.info(f"Creating node {self.node_name}")
-        Instance(self.parameters).run(self.node_name,
+        logger.info(f"Creating node {self.node_encoded} ({self.node_name})")
+        Instance(self.parameters).run(self.node_encoded,
                                       image['publisher'],
                                       image['offer'],
                                       image['sku'],
@@ -197,26 +224,26 @@ class AzureDeployment(object):
                                       image['os_user'],
                                       ssh_pub_key_text,
                                       rg_name,
-                                      self.boot_disk,
+                                      self.boot_encoded,
                                       machine_type=machine_name,
                                       password=self.password,
                                       ultra=self.ultra)
 
-        logger.info(f"Attaching disk {self.swap_disk}")
-        Instance(self.parameters).attach_disk(self.node_name, self.az_base.disk_caching(machine_ram, self.ultra), "1", swap_resource.id, rg_name)
-        logger.info(f"Attaching disk {self.data_disk}")
-        Instance(self.parameters).attach_disk(self.node_name, self.az_base.disk_caching(volume_size, self.ultra), "2", data_resource.id, rg_name)
+        logger.info(f"Attaching disk {self.swap_encoded}")
+        Instance(self.parameters).attach_disk(self.node_encoded, self.az_base.disk_caching(machine_ram, self.ultra), "1", swap_resource.id, rg_name)
+        logger.info(f"Attaching disk {self.data_encoded}")
+        Instance(self.parameters).attach_disk(self.node_encoded, self.az_base.disk_caching(volume_size, self.ultra), "2", data_resource.id, rg_name)
 
-        self.state['instance_id'] = self.node_name
-        self.state['name'] = self.node_name
+        self.state['instance_id'] = self.node_encoded
+        self.state['name'] = self.node_encoded
         self.state['services'] = services
         self.state['zone'] = subnet['zone']
         self.state['resource_group'] = rg_name
-        self.state['boot_disk'] = self.boot_disk
+        self.state['boot_disk'] = self.boot_encoded
         self.az_network.add_service(self.node_name)
 
-        nic_details = Network(self.parameters).describe_nic(self.node_nic, rg_name)
-        pub_ip_details = Network(self.parameters).describe_pub_ip(self.node_pub_ip, rg_name)
+        nic_details = Network(self.parameters).describe_nic(self.nic_encoded, rg_name)
+        pub_ip_details = Network(self.parameters).describe_pub_ip(self.pub_ip_encoded, rg_name)
         self.state['public_ip'] = pub_ip_details.ip_address
         self.state['private_ip'] = nic_details.ip_configurations[0].private_ip_address
 
@@ -252,15 +279,15 @@ class AzureDeployment(object):
             PrivateDNS(self.parameters).delete_record(domain_id, name, rg_name)
             logger.info(f"Deleted DNS record for {ip}")
         if not self.state.get('instance_id'):
-            result = Instance(self.parameters).details(self.node_name, rg_name)
+            result = Instance(self.parameters).details(self.node_encoded, rg_name)
             if result:
-                logger.warning(f"Found orphaned instance {self.node_name} - repairing configuration")
-                self.state['instance_id'] = self.node_name
+                logger.warning(f"Found orphaned instance {self.node_encoded} - repairing configuration")
+                self.state['instance_id'] = self.node_encoded
         if not self.state.get('boot_disk'):
-            result = Disk(self.parameters).details(self.boot_disk, rg_name)
+            result = Disk(self.parameters).details(self.boot_encoded, rg_name)
             if result:
-                logger.warning(f"Found orphaned boot disk {self.boot_disk} - repairing configuration")
-                self.state['boot_disk'] = self.boot_disk
+                logger.warning(f"Found orphaned boot disk {self.boot_encoded} - repairing configuration")
+                self.state['boot_disk'] = self.boot_encoded
         if self.state.get('instance_id'):
             instance_name = self.state['instance_id']
             node_nic = self.state['node_nic']
