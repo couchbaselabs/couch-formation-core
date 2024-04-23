@@ -55,10 +55,14 @@ class SecurityGroup(CloudBase):
         else:
             return sg_list
 
-    def create(self, name: str, description: str, vpc_id: str) -> str:
-        sg_tag = [AWSTagStruct.build("security-group").add(AWSTag("Name", name)).as_dict]
+    def create(self, name: str, description: str, vpc_id: str, tags: Union[dict, None] = None) -> str:
+        sg_tag = AWSTagStruct.build("security-group")
+        sg_tag.add(AWSTag("Name", name))
+        if tags:
+            for k, v in tags.items():
+                sg_tag.add(AWSTag(k, str(v)))
         try:
-            result = self.ec2_client.create_security_group(GroupName=name, Description=description, VpcId=vpc_id, TagSpecifications=sg_tag)
+            result = self.ec2_client.create_security_group(GroupName=name, Description=description, VpcId=vpc_id, TagSpecifications=[sg_tag.as_dict])
         except Exception as err:
             raise AWSDriverError(f"error creating security group: {err}")
 
@@ -109,6 +113,44 @@ class SecurityGroup(CloudBase):
         except Exception as err:
             raise AWSDriverError(f"error deleting security group: {err}")
 
+    def get(self, name: str):
+        get_filter = {
+            'Name': "tag:Name",
+            'Values': [
+                name,
+            ]
+        }
+        try:
+            result = self.ec2_client.describe_security_groups(Filters=[get_filter])
+            return result.get('SecurityGroups', [])[0]['GroupId']
+        except IndexError:
+            return None
+        except botocore.exceptions.ClientError as err:
+            if err.response['Error']['Code'].endswith('NotFound'):
+                return None
+            raise AWSDriverError(f"ClientError: {err}")
+        except Exception as err:
+            raise AWSDriverError(f"error getting security group details: {err}")
+
+    def search(self, name: str):
+        get_filter = {
+            'Name': "tag:Name",
+            'Values': [
+                name,
+            ]
+        }
+        try:
+            result = self.ec2_client.describe_security_groups(Filters=[get_filter])
+            return [dict({tag['Key']: tag['Value'] for tag in e.get('Tags', [])}, id=e.get('GroupId')) for e in result.get('SecurityGroups', [])]
+        except IndexError:
+            return None
+        except botocore.exceptions.ClientError as err:
+            if err.response['Error']['Code'].endswith('NotFound'):
+                return None
+            raise AWSDriverError(f"ClientError: {err}")
+        except Exception as err:
+            raise AWSDriverError(f"error getting security group details: {err}")
+
     def details(self, sg_id: str) -> Union[dict, None]:
         try:
             result = self.ec2_client.describe_security_groups(GroupIds=[sg_id])
@@ -125,4 +167,4 @@ class SecurityGroup(CloudBase):
                 return None
             raise AWSDriverError(f"ClientError: {err}")
         except Exception as err:
-            raise AWSDriverError(f"error getting Internet Gateway details: {err}")
+            raise AWSDriverError(f"error getting security group details: {err}")

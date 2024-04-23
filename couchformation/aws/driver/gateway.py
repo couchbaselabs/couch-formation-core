@@ -66,6 +66,25 @@ class InternetGateway(CloudBase):
         except Exception as err:
             raise AWSDriverError(f"error deleting Internet Gateway: {err}")
 
+    def get(self, name: str):
+        get_filter = {
+            'Name': "tag:Name",
+            'Values': [
+                name,
+            ]
+        }
+        try:
+            result = self.ec2_client.describe_internet_gateways(Filters=[get_filter])
+            return result.get('InternetGateways', [])[0]['InternetGatewayId']
+        except IndexError:
+            return None
+        except botocore.exceptions.ClientError as err:
+            if err.response['Error']['Code'].endswith('NotFound'):
+                return None
+            raise AWSDriverError(f"ClientError: {err}")
+        except Exception as err:
+            raise AWSDriverError(f"error getting Internet Gateway details: {err}")
+
     def details(self, ig_id: str) -> Union[dict, None]:
         try:
             result = self.ec2_client.describe_internet_gateways(InternetGatewayIds=[ig_id])

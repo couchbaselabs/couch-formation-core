@@ -244,12 +244,10 @@ class AzureNetwork(object):
             state_key_name = f"rule_{build_name}"
             build_rule_name = f"Allow{build_name.upper()}"
             if not self.state.get(state_key_name):
-                tcp_port_list = [str(tcp_port) for tcp_port in build_port_cfg.tcp_ports]
-                udp_port_list = [str(udp_port) for udp_port in build_port_cfg.udp_ports]
-                if len(tcp_port_list) > 0:
-                    SecurityGroup(self.parameters).add_rule(f"{build_rule_name}_TCP", nsg_name, tcp_port_list, 0, rg_name, "tcp")
-                if len(udp_port_list) > 0:
-                    SecurityGroup(self.parameters).add_rule(f"{build_rule_name}_UDP", nsg_name, udp_port_list, 0, rg_name, "udp")
+                if build_port_cfg.has_tcp_ports:
+                    SecurityGroup(self.parameters).add_rule(f"{build_rule_name}_TCP", nsg_name, list(build_port_cfg.tcp_as_ranges()), 0, rg_name, "tcp")
+                if build_port_cfg.has_udp_ports:
+                    SecurityGroup(self.parameters).add_rule(f"{build_rule_name}_UDP", nsg_name, list(build_port_cfg.udp_as_ranges()), 0, rg_name, "udp")
                 self.state[state_key_name] = build_rule_name
                 logger.info(f"Added NSG rule {build_rule_name}")
 
@@ -271,12 +269,10 @@ class AzureNetwork(object):
         rule_name = f"Allow{service.upper()}{group:02d}"
         if not self.state.get(state_key_name):
             port_cfg = PortSettings().create(self.name, ports)
-            tcp_port_list = [str(tcp_port) for tcp_port in port_cfg.tcp_ports]
-            udp_port_list = [str(udp_port) for udp_port in port_cfg.udp_ports]
-            if len(tcp_port_list) > 0:
-                SecurityGroup(self.parameters).add_rule(f"{rule_name}_TCP", nsg_name, tcp_port_list, 0, rg_name, "tcp")
-            if len(udp_port_list) > 0:
-                SecurityGroup(self.parameters).add_rule(f"{rule_name}_UDP", nsg_name, udp_port_list, 0, rg_name, "udp")
+            if port_cfg.has_tcp_ports:
+                SecurityGroup(self.parameters).add_rule(f"{rule_name}_TCP", nsg_name, list(port_cfg.tcp_as_ranges()), 0, rg_name, "tcp")
+            if port_cfg.has_udp_ports:
+                SecurityGroup(self.parameters).add_rule(f"{rule_name}_UDP", nsg_name, list(port_cfg.udp_as_ranges()), 0, rg_name, "udp")
             self.state[state_key_name] = rule_name
             logger.info(f"Added NSG rule {rule_name}")
 

@@ -218,9 +218,9 @@ class GCPNetwork(object):
             state_key_name = f"firewall_{build_name}"
             build_fw_name = f"{vpc_name}-fw-{build_name}"
             if not self.state.get(state_key_name):
-                tcp_port_list = [str(tcp_port) for tcp_port in build_port_cfg.tcp_ports]
-                udp_port_list = [str(udp_port) for udp_port in build_port_cfg.udp_ports]
-                Firewall(self.parameters).create_ingress(build_fw_name, vpc_name, self.allow, ports=tcp_port_list, udp_ports=udp_port_list)
+                Firewall(self.parameters).create_ingress(build_fw_name, vpc_name, self.allow,
+                                                         ports=list(build_port_cfg.tcp_as_ranges()),
+                                                         udp_ports=list(build_port_cfg.udp_as_ranges()))
                 self.state[state_key_name] = build_fw_name
                 logger.info(f"Created firewall rule {build_fw_name}")
 
@@ -244,9 +244,7 @@ class GCPNetwork(object):
         build_fw_name = f"{vpc_name}-fw-{service}-{group}"
         if not self.state.get(state_key_name):
             port_cfg = PortSettings().create(self.name, ports)
-            tcp_port_list = [str(tcp_port) for tcp_port in port_cfg.tcp_ports]
-            udp_port_list = [str(udp_port) for udp_port in port_cfg.udp_ports]
-            Firewall(self.parameters).create_ingress(build_fw_name, vpc_name, self.allow, ports=tcp_port_list, udp_ports=udp_port_list)
+            Firewall(self.parameters).create_ingress(build_fw_name, vpc_name, self.allow, ports=list(port_cfg.tcp_as_ranges()), udp_ports=list(port_cfg.udp_as_ranges()))
             self.state[state_key_name] = build_fw_name
             logger.info(f"Created firewall rule {build_fw_name}")
 

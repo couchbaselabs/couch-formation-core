@@ -74,34 +74,66 @@ class AWSNetwork(object):
             if result is None:
                 logger.warning(f"Removing stale state entry for subnet {subnet_id}")
                 self.state.list_remove('zone', zone_state[0])
+
         if self.state.get('route_table_id'):
             result = RouteTable(self.parameters).details(self.state['route_table_id'])
             if result is None:
                 logger.warning(f"Removing stale state entry for route table {self.state['route_table_id']}")
                 del self.state['route_table_id']
+        else:
+            result = RouteTable(self.parameters).get(self.rt_name)
+            if result:
+                logger.warning(f"Importing orphaned entry for route table {result}")
+                self.state['route_table_id'] = result
+
         if self.state.get('internet_gateway_id'):
             result = InternetGateway(self.parameters).details(self.state['internet_gateway_id'])
             if result is None:
                 logger.warning(f"Removing stale state entry for gateway {self.state['internet_gateway_id']}")
                 del self.state['internet_gateway_id']
+        else:
+            result = InternetGateway(self.parameters).get(self.ig_name)
+            if result:
+                logger.warning(f"Importing orphaned entry for internet gateway {result}")
+                self.state['internet_gateway_id'] = result
+
         if self.state.get('security_group_id'):
             result = SecurityGroup(self.parameters).details(self.state['security_group_id'])
             if result is None:
                 logger.warning(f"Removing stale state entry for security group {self.state['security_group_id']}")
                 del self.state['security_group_id']
+        else:
+            result = SecurityGroup(self.parameters).get(self.sg_name)
+            if result:
+                logger.warning(f"Importing orphaned entry for security group {result}")
+                self.state['security_group_id'] = result
+
         for build_port_cfg in self.build_ports:
             build_name = build_port_cfg.build
             state_key_name = f"{build_name}_security_group_id"
+            build_sg_name = f"{self.asset_prefix}-{build_name}-sg"
             if self.state.get(state_key_name):
                 result = SecurityGroup(self.parameters).details(self.state[state_key_name])
                 if result is None:
                     logger.warning(f"Removing stale state entry for security group {self.state[state_key_name]}")
                     del self.state[state_key_name]
+            else:
+                result = SecurityGroup(self.parameters).get(build_sg_name)
+                if result:
+                    logger.warning(f"Importing orphaned entry for security group {result}")
+                    self.state[state_key_name] = result
+
         if self.state.get('win_security_group_id'):
             result = SecurityGroup(self.parameters).details(self.state['win_security_group_id'])
             if result is None:
                 logger.warning(f"Removing stale state entry for security group {self.state['win_security_group_id']}")
                 del self.state['win_security_group_id']
+        else:
+            win_sg_name = f"{self.asset_prefix}-win-sg"
+            result = SecurityGroup(self.parameters).get(win_sg_name)
+            if result:
+                logger.warning(f"Importing orphaned entry for security group {result}")
+                self.state['win_security_group_id'] = result
 
         for group_sg_key in self.state.key_match('.*_group_.*_sg_id'):
             if self.state.get(group_sg_key):
@@ -109,6 +141,15 @@ class AWSNetwork(object):
                 if result is None:
                     logger.warning(f"Removing stale state entry for security group {self.state[group_sg_key]}")
                     del self.state[group_sg_key]
+
+        for n, sg_group in enumerate(SecurityGroup(self.parameters).search(f"{self.asset_prefix}-*-sg")):
+            sg_group_id = sg_group.get('id')
+            service = sg_group.get('Service', 'import')
+            group = sg_group.get('Group', n)
+            state_key_name = f"{service}_group_{group}_sg_id"
+            if not self.state.value_match(sg_group_id):
+                logger.warning(f"Importing orphaned entry for security group {sg_group_id}")
+                self.state[state_key_name] = sg_group_id
 
         if self.state.get('vpc_id'):
             result = Network(self.parameters).details(self.state['vpc_id'])
@@ -246,10 +287,10 @@ class AWSNetwork(object):
             build_sg_name = f"{self.asset_prefix}-{build_name}-sg"
             if not self.state.get(state_key_name):
                 build_sg_id = SecurityGroup(self.parameters).create(build_sg_name, f"Couch Formation build type {build_name}", vpc_id)
-                for tcp_port in build_port_cfg.tcp_ports:
-                    SecurityGroup(self.parameters).add_ingress(build_sg_id, "tcp", tcp_port, tcp_port, self.allow)
-                for udp_port in build_port_cfg.udp_ports:
-                    SecurityGroup(self.parameters).add_ingress(build_sg_id, "udp", udp_port, udp_port, self.allow)
+                for begin, end in build_port_cfg.tcp_as_tuple():
+                    SecurityGroup(self.parameters).add_ingress(build_sg_id, "tcp", begin, end, self.allow)
+                for begin, end in build_port_cfg.udp_as_tuple():
+                    SecurityGroup(self.parameters).add_ingress(build_sg_id, "udp", begin, end, self.allow)
                 self.state[state_key_name] = build_sg_id
                 logger.info(f"Created {build_name} build security group {build_sg_id}")
             else:
@@ -263,8 +304,7 @@ class AWSNetwork(object):
             win_sg_name = f"{self.asset_prefix}-win-sg"
             win_sg_id = SecurityGroup(self.parameters).create(win_sg_name, "Couch Formation Windows OS ports", vpc_id)
             SecurityGroup(self.parameters).add_ingress(win_sg_id, "tcp", 3389, 3389, self.allow)
-            SecurityGroup(self.parameters).add_ingress(win_sg_id, "tcp", 5985, 5985, self.allow)
-            SecurityGroup(self.parameters).add_ingress(win_sg_id, "tcp", 5986, 5986, self.allow)
+            SecurityGroup(self.parameters).add_ingress(win_sg_id, "tcp", 5985, 5986, self.allow)
             self.state['win_security_group_id'] = win_sg_id
             logger.info(f"Created win security group {win_sg_id}")
         else:
@@ -279,11 +319,12 @@ class AWSNetwork(object):
         build_sg_name = f"{self.asset_prefix}-{service_code}-sg"
         if not self.state.get(state_key_name):
             port_cfg = PortSettings().create(self.name, ports)
-            port_sg_id = SecurityGroup(self.parameters).create(build_sg_name, f"Couch Formation service {service} group {group}", vpc_id)
-            for tcp_port in port_cfg.tcp_ports:
-                SecurityGroup(self.parameters).add_ingress(port_sg_id, "tcp", tcp_port, tcp_port, self.allow)
-            for udp_port in port_cfg.udp_ports:
-                SecurityGroup(self.parameters).add_ingress(port_sg_id, "udp", udp_port, udp_port, self.allow)
+            tags = {'Service': service, 'Group': group}
+            port_sg_id = SecurityGroup(self.parameters).create(build_sg_name, f"Couch Formation service {service} group {group}", vpc_id, tags=tags)
+            for begin, end in port_cfg.tcp_as_tuple():
+                SecurityGroup(self.parameters).add_ingress(port_sg_id, "tcp", begin, end, self.allow)
+            for begin, end in port_cfg.udp_as_tuple():
+                SecurityGroup(self.parameters).add_ingress(port_sg_id, "udp", begin, end, self.allow)
             self.state[state_key_name] = port_sg_id
             logger.info(f"Created service group security group {port_sg_id}")
         else:
@@ -296,6 +337,7 @@ class AWSNetwork(object):
             logger.info(f"Active services, leaving project network in place")
             return
 
+        self.check_state()
         try:
 
             for n, zone_state in reversed(list(enumerate(self.state.list_get('zone')))):

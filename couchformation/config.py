@@ -8,6 +8,7 @@ from pathlib import Path
 import attr
 import argparse
 import yaml
+import itertools
 import couchformation.constants as C
 
 
@@ -391,6 +392,42 @@ class PortSettings:
             tcp_ports,
             udp_ports
         )
+
+    @property
+    def has_tcp_ports(self):
+        return len(self.tcp_ports) > 0
+
+    @property
+    def has_udp_ports(self):
+        return len(self.udp_ports) > 0
+
+    @staticmethod
+    def ranges(ports: List[int]):
+        for a, b in itertools.groupby(enumerate(ports), lambda pair: pair[1] - pair[0]):
+            b = list(b)
+            yield b[0][1], b[-1][1]
+
+    def tcp_as_tuple(self):
+        for begin, end in self.ranges(self.tcp_ports):
+            yield begin, end
+
+    def udp_as_tuple(self):
+        for begin, end in self.ranges(self.udp_ports):
+            yield begin, end
+
+    def tcp_as_ranges(self):
+        for begin, end in self.ranges(self.tcp_ports):
+            if begin < end:
+                yield f"{begin}-{end}"
+            else:
+                yield str(begin)
+
+    def udp_as_ranges(self):
+        for begin, end in self.ranges(self.udp_ports):
+            if begin < end:
+                yield f"{begin}-{end}"
+            else:
+                yield str(begin)
 
 
 @attr.s

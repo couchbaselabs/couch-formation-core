@@ -37,6 +37,7 @@ aws:
     - sw_version
     - upload
     - domain
+    - ports
   required:
     - region
     - ssh_key
@@ -80,6 +81,7 @@ gcp:
     - sw_version
     - upload
     - domain
+    - ports
   required:
     - region
     - ssh_key
@@ -126,6 +128,7 @@ azure:
     - sw_version
     - upload
     - domain
+    - ports
   required:
     - region
     - ssh_key

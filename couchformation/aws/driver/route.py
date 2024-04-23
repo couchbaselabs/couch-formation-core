@@ -64,6 +64,25 @@ class RouteTable(CloudBase):
         except Exception as err:
             raise AWSDriverError(f"error deleting Route Table: {err}")
 
+    def get(self, name: str):
+        get_filter = {
+            'Name': "tag:Name",
+            'Values': [
+                name,
+            ]
+        }
+        try:
+            result = self.ec2_client.describe_route_tables(Filters=[get_filter])
+            return result.get('RouteTables', [])[0]['RouteTableId']
+        except IndexError:
+            return None
+        except botocore.exceptions.ClientError as err:
+            if err.response['Error']['Code'].endswith('NotFound'):
+                return None
+            raise AWSDriverError(f"ClientError: {err}")
+        except Exception as err:
+            raise AWSDriverError(f"error getting Route Table details: {err}")
+
     def details(self, rt_id: str) -> Union[dict, None]:
         try:
             result = self.ec2_client.describe_route_tables(RouteTableIds=[rt_id])
