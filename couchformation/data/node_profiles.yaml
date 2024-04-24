@@ -21,6 +21,14 @@ generic:
       - macos
     commands:
       - bundlemgr -b Base
+database:
+  - provisioner: remote
+    root: true
+    exclude:
+      - windows
+      - macos
+    commands:
+      - bundlemgr -b GenDBNode
 windev:
   - provisioner: winrm
     root: true

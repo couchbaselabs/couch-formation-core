@@ -5,6 +5,8 @@ sgw:
   deployer: node
 generic:
   deployer: node
+database:
+  deployer: node
 windev:
   deployer: node
 winsql:
