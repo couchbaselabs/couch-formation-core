@@ -1,6 +1,7 @@
 ##
 ##
 
+import re
 import os
 import logging
 import random
@@ -62,9 +63,8 @@ class GCPNetwork(object):
         self.vpc_name = f"{self.asset_prefix}-vpc"
         self.subnet_name = f"{self.asset_prefix}-subnet-01"
         self.firewall_default = f"{self.vpc_name}-fw-default"
-        self.firewall_cbs = f"{self.vpc_name}-fw-cbs"
         self.firewall_ssh = f"{self.vpc_name}-fw-ssh"
-        self.firewall_rdp = f"{self.vpc_name}-fw-rdp"
+        self.firewall_win = f"{self.vpc_name}-fw-win"
 
     def check_state(self):
         if self.state.get('firewall_win'):
@@ -72,36 +72,75 @@ class GCPNetwork(object):
             if result is None:
                 logger.warning(f"Removing stale state entry for firewall entry {self.state['firewall_win']}")
                 del self.state['firewall_win']
+        else:
+            result = Firewall(self.parameters).details(self.firewall_win)
+            if result:
+                logger.warning(f"Importing orphaned entry for firewall rule {result}")
+                self.state['firewall_win'] = self.firewall_win
+
         if self.state.get('firewall_ssh'):
             result = Firewall(self.parameters).details(self.state['firewall_ssh'])
             if result is None:
                 logger.warning(f"Removing stale state entry for firewall entry {self.state['firewall_ssh']}")
                 del self.state['firewall_ssh']
+        else:
+            result = Firewall(self.parameters).details(self.firewall_ssh)
+            if result:
+                logger.warning(f"Importing orphaned entry for firewall rule {result}")
+                self.state['firewall_ssh'] = self.firewall_ssh
+
         for build_port_cfg in self.build_ports:
             build_name = build_port_cfg.build
             state_key_name = f"firewall_{build_name}"
+            build_fw_name = f"{self.vpc_name}-fw-{build_name}"
             if self.state.get(state_key_name):
                 result = Firewall(self.parameters).details(self.state[state_key_name])
                 if result is None:
                     logger.warning(f"Removing stale state entry for firewall entry {self.state[state_key_name]}")
                     del self.state[state_key_name]
+            else:
+                result = Firewall(self.parameters).details(build_fw_name)
+                if result:
+                    logger.warning(f"Importing orphaned entry for firewall rule {result}")
+                    self.state[state_key_name] = build_fw_name
+
         for group_sg_key in self.state.key_match('firewall_.*_group_.*'):
             if self.state.get(group_sg_key):
                 result = Firewall(self.parameters).details(self.state[group_sg_key])
                 if result is None:
                     logger.warning(f"Removing stale state entry for firewall entry {self.state[group_sg_key]}")
                     del self.state[group_sg_key]
+        for fw_entry in Firewall(self.parameters).search(f"{self.vpc_name}-fw-.*-[0-9]*"):
+            m = re.search(f"{self.vpc_name}-fw-(.+?)-(.+?)", fw_entry['name'])
+            state_key_name = f"firewall_{m.group(1)}_group_{m.group(2)}"
+            if not self.state.get(state_key_name):
+                logger.warning(f"Importing orphaned entry for firewall rule {fw_entry['name']}")
+                self.state[state_key_name] = fw_entry['name']
+
         if self.state.get('firewall_default'):
             result = Firewall(self.parameters).details(self.state['firewall_default'])
             if result is None:
                 logger.warning(f"Removing stale state entry for firewall entry {self.state['firewall_default']}")
                 del self.state['firewall_default']
+        else:
+            result = Firewall(self.parameters).details(self.firewall_default)
+            if result:
+                logger.warning(f"Importing orphaned entry for firewall rule {result}")
+                self.state['firewall_default'] = self.firewall_default
+
         if self.state.get('subnet'):
             result = Subnet(self.parameters).details(self.state['subnet'])
             if result is None:
                 logger.warning(f"Removing stale state entry for subnet {self.state['subnet']}")
                 del self.state['subnet']
                 del self.state['subnet_cidr']
+        else:
+            result = Subnet(self.parameters).details(self.subnet_name)
+            if result:
+                logger.warning(f"Importing orphaned entry for subnet {result}")
+                self.state['subnet'] = self.subnet_name
+                self.state['subnet_cidr'] = result['cidr']
+
         if self.state.get('network'):
             result = Network(self.parameters).details(self.state['network'])
             if result is None:
@@ -109,11 +148,19 @@ class GCPNetwork(object):
                 del self.state['network']
                 del self.state['network_cidr']
                 del self.state['zone']
+        else:
+            result = Network(self.parameters).details(self.vpc_name)
+            if result:
+                logger.warning(f"Importing orphaned entry for network {result}")
+                self.state['network'] = self.vpc_name
+                self.state['network_link'] = result['selfLink']
+
         if self.state.get('public_hosted_zone'):
             result = DNS(self.parameters).details(self.state['public_hosted_zone'])
             if result is None:
                 logger.warning(f"Removing stale state entry for public managed zone {self.state['public_hosted_zone']}")
                 del self.state['public_hosted_zone']
+
         if self.state.get('private_hosted_zone'):
             result = DNS(self.parameters).details(self.state['private_hosted_zone'])
             if result is None:
@@ -254,6 +301,7 @@ class GCPNetwork(object):
             logger.info(f"Active services, leaving project network in place")
             return
 
+        self.check_state()
         try:
 
             if self.state.get('firewall_win'):

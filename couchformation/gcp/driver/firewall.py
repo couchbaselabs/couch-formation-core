@@ -1,6 +1,7 @@
 ##
 ##
 
+import re
 import logging
 from typing import List, Union
 import googleapiclient.errors
@@ -34,6 +35,13 @@ class Firewall(CloudBase):
             raise EmptyResultSet(f"no firewalls found")
         else:
             return firewall_list
+
+    def search(self, pattern: str) -> List[dict]:
+        firewall_list = []
+        for entry in self.list():
+            if re.search(pattern, entry['name']):
+                firewall_list.append(entry)
+        return firewall_list
 
     def create_ingress(self, name: str, network: str, cidr: str, protocol: str = "tcp", ports: Union[List[str], None] = None, udp_ports: Union[List[str], None] = None) -> str:
         operation = {}
