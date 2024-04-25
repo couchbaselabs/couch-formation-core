@@ -75,7 +75,7 @@ class GCPNetwork(object):
         else:
             result = Firewall(self.parameters).details(self.firewall_win)
             if result:
-                logger.warning(f"Importing orphaned entry for firewall rule {result}")
+                logger.warning(f"Importing orphaned entry for firewall rule {self.firewall_win}")
                 self.state['firewall_win'] = self.firewall_win
 
         if self.state.get('firewall_ssh'):
@@ -86,7 +86,7 @@ class GCPNetwork(object):
         else:
             result = Firewall(self.parameters).details(self.firewall_ssh)
             if result:
-                logger.warning(f"Importing orphaned entry for firewall rule {result}")
+                logger.warning(f"Importing orphaned entry for firewall rule {self.firewall_ssh}")
                 self.state['firewall_ssh'] = self.firewall_ssh
 
         for build_port_cfg in self.build_ports:
@@ -101,7 +101,7 @@ class GCPNetwork(object):
             else:
                 result = Firewall(self.parameters).details(build_fw_name)
                 if result:
-                    logger.warning(f"Importing orphaned entry for firewall rule {result}")
+                    logger.warning(f"Importing orphaned entry for firewall rule {build_fw_name}")
                     self.state[state_key_name] = build_fw_name
 
         for group_sg_key in self.state.key_match('firewall_.*_group_.*'):
@@ -125,7 +125,7 @@ class GCPNetwork(object):
         else:
             result = Firewall(self.parameters).details(self.firewall_default)
             if result:
-                logger.warning(f"Importing orphaned entry for firewall rule {result}")
+                logger.warning(f"Importing orphaned entry for firewall rule {self.firewall_default}")
                 self.state['firewall_default'] = self.firewall_default
 
         if self.state.get('subnet'):
@@ -137,7 +137,7 @@ class GCPNetwork(object):
         else:
             result = Subnet(self.parameters).details(self.subnet_name)
             if result:
-                logger.warning(f"Importing orphaned entry for subnet {result}")
+                logger.warning(f"Importing orphaned entry for subnet {self.subnet_name}")
                 self.state['subnet'] = self.subnet_name
                 self.state['subnet_cidr'] = result['cidr']
 
@@ -151,7 +151,7 @@ class GCPNetwork(object):
         else:
             result = Network(self.parameters).details(self.vpc_name)
             if result:
-                logger.warning(f"Importing orphaned entry for network {result}")
+                logger.warning(f"Importing orphaned entry for network {self.vpc_name}")
                 self.state['network'] = self.vpc_name
                 self.state['network_link'] = result['selfLink']
 

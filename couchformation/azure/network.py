@@ -84,17 +84,33 @@ class AzureNetwork(object):
                 del self.state['subnet']
                 del self.state['subnet_id']
                 del self.state['subnet_cidr']
+        else:
+            result = Subnet(self.parameters).details(vpc_name, self.subnet_name, rg_name)
+            if result:
+                logger.warning(f"Importing orphaned entry for subnet {self.subnet_name}")
+                self.state['subnet'] = self.subnet_name
+                self.state['subnet_id'] = result['id']
+                self.state['subnet_cidr'] = result['cidr']
+
         if self.state.get('network_security_group'):
             result = SecurityGroup(self.parameters).details(self.state['network_security_group'], rg_name)
             if result is None:
                 logger.warning(f"Removing stale state entry for security group {self.state['network_security_group']}")
                 del self.state['network_security_group']
                 del self.state['network_security_group_id']
+        else:
+            result = SecurityGroup(self.parameters).details(self.nsg_name, rg_name)
+            if result:
+                logger.warning(f"Importing orphaned entry for network security group {self.nsg_name}")
+                self.state['network_security_group'] = self.nsg_name
+                self.state['network_security_group_id'] = result['id']
+
         for sg_rule_key in self.state.key_match('rule_.*'):
             result = SecurityGroup(self.parameters).search_rules(self.state['network_security_group'], rg_name, self.state.get(sg_rule_key))
             if result is None:
                 logger.warning(f"Removing stale state entry for security group rule {self.state[sg_rule_key]}")
                 del self.state[sg_rule_key]
+
         if self.state.get('network'):
             result = Network(self.parameters).details(self.state['network'], rg_name)
             if result is None:
@@ -102,27 +118,43 @@ class AzureNetwork(object):
                 del self.state['network']
                 del self.state['network_cidr']
                 del self.state['network_id']
+        else:
+            result = Network(self.parameters).details(self.vpc_name, rg_name)
+            if result:
+                logger.warning(f"Importing orphaned entry for network {self.vpc_name}")
+                self.state['network'] = self.vpc_name
+                self.state['network_id'] = result.id
+                self.state['network_cidr'] = result.address_space.address_prefixes[0]
+
         if self.state.get('public_hosted_zone'):
             result = DNS(self.parameters).details(self.state['public_hosted_zone'])
             if result is None:
                 logger.warning(f"Removing stale state entry for public managed zone {self.state['public_hosted_zone']}")
                 del self.state['public_hosted_zone']
+
         if self.state.get('private_dns_zone_link') and self.state['private_hosted_zone']:
             result = PrivateDNS(self.parameters).vpc_link_details(self.state['private_hosted_zone'], self.state['private_dns_zone_link'], rg_name)
             if result is None:
                 logger.warning(f"Removing stale state entry for private DNS zone link {self.state['private_dns_zone_link']}")
                 del self.state['private_dns_zone_link']
+
         if self.state.get('private_hosted_zone'):
             result = PrivateDNS(self.parameters).details(self.state['private_hosted_zone'])
             if result is None:
                 logger.warning(f"Removing stale state entry for private managed zone {self.state['private_hosted_zone']}")
                 del self.state['private_hosted_zone']
+
         if self.state.get('resource_group'):
             result = self.az_base.get_rg(self.state['resource_group'], self.az_base.region)
             if result is None:
                 logger.warning(f"Removing stale state entry for resource group {self.state['resource_group']}")
                 del self.state['resource_group']
                 del self.state['zone']
+        else:
+            result = self.az_base.get_rg(self.rg_name, self.az_base.region)
+            if result:
+                logger.warning(f"Importing orphaned entry for resource group {self.rg_name}")
+                self.state['resource_group'] = self.rg_name
 
     @synchronize()
     def create_vpc(self):
@@ -282,6 +314,7 @@ class AzureNetwork(object):
             logger.info(f"Active services, leaving project network in place")
             return
 
+        self.check_state()
         try:
 
             if self.state.get('resource_group'):

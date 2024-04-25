@@ -5,6 +5,7 @@ import logging
 import re
 from typing import Union, List
 from azure.core.exceptions import ResourceNotFoundError
+from azure.mgmt.network.models import VirtualNetwork
 from couchformation.azure.driver.base import CloudBase, AzureDriverError, EmptyResultSet
 
 logger = logging.getLogger('couchformation.azure.driver.network')
@@ -86,7 +87,7 @@ class Network(CloudBase):
         except Exception as err:
             raise AzureDriverError(f"error getting vnet: {err}")
 
-    def details(self, network: str, resource_group: str) -> Union[dict, None]:
+    def details(self, network: str, resource_group: str) -> Union[VirtualNetwork, None]:
         try:
             info = self.network_client.virtual_networks.get(resource_group, network)
             return info
