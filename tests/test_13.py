@@ -13,7 +13,7 @@ from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 from couchformation.aws.driver.base import CloudBase
 from tests.interactive import aws_base
-from tests.common import start_container, stop_container, run_in_container, copy_to_container, copy_home_env_to_container, linux_image_name, ssh_key_relative_path, get_cmd_output
+from tests.common import start_container, stop_container, run_in_container, copy_home_env_to_container, ssh_key_relative_path, get_cmd_output
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger('couchformation.aws.driver.base')
@@ -44,21 +44,16 @@ class TestInstallAWS(object):
     container_id = None
     environment = {}
     container_name = 'pytest'
-    ssh_key_path = os.path.join('/root', ssh_key_relative_path)
+    ssh_key_path = os.path.join('/home/ubuntu', ssh_key_relative_path)
 
     @classmethod
     def setup_class(cls):
         logger.info("Starting Linux container")
         platform = f"linux/{os.uname().machine}"
-        script = os.path.join(parent, 'tests', 'install_pkg.sh')
         cls.environment = CloudBase(aws_base).get_auth_config()
-        cls.environment.update({
-            'PATH': '/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin'
-        })
-        cls.container_id = start_container(linux_image_name, cls.container_name, platform=platform)
-        copy_home_env_to_container(cls.container_id, '/root')
-        copy_to_container(cls.container_id, script, '/root')
-        command = ['/bin/bash', '/root/install_pkg.sh']
+        cls.container_id = start_container('cftest', cls.container_name, platform=platform)
+        copy_home_env_to_container(cls.container_id,'/home/ubuntu', uid=1000, gid=1000)
+        command = ['pip3', 'install', '--user', 'git+https://github.com/mminichino/couch-formation-core']
         result = run_in_container(cls.container_id, command)
         assert result is True
         time.sleep(1)

@@ -168,6 +168,9 @@ def copy_home_env_to_container(container_id: Container, dst: str, uid=0, gid=0, 
     with tarfile.open(fileobj=stream, mode='w|') as tar:
         tar.add(ssh_key_path, arcname=ssh_key_relative_path, filter=lambda x: set_root(x, uid, gid, uname, gname))
         tar.add(capella_config_path, arcname=capella_config_relative_path, recursive=True, filter=lambda x: set_root(x, uid, gid, uname, gname))
+        tar.add(aws_config_dir, arcname=os.path.relpath(aws_config_dir, Path.home()), recursive=True, filter=lambda x: set_root(x, uid, gid, uname, gname))
+        tar.add(gcp_config_dir, arcname=os.path.relpath(gcp_config_dir, Path.home()), recursive=True, filter=lambda x: set_root(x, uid, gid, uname, gname))
+        tar.add(azure_config_dir, arcname=os.path.relpath(azure_config_dir, Path.home()), recursive=True, filter=lambda x: set_root(x, uid, gid, uname, gname))
 
     container_id.put_archive(dst, stream.getvalue())
 
@@ -260,7 +263,7 @@ def create_port_dict(port_list: List[int]):
 def start_container(image: str,
                     name: str,
                     volume_mount: Union[str, None] = None,
-                    dir_mount: Union[str, None] = None,
+                    dir_mount: Union[str, List[dict], None] = None,
                     platform: Union[str, None] = None,
                     ports: Union[str, None] = None,
                     command: Union[str, list, None] = None) -> Container:
@@ -288,7 +291,10 @@ def start_container(image: str,
         elif dir_mount:
             if not volume_mount:
                 volume_mount = dir_mount
-            volume_map = [f"{dir_mount}:{volume_mount}"]
+            if type(dir_mount) is str:
+                volume_map = [f"{dir_mount}:{volume_mount}"]
+            elif type(dir_mount) is list:
+                volume_map = dir_mount
         container_id = client.containers.run(image,
                                              tty=True,
                                              detach=True,
