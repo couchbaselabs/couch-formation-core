@@ -202,6 +202,9 @@ class MetadataManager(object):
                     continue
                 log.info(f"\n<Service: {service}>")
                 for n, group in enumerate(self.get_service_groups(service)):
+                    if n == 0:
+                        log.info(f"Cloud: {group.get('cloud')}")
+                        log.info(f"Build: {group.get('build')}")
                     log.info(f"[{service}] Group: {n+1}")
                     for key, value in group.items():
                         if key not in vars(options):
