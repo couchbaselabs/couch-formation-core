@@ -10,7 +10,7 @@ parent = os.path.dirname(current)
 sys.path.append(parent)
 sys.path.append(current)
 
-from tests.common import encrypt_file, decrypt_file, random_string
+from common import encrypt_file, decrypt_file, random_string
 
 
 def parse_args():

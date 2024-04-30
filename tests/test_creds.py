@@ -9,7 +9,7 @@ parent = os.path.dirname(current)
 sys.path.append(parent)
 sys.path.append(current)
 
-from tests.common import create_cred_package
+from common import create_cred_package
 
 
 def main():
