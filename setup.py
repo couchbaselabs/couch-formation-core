@@ -72,7 +72,8 @@ setup(
         "certifi>=2023.5.7",
         "pyhostprep>=1.0.10",
         "psutil>=5.9.5",
-        "pycryptodome>=3.20.0"
+        "pycryptodome>=3.20.0",
+        "six>=1.16.0"
     ],
     author_email='info@unix.us.com',
     description='Couchbase Cloud Automation',
