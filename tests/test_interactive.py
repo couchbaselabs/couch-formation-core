@@ -11,4 +11,4 @@ sys.path.append(current)
 
 if __name__ == '__main__':
     os.environ['PYTHONSTARTUP'] = os.path.join(current, 'interactive.py')
-    result = subprocess.run(["python3"])
+    result = subprocess.run(["python"])
