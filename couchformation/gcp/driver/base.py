@@ -82,7 +82,7 @@ class CloudBase(object):
     def default_auth():
         try:
             credentials, project_id = google.auth.default()
-            if hasattr(credentials, "service_account_email"):
+            if hasattr(credentials, "service_account_email") and getattr(credentials, "service_account_email") != "default":
                 service_account_email = credentials.service_account_email
                 account_email = None
             elif hasattr(credentials, "signer_email"):
