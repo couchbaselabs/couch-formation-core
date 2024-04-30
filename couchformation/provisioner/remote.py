@@ -96,6 +96,7 @@ class RemoteProvisioner(object):
             else self.parameters.get('connect')
         self.private_ip_list = ','.join(self.parameters.get('private_ip_list'))
         self.public_ip_list = ','.join(self.parameters.get('public_ip_list'))
+        self.service_list = ':'.join(self.parameters.get('service_list'))
         if self.parameters.get('private_host_list') and len(self.parameters.get('private_host_list')) > 0:
             self.private_host_list = ','.join(self.parameters.get('private_host_list'))
         else:
@@ -203,6 +204,7 @@ class RemoteProvisioner(object):
             PASSWORD=self.password,
             PRIVATE_IP_LIST=self.private_ip_list,
             PUBLIC_IP_LIST=self.public_ip_list,
+            SERVICE_LIST=self.service_list,
             IP_LIST=self.public_ip_list if self.public else self.private_ip_list,
             HOST_LIST=self.public_host_list if self.public else self.private_host_list,
             NODE_ZONE=self.zone,

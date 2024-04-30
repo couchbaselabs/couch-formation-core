@@ -18,6 +18,7 @@ remote:
     - connect
     - private_ip_list
     - public_ip_list
+    - service_list
     - use_private_ip
     - sw_version
     - password
@@ -61,6 +62,7 @@ winrm:
     - connect
     - private_ip_list
     - public_ip_list
+    - service_list
     - use_private_ip
     - sw_version
     - password

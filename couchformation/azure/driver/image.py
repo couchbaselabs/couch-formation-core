@@ -112,7 +112,6 @@ class Image(CloudBase):
                     continue
                 filtered_images = []
                 for image in image_list:
-                    logger.debug(f"Found image -> {image}")
                     offer_match = re.search(image_type['offer_match'], image['offer'])
                     sku_match = re.search(image_type['sku_match'], image['sku'])
                     if offer_match:

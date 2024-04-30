@@ -170,11 +170,13 @@ class Project(object):
         public_ip_list = [d['public_ip'] for d in result_list]
         private_host_list = [d['private_hostname'] for d in result_list if d.get('private_hostname')]
         public_host_list = [d['public_hostname'] for d in result_list if d.get('public_hostname')]
+        service_list = [d['services'] for d in result_list if d.get('services', 'default')]
         result_list = [dict(item,
                             private_ip_list=private_ip_list,
                             public_ip_list=public_ip_list,
                             private_host_list=private_host_list,
-                            public_host_list=public_host_list) for item in result_list]
+                            public_host_list=public_host_list,
+                            service_list=service_list) for item in result_list]
         result_list = [dict(item, password=password) if 'password' not in item else item for item in result_list]
 
         if skip_provision:
