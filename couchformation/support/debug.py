@@ -161,10 +161,10 @@ class CreateDebugPackage(object):
                 file_text = file_tuple[0]
                 if isinstance(file_tuple[1], io.BytesIO):
                     file_data: io.BytesIO = file_tuple[1]
-                    tar_info = tarfile.TarInfo(name=os.path.join('log', file_text))
+                    tar_info = tarfile.TarInfo(name=f"log/{file_text}")
                     tar_info.mtime = time.time()
-                    tar_info.uname = getpass.getuser()
-                    tar_info.gname = group_name
+                    tar_info.uid = 0
+                    tar_info.gid = 0
                     tar_info.size = file_data.getbuffer().nbytes
                     tar.addfile(tarinfo=tar_info, fileobj=file_data)
                 else:
