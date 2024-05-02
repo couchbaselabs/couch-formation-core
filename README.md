@@ -100,13 +100,13 @@ Optionally create an app service (Sync Gateway in Capella) and attach it to a Ca
 cloudmgr create --build capella --cloud capella --project test-project --name test-app-svc --quantity 2 --machine_type 4x8 --type mobile --connect test-cluster
 ```
 
-## Additional CLI examples
+## Additional commands
 ### Destroy a project:
 ```
 cloudmgr destroy --project dev01
 ```
 
-### List node IP addresses:
+### List node details (including IP addresses and generated passwords):
 ```
 cloudmgr list --project dev01
 ```
@@ -114,6 +114,26 @@ cloudmgr list --project dev01
 ### Operate on only one service in a project:
 ```
 cloudmgr deploy --project dev01 --name source01
+```
+
+### List all projects and services:
+```
+cloudmgr list
+```
+
+### Display detailed information about configured services in a project:
+```
+cloudmgr show --project dev01
+```
+
+### Recall the CLI commands that were used to add services to a project (you can use this to copy and paste to create a new project):
+```
+cloudmgr cli --project dev01
+```
+
+### Change the values for parameters in a previously created service:
+```
+cloudmgr update --project dev01 --name node --machine_type 8x32
 ```
 
 ## AWS SSO Support
@@ -131,7 +151,7 @@ cloudmgr create --build cbs --cloud aws --project dev01 --name testdb01 --auth_m
 Configure the AWS CLI via an appropriate method based on your IAM settings. For example use ```aws configure``` to configure long term credentials, or manually set the access parameters in ```.aws/credentials``` or with environment variables. Couch Formation accepts an optional ```--profile``` service configuration parameter to use a specific auth profile. Check [here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html#getting-started-quickstart-new) for more information.
 
 ## GCP Default Authentication
-For Google Cloud use ```gcloud auth``` to configure CLI access.  Check [here](https://cloud.google.com/sdk/gcloud/reference/auth) for more information.
+For Google Cloud use ```gcloud auth application-default login``` to configure CLI access.  Check [here](https://cloud.google.com/sdk/gcloud/reference/auth) for more information.
 
 ## Azure Default Authentication
 For Azure use ```az login``` to configure CLI access. Check [here](https://learn.microsoft.com/en-us/cli/azure/authenticate-azure-cli-interactively) for more information.
@@ -189,6 +209,11 @@ pip3 install couchformation
 | sgw        | Sync Gateway                    |
 | capella    | Capella Database                |
 | generic    | Base configured node from image |
+| database   | Generic database node           |
+| windev     | Windows development host        |
 
 ## Troubleshooting
-Log files are written to ```.config/couch-formation/log```.
+Log files are written to ```.config/couch-formation/log```. To create a support bundle with diagnostic information, use the ```dump``` command.
+```
+cloudmgr dump
+```
