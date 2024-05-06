@@ -136,6 +136,11 @@ cloudmgr cli --project dev01
 cloudmgr update --project dev01 --name node --machine_type 8x32
 ```
 
+### Change the values for parameters for a service node group:
+```
+cloudmgr update --project dev01 --name testdb --group 2 --machine_type 4x16
+```
+
 ## AWS SSO Support
 ### Setup AWS CLI SSO:
 ```
@@ -213,7 +218,9 @@ pip3 install couchformation
 | windev     | Windows development host        |
 
 ## Troubleshooting
-Log files are written to ```.config/couch-formation/log```. To create a support bundle with diagnostic information, use the ```dump``` command.
+Log files are written to ```.config/couch-formation/log```.
+<br><br>
+To create a support bundle with diagnostic information, use the ```dump``` command.
 ```
 cloudmgr dump
 ```
