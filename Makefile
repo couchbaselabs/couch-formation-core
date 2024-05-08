@@ -5,10 +5,9 @@ export PROJECT_VERSION := $(shell cat VERSION)
 
 commit:
 		git commit -am "Version $(shell cat VERSION)"
-		git push
+		git push -u origin main
 branch:
-		git checkout -b "Version_$(shell cat VERSION)"
-		git push --set-upstream origin "Version_$(shell cat VERSION)"
+		git branch "Version_$(shell cat VERSION)"
 merge:
 		git checkout main
 		git pull origin main
