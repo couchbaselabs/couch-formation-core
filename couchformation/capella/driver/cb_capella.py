@@ -755,6 +755,8 @@ class Capella(object):
 
     def delete_app_svc(self, cluster_id: str):
         app_svc = self.get_app_svc(cluster_id)
+        if not app_svc:
+            return
         app_svc_id = app_svc.get('id')
         return self.rest.delete_capella(f"/v4/organizations/{self.organization_id}/projects/{self.project_id}/clusters/{cluster_id}/appservices/{app_svc_id}")
 
