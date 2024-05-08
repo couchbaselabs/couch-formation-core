@@ -117,7 +117,7 @@ class CapellaDeployment(object):
                 quantity = int(group_db.get('quantity'))
                 machine = group_db.get('machine_type')
                 logger.info(f"Creating app service {self.name} with {quantity} {machine} nodes")
-                app_svc = AppService.create(self.name, "CouchFormation managed app service", quantity, machine, "3.0")
+                app_svc = AppService.create(self.name, "CouchFormation managed app service", quantity, machine, self.sw_version)
 
                 app_svc_id = Capella(project_id=project_id, profile=self.profile).create_app_svc(self.cluster_id, app_svc)
                 self.state['name'] = self.name

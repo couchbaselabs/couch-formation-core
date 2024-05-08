@@ -403,7 +403,7 @@ class AppService:
     description: Optional[str] = attr.ib(default="Automation Generated App Service")
     nodes: Optional[int] = attr.ib(default=2)
     compute: Optional[ComputeConfig] = attr.ib(default=ComputeConfig(2, 4))
-    version: Optional[str] = attr.ib(default="3.0")
+    version: Optional[str] = attr.ib(default="latest")
 
     @classmethod
     def create(cls, name: str, description: str, nodes: int, machine_type: str, version: str):
@@ -743,6 +743,10 @@ class Capella(object):
         response = self.get_app_svc(cluster_id)
         if response:
             return response.get('id')
+
+        if parameters.get("version") in (None, "latest"):
+            if parameters.get("version"):
+                del parameters["version"]
 
         try:
             return self.rest.post_capella(f"/v4/organizations/{self.organization_id}/projects/{self.project_id}/clusters/{cluster_id}/appservices", parameters).id()
