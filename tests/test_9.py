@@ -39,7 +39,8 @@ class BasicAuth(AuthBase):
         return r
 
 
-@pytest.mark.serial
+@pytest.mark.cf_docker
+@pytest.mark.order(5)
 class TestMainDocker(object):
 
     @classmethod

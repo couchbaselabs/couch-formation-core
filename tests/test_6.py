@@ -41,7 +41,9 @@ class BasicAuth(AuthBase):
         return r
 
 
-@pytest.mark.serial
+@pytest.mark.cf_azure
+@pytest.mark.cf_windows
+@pytest.mark.order(2)
 class TestMainAzure(unittest.TestCase):
 
     def setUp(self):

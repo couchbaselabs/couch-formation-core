@@ -41,7 +41,9 @@ class BasicAuth(AuthBase):
         return r
 
 
-@pytest.mark.serial
+@pytest.mark.cf_gcp
+@pytest.mark.cf_windows
+@pytest.mark.order(2)
 class TestMainGCP(unittest.TestCase):
 
     def setUp(self):

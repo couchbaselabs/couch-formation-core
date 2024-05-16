@@ -42,7 +42,9 @@ class BasicAuth(AuthBase):
         return r
 
 
-@pytest.mark.serial
+@pytest.mark.cf_capella
+@pytest.mark.cf_windows
+@pytest.mark.order(3)
 class TestMainCapella(unittest.TestCase):
 
     def setUp(self):

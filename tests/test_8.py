@@ -18,7 +18,8 @@ from couchformation.docker.driver.network import Network
 from couchformation.docker.driver.container import Container
 
 
-@pytest.mark.serial
+@pytest.mark.cf_docker
+@pytest.mark.order(4)
 class TestMainDocker(object):
     parameters = {}
     project = None

@@ -25,7 +25,9 @@ from couchformation.ssh import SSHUtil
 from tests.common import ssh_key_path
 
 
-@pytest.mark.serial
+@pytest.mark.cf_azure
+@pytest.mark.cf_windows
+@pytest.mark.order(1)
 class TestMainAzure(unittest.TestCase):
 
     def setUp(self):

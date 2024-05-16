@@ -28,7 +28,9 @@ from couchformation.ssh import SSHUtil
 from tests.common import ssh_key_path
 
 
-@pytest.mark.serial
+@pytest.mark.cf_aws
+@pytest.mark.cf_windows
+@pytest.mark.order(1)
 class TestMainAWS(unittest.TestCase):
 
     def setUp(self):

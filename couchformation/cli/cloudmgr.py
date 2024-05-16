@@ -53,7 +53,7 @@ class CloudMgrCLI(CLI):
         command_subparser.add_parser('help', help="Show Supported Options", parents=[opt_parser], add_help=False)
 
     def run(self):
-        if not self.options.json:
+        if not hasattr(self.options, 'json'):
             logger.info(f"Couch Formation v{couchformation.__version__}")
 
         if self.options.show_version:

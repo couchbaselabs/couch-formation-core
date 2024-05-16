@@ -39,7 +39,8 @@ class BasicAuth(AuthBase):
         return r
 
 
-@pytest.mark.serial
+@pytest.mark.cf_aws
+@pytest.mark.order(7)
 class TestInstallAWS(object):
     container_id = None
     environment = {}
