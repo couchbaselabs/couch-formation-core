@@ -309,6 +309,10 @@ class AzureNetwork(object):
             logger.info(f"Added NSG rule {rule_name}")
 
     @synchronize()
+    def peer_vpc(self):
+        logger.warning(f"Peering not implemented for cloud {self.cloud}")
+
+    @synchronize()
     def destroy_vpc(self):
         if self.state.list_len('services') > 0:
             logger.info(f"Active services, leaving project network in place")

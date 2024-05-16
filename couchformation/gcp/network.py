@@ -296,6 +296,10 @@ class GCPNetwork(object):
             logger.info(f"Created firewall rule {build_fw_name}")
 
     @synchronize()
+    def peer_vpc(self):
+        logger.warning(f"Peering not implemented for cloud {self.cloud}")
+
+    @synchronize()
     def destroy_vpc(self):
         if self.state.list_len('services') > 0:
             logger.info(f"Active services, leaving project network in place")

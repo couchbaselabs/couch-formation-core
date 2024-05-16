@@ -9,7 +9,7 @@ aws:
       module: AWSNetwork
       deploy: create_vpc
       destroy: destroy_vpc
-      peer: accept_peering
+      peer: peer_vpc
       info: info
       compose: null
   node:
@@ -58,7 +58,7 @@ gcp:
       module: GCPNetwork
       deploy: create_vpc
       destroy: destroy_vpc
-      peer: null
+      peer: peer_vpc
       info: info
       compose: null
   node:
@@ -104,7 +104,7 @@ azure:
       module: AzureNetwork
       deploy: create_vpc
       destroy: destroy_vpc
-      peer: null
+      peer: peer_vpc
       info: info
       compose: null
   node:
@@ -194,7 +194,7 @@ docker:
       module: DockerNetwork
       deploy: create_vpc
       destroy: destroy_vpc
-      peer: null
+      peer: peer_vpc
       info: info
       compose: null
   node:

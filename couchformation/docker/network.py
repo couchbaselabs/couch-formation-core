@@ -6,7 +6,7 @@ from itertools import cycle
 from couchformation.network import NetworkDriver
 from couchformation.config import get_state_file, get_state_dir
 from couchformation.exception import FatalError
-from couchformation.util import FileManager
+from couchformation.util import FileManager, synchronize
 from couchformation.kvdb import KeyValueStore
 from couchformation.docker.driver.network import Network
 
@@ -47,6 +47,7 @@ class DockerNetwork(object):
                 logger.warning(f"Removing stale state entry for network {self.state.get('network')}")
                 del self.state['network']
 
+    @synchronize()
     def create_vpc(self):
         self.check_state()
         cidr_util = NetworkDriver()
@@ -70,6 +71,11 @@ class DockerNetwork(object):
         except Exception as err:
             raise DockerNetworkError(f"Error creating network: {err}")
 
+    @synchronize()
+    def peer_vpc(self):
+        logger.warning(f"Peering not implemented for cloud {self.cloud}")
+
+    @synchronize()
     def destroy_vpc(self):
         if self.state.list_len('services') > 0:
             logger.info(f"Active services, leaving project network in place")

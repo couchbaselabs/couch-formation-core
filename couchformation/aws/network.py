@@ -333,7 +333,7 @@ class AWSNetwork(object):
         return port_sg_id
 
     @synchronize()
-    def accept_peering(self):
+    def peer_vpc(self):
         self.check_state()
         vpc_id = self.state.get('vpc_id')
         rt_id = self.state.get('route_table_id')
