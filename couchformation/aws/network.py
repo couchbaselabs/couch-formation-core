@@ -42,6 +42,7 @@ class AWSNetwork(object):
         self.ssh_key = parameters.get('ssh_key')
         self.cloud = parameters.get('cloud')
         self.domain = parameters.get('domain')
+        self.hosted_zone = parameters.get('hosted_zone')
         self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
         self.build_ports = PortSettingSet().create().items()
 
@@ -330,6 +331,27 @@ class AWSNetwork(object):
         else:
             port_sg_id = self.state.get(state_key_name)
         return port_sg_id
+
+    @synchronize()
+    def accept_peering(self):
+        self.check_state()
+        vpc_id = self.state.get('vpc_id')
+        rt_id = self.state.get('route_table_id')
+
+        peers = Network(self.parameters).peering_details(vpc_id)
+
+        for peering in peers:
+            if peering.get('status') == 'pending-acceptance':
+                pcx_id = peering.get('id')
+                cidr = peering.get('cidr')
+                Network(self.parameters).peering_accept(pcx_id)
+                logger.info(f"Accepted peering request {pcx_id} with CIDR {cidr}")
+                RouteTable(self.parameters).add_peer_route(cidr, pcx_id, rt_id)
+                logger.info(f"Added route for {cidr} to route table {rt_id}")
+
+        if self.hosted_zone:
+            DNS(self.parameters).associate(self.hosted_zone, vpc_id, self.region)
+            logger.info(f"Associated hosted zone {self.hosted_zone} with VPC {vpc_id}")
 
     @synchronize()
     def destroy_vpc(self):

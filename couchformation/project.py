@@ -97,6 +97,16 @@ class Project(object):
             logger.info(f"Project Credentials: {password} ")
         return return_list
 
+    def accept_peering(self, service=None):
+        for group in NodeGroup(self.options).get_node_groups():
+            self._test_cloud(group)
+        for group in NodeGroup(self.options).get_node_groups():
+            if service and group[0].get('name') != service:
+                continue
+            cloud = group[0].get('cloud')
+            region = group[0].get('region') if group[0].get('region') else "local"
+            self._accept_peering(cloud, region)
+
     def credential(self):
         return NodeGroup(self.options).get_credentials()
 
@@ -114,6 +124,15 @@ class Project(object):
         instance = profile.network.module
         method = profile.network.deploy
         runner.foreground(module, instance, method, net.as_dict)
+
+    def _accept_peering(self, cloud, region):
+        runner = JobDispatch()
+        net = NodeGroup(self.options).get_network(cloud, region)
+        profile = TargetProfile(self.remainder).get(cloud)
+        module = profile.network.driver
+        instance = profile.network.module
+        method = profile.network.peer
+        runner.foreground(module, instance, method, profile.merge_options(net.as_dict))
 
     def _deploy_saas(self, group, password):
         runner = JobDispatch()

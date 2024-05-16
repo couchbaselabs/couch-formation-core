@@ -122,3 +122,31 @@ class DNS(CloudBase):
             return result.get('ChangeInfo', {}).get('Status')
         except Exception as err:
             raise AWSDriverError(f"error deleting record from domain: {err}")
+
+    def list_associations(self, vpc_id: str, region: str):
+        extra_args = {}
+        results = []
+        try:
+            while True:
+                result = self.dns_client.list_hosted_zones_by_vpc(VPCId=vpc_id, VPCRegion=region, **extra_args)
+                results.extend(result['HostedZoneSummaries'])
+                if 'NextToken' not in result:
+                    break
+                extra_args['NextToken'] = result['NextToken']
+            return results
+        except Exception as err:
+            raise AWSDriverError(f"error getting VPC list: {err}")
+
+    def associate(self, hosted_zone: str, vpc_id: str, region: str):
+        current_associations = self.list_associations(vpc_id, region)
+        if next((z for z in current_associations if z.get('HostedZoneId') == hosted_zone), None):
+            return
+        vpc_info = {
+            'VPCRegion': region,
+            'VPCId': vpc_id
+        }
+        try:
+            result = self.dns_client.associate_vpc_with_hosted_zone(HostedZoneId=hosted_zone, VPC=vpc_info)
+            return result.get('ChangeInfo', {}).get('Status')
+        except Exception as err:
+            raise AWSDriverError(f"error associating hosted zone: {err}")

@@ -9,6 +9,7 @@ aws:
       module: AWSNetwork
       deploy: create_vpc
       destroy: destroy_vpc
+      peer: accept_peering
       info: info
       compose: null
   node:
@@ -16,6 +17,7 @@ aws:
       module: AWSDeployment
       deploy: deploy
       destroy: destroy
+      peer: null
       info: info
       compose: null
   parameters:
@@ -38,6 +40,7 @@ aws:
     - upload
     - domain
     - ports
+    - hosted_zone
   required:
     - region
     - ssh_key
@@ -55,6 +58,7 @@ gcp:
       module: GCPNetwork
       deploy: create_vpc
       destroy: destroy_vpc
+      peer: null
       info: info
       compose: null
   node:
@@ -62,6 +66,7 @@ gcp:
       module: GCPDeployment
       deploy: deploy
       destroy: destroy
+      peer: null
       info: info
       compose: null
   parameters:
@@ -99,6 +104,7 @@ azure:
       module: AzureNetwork
       deploy: create_vpc
       destroy: destroy_vpc
+      peer: null
       info: info
       compose: null
   node:
@@ -106,6 +112,7 @@ azure:
       module: AzureDeployment
       deploy: deploy
       destroy: destroy
+      peer: null
       info: info
       compose: null
   parameters:
@@ -147,6 +154,7 @@ capella:
       module: NullClass
       deploy: null_f
       destroy: null_f
+      peer: null_f
       info: null_f
       compose: null_f
   node:
@@ -154,6 +162,7 @@ capella:
       module: CapellaDeployment
       deploy: deploy
       destroy: destroy
+      peer: null
       info: info
       compose: compose
   parameters:
@@ -185,6 +194,7 @@ docker:
       module: DockerNetwork
       deploy: create_vpc
       destroy: destroy_vpc
+      peer: null
       info: info
       compose: null
   node:
@@ -192,6 +202,7 @@ docker:
       module: DockerDeployment
       deploy: deploy
       destroy: destroy
+      peer: null
       info: info
       compose: null
   parameters:

@@ -49,6 +49,7 @@ class CloudMgrCLI(CLI):
         command_subparser.add_parser('dump', help="Create Debug Bundle", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('cli', help="Get Project Create CLI", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('update', help="Edit Service Settings", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('peer', help="Network Peering", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('help', help="Show Supported Options", parents=[opt_parser], add_help=False)
 
     def run(self):
@@ -115,6 +116,8 @@ class CloudMgrCLI(CLI):
                 logger.error("Missing required parameter: name")
                 return
             project.service_edit()
+        elif self.options.command == "peer":
+            project.accept_peering(self.options.name)
 
         loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
         for log in loggers:

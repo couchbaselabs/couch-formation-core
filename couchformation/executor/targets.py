@@ -20,6 +20,7 @@ class Profile:
     module: str = attr.ib()
     deploy: str = attr.ib()
     destroy: str = attr.ib()
+    peer: str = attr.ib()
     info: str = attr.ib()
     compose: str = attr.ib()
 
@@ -61,6 +62,14 @@ class CloudProfile:
 
     def get_options(self):
         return self.options
+
+    def merge_options(self, parameters: dict):
+        p_copy = parameters.copy()
+        opt_data = vars(self.options)
+        for key, value in opt_data.items():
+            if key not in parameters or parameters[key] is None:
+                p_copy[key] = value
+        return p_copy
 
 
 @attr.s
@@ -213,9 +222,10 @@ class TargetProfile(object):
         module = elements.get('module')
         deploy = elements.get('deploy')
         destroy = elements.get('destroy')
+        peer = elements.get('peer')
         info = elements.get('info')
         compose = elements.get('compose')
-        return driver, module, deploy, destroy, info, compose
+        return driver, module, deploy, destroy, peer, info, compose
 
     @staticmethod
     def construct_driver(settings, key):

@@ -114,4 +114,11 @@ class RouteTable(CloudBase):
             response = self.ec2_client.create_route(DestinationCidrBlock=cidr, GatewayId=ig_id, RouteTableId=rt_id)
             return response['Return']
         except Exception as err:
-            raise AWSDriverError(f"error creating Route Table: {err}")
+            raise AWSDriverError(f"error creating route entry: {err}")
+
+    def add_peer_route(self, cidr: str, peer_id: str, rt_id: str):
+        try:
+            response = self.ec2_client.create_route(DestinationCidrBlock=cidr, VpcPeeringConnectionId=peer_id, RouteTableId=rt_id)
+            return response['Return']
+        except Exception as err:
+            raise AWSDriverError(f"error creating route entry: {err}")

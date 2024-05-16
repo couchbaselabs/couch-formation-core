@@ -96,6 +96,45 @@ class Network(CloudBase):
         except Exception as err:
             raise AWSDriverError(f"error getting VPC details: {err}")
 
+    def peering_details(self, vpc_id: str) -> Union[List[dict], None]:
+        extra_args = {}
+        peers = []
+        peer_list = []
+        peer_filter = {
+            'Name': "accepter-vpc-info.vpc-id",
+            'Values': [
+                vpc_id,
+            ]
+        }
+        try:
+            while True:
+                result = self.ec2_client.describe_vpc_peering_connections(Filters=[peer_filter], **extra_args)
+                peers.extend(result['VpcPeeringConnections'])
+                if 'NextToken' not in result:
+                    break
+                extra_args['NextToken'] = result['NextToken']
+        except Exception as err:
+            raise AWSDriverError(f"error getting VPC list: {err}")
+
+        for peer_entry in peers:
+            peer_block = {'cidr': peer_entry.get('RequesterVpcInfo', {}).get('CidrBlock'),
+                          'status': peer_entry.get('Status', {}).get('Code'),
+                          'id': peer_entry['VpcPeeringConnectionId']}
+            peer_list.append(peer_block)
+
+        if len(peer_list) == 0:
+            return []
+        else:
+            return peer_list
+
+    def peering_accept(self, peer_id: str):
+        try:
+            self.ec2_client.accept_vpc_peering_connection(VpcPeeringConnectionId=peer_id)
+        except botocore.exceptions.ClientError as err:
+            raise AWSDriverError(f"ClientError: {err}")
+        except Exception as err:
+            raise AWSDriverError(f"error accepting peering request: {err}")
+
 
 class Subnet(CloudBase):
 
