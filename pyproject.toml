@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "couchformation"
 description = "Couchbase Cloud Automation"
-version = "4.0.0a354"
+version = "4.0.0a360"
 readme = "README.md"
 authors = ["Michael Minichino <info@unix.us.com>"]
 classifiers = [

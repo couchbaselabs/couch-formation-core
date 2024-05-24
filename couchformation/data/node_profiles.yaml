@@ -62,3 +62,9 @@ sgw:
       - bundlemgr -b InstallSGW -V {{ SOFTWARE_VERSION }}
       - swmgr gateway configure -l {{ CONNECT_LIST }} -p '{{ PASSWORD }}'
       - bundlemgr -b EnableSGW
+cbsc:
+  - provisioner: remote
+    root: true
+    commands:
+      - bundlemgr -b CBS -V {{ SOFTWARE_VERSION }} -C
+      - swmgr cluster create -n {{ SERVICE_NAME }} -g {{ NODE_ZONE }} -D /cbdata -l {{ IP_LIST }} -p '{{ PASSWORD }}' -h {{ HOST_LIST }} -L {{ SERVICE_LIST }} -C
