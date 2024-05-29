@@ -29,6 +29,14 @@ database:
       - macos
     commands:
       - bundlemgr -b GenDBNode
+appnode:
+  - provisioner: remote
+    root: true
+    exclude:
+      - windows
+      - macos
+    commands:
+      - bundlemgr -b GenAppNode
 windev:
   - provisioner: winrm
     root: true

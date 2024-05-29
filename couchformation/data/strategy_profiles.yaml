@@ -9,6 +9,8 @@ generic:
   deployer: node
 database:
   deployer: node
+appnode:
+  deployer: node
 windev:
   deployer: node
 winsql:
