@@ -130,7 +130,10 @@ class SFTPFileObject(object):
 
         for retry_number in range(op_retry):
             try:
-                sftp_client.putfo(self.fl, self.destination, confirm=True)
+                self.fl.seek(0)
+                f = sftp_client.open(self.destination, 'wb')
+                f.write(self.fl.read())
+                f.close()
             except Exception as err:
                 n_retry = retry_number + 1
                 if n_retry == op_retry:
