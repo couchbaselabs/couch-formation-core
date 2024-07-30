@@ -53,6 +53,24 @@ class SFTPFile(object):
                 wait *= n_retry
                 time.sleep(wait)
 
+    def copy_key(self, connect_retry=35, op_retry=10, factor=0.5):
+        ssh = self.ssh_connect(retry_count=connect_retry, factor=factor)
+        sftp_client = ssh.open_sftp()
+
+        for retry_number in range(op_retry):
+            try:
+                sftp_client.put(self.ssh_key, '.ssh/id.pem')
+            except Exception as err:
+                n_retry = retry_number + 1
+                if n_retry == op_retry:
+                    raise RuntimeError(f"upload failed on {self.hostname}: {err}")
+                logger.info(f"Retrying upload on {self.hostname}")
+                wait = factor
+                wait *= n_retry
+                time.sleep(wait)
+
+        sftp_client.close()
+
     def upload(self, connect_retry=35, op_retry=10, factor=0.5):
         ssh = self.ssh_connect(retry_count=connect_retry, factor=factor)
         sftp_client = ssh.open_sftp()

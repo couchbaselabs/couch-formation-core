@@ -87,6 +87,7 @@ class RemoteProvisioner(object):
         self.ssh_key = self.parameters.get('ssh_key')
         self.zone = self.parameters.get('zone')
         self.password = self.parameters.get('password') if 'password' in self.parameters else 'password'
+        self.private_key = self.parameters.get('private_key') if 'private_key' in self.parameters else 'null'
         self.host_password = self.parameters.get('host_password')
         self.upload_file = self.parameters.get('upload')
         self.sw_version = self.parameters.get('sw_version') if 'sw_version' in self.parameters else 'latest'
@@ -202,6 +203,7 @@ class RemoteProvisioner(object):
             SERVICE_NAME=self.service,
             SOFTWARE_VERSION=self.sw_version,
             PASSWORD=self.password,
+            PRIVATE_KEY=self.private_key,
             PRIVATE_IP_LIST=self.private_ip_list,
             PUBLIC_IP_LIST=self.public_ip_list,
             SERVICE_LIST=self.service_list,

@@ -48,6 +48,7 @@ class Project(object):
 
     def deploy(self, service=None, skip_provision=False):
         password = NodeGroup(self.options).create_credentials()
+        private_key = NodeGroup(self.options).create_private_key()
         for group in NodeGroup(self.options).get_node_groups():
             self._test_cloud(group)
         for group in NodeGroup(self.options).get_node_groups():
@@ -58,7 +59,7 @@ class Project(object):
             region = group[0].get('region') if group[0].get('region') else "local"
             if strategy.deployer == DeployMode.node.value:
                 self._deploy_network(cloud, region)
-                self._deploy_node(group, password, skip_provision)
+                self._deploy_node(group, password, private_key, skip_provision)
             elif strategy.deployer == DeployMode.saas.value:
                 self._deploy_saas(group, password)
 
@@ -164,7 +165,7 @@ class Project(object):
 
         runner.foreground(module, instance, deploy, main_params)
 
-    def _deploy_node(self, group, password, skip_provision=False):
+    def _deploy_node(self, group, password, private_key, skip_provision=False):
         number = 0
         runner = JobDispatch()
 
@@ -197,6 +198,7 @@ class Project(object):
                             public_host_list=public_host_list,
                             service_list=service_list) for item in result_list]
         result_list = [dict(item, password=password) if 'password' not in item else item for item in result_list]
+        result_list = [dict(item, private_key=private_key) if 'private_key' not in item else item for item in result_list]
 
         if skip_provision:
             return

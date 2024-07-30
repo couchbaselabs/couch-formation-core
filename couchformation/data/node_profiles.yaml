@@ -56,7 +56,7 @@ cbs:
     root: true
     commands:
       - bundlemgr -b CBS -V {{ SOFTWARE_VERSION }}
-      - swmgr cluster create -n {{ SERVICE_NAME }} -g {{ NODE_ZONE }} -D /cbdata -l {{ IP_LIST }} -p '{{ PASSWORD }}' -h {{ HOST_LIST }} -L {{ SERVICE_LIST }}
+      - swmgr cluster create -n {{ SERVICE_NAME }} -g {{ NODE_ZONE }} -D /cbdata -l {{ IP_LIST }} -p '{{ PASSWORD }}' -h {{ HOST_LIST }} -L {{ SERVICE_LIST }} -K {{ PRIVATE_KEY }}
       - swmgr cluster rebalance -l {{ IP_LIST }} -p '{{ PASSWORD }}'
   - provisioner: docker
     root: true

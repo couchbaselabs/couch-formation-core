@@ -7,7 +7,11 @@ import os
 import json
 import argparse
 import yaml
+import base64
 import couchformation.constants as C
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.backends import default_backend
 from typing import Optional, List, Tuple, Union, Any
 from enum import Enum
 from couchformation.exception import FatalError
@@ -377,6 +381,25 @@ class NodeGroup(object):
             self.credentials['password'] = password
 
         return self.credentials.get('password')
+
+    def create_private_key(self):
+        document = f"credentials:{self.project}"
+
+        self.credentials.document(document)
+        if not self.credentials.get('private_key'):
+            private_key = rsa.generate_private_key(
+                public_exponent=65537,
+                key_size=2048,
+                backend=default_backend(),
+            )
+            pem = private_key.private_bytes(
+                encoding=serialization.Encoding.DER,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            )
+            self.credentials['private_key'] = base64.b64encode(pem).decode()
+
+        return self.credentials.get('private_key')
 
     def remove_credentials(self):
         document = f"credentials:{self.project}"

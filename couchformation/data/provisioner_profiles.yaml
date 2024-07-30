@@ -23,6 +23,7 @@ remote:
     - sw_version
     - password
     - host_password
+    - private_key
     - upload
     - public_hostname
     - private_hostname
