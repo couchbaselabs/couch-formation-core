@@ -95,6 +95,7 @@ class MetadataManager(object):
         self.project_dir = get_project_dir(project)
         self.metadata = os.path.join(self.project_dir, C.METADATA)
         self.network = os.path.join(self.project_dir, C.NETWORK)
+        self.credentials = os.path.join(self.project_dir, C.CREDENTIALS)
 
     @property
     def project_uid(self):
@@ -121,6 +122,12 @@ class MetadataManager(object):
         db = KeyValueStore(filename)
         doc_list = db.doc_id_startswith(service)
         return [KeyValueStore(filename, doc) for doc in doc_list]
+
+    def get_project_ca(self):
+        document = f"credentials:{self.project}"
+        credentials = KeyValueStore(self.credentials)
+        credentials.document(document)
+        return credentials.get('ca_cert')
 
     def copy_project(self, target: str):
         target_dir = get_project_dir(target)

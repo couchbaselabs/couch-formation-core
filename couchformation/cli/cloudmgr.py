@@ -34,6 +34,7 @@ class CloudMgrCLI(CLI):
         opt_parser.add_argument('-P', '--provisioner', action='store', help="Provisioner Name", default="remote")
         opt_parser.add_argument('-R', '--raw', action='store_true', help="Skip provision phase")
         opt_parser.add_argument('-t', '--to', action='store', help="Copy target")
+        opt_parser.add_argument('-E', '--extended', action='store_true', help="Extended output")
         opt_parser.add_argument('--json', action='store_true', help="List output in JSON")
 
         command_subparser = self.parser.add_subparsers(dest='command')

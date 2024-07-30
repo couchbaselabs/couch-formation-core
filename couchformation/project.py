@@ -97,6 +97,8 @@ class Project(object):
         return_list = [dict(item, project_password=password) for item in return_list]
         if not api:
             logger.info(f"Project Credentials: {password} ")
+        if not api and self.options.extended:
+            logger.info(f"Project CA:\n{base64.b64decode(MetadataManager(self.options.project).get_project_ca()).decode()} ")
         return return_list
 
     def accept_peering(self, service=None):
