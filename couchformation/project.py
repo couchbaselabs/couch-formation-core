@@ -1,6 +1,6 @@
 ##
 ##
-
+import base64
 import io
 import logging
 from couchformation.exception import FatalError
@@ -199,7 +199,6 @@ class Project(object):
                             public_host_list=public_host_list,
                             service_list=service_list) for item in result_list]
         result_list = [dict(item, password=password) if 'password' not in item else item for item in result_list]
-        # result_list = [dict(item, private_key=private_key) if 'private_key' not in item else item for item in result_list]
 
         if skip_provision:
             return
@@ -264,9 +263,9 @@ class Project(object):
             for file in build_config.files:
                 destination = build_config.files[file]
                 if file == 'ca_cert':
-                    fl = io.BytesIO(ca_cert.encode())
+                    fl = io.BytesIO(base64.b64decode(ca_cert))
                 elif file == 'ca_key':
-                    fl = io.BytesIO(private_key.encode())
+                    fl = io.BytesIO(base64.b64decode(private_key))
                 else:
                     fl = open(file, 'rb')
                 logger.info(f"Copying file {file} to {destination}")
