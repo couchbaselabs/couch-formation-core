@@ -59,6 +59,10 @@ class WinRMProvisioner(object):
     def upload():
         logger.warning("Upload not implemented")
 
+    @staticmethod
+    def copy_file(fl, target):
+        logger.warning("File copy not implemented")
+
     def run(self):
         if self.use_private_ip:
             hostname = self.private_ip

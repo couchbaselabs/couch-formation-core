@@ -12,7 +12,7 @@ from typing import Optional, List
 from couchformation.exception import NonFatalError
 from couchformation.config import NodeList, get_state_dir
 from couchformation.provisioner.ssh import RunSSHCommand
-from couchformation.provisioner.sftp import SFTPFile
+from couchformation.provisioner.sftp import SFTPFile, SFTPFileObject
 import couchformation.constants as C
 
 logger = logging.getLogger('couchformation.provisioner.remote')
@@ -125,6 +125,22 @@ class RemoteProvisioner(object):
         time.sleep(0.5)
 
         SFTPFile(self.ssh_key, self.username, hostname, self.upload_file, f"/var/tmp/{filename}").upload()
+
+        return 0
+
+    def copy_file(self, fl, target):
+        if self.use_private_ip:
+            hostname = self.private_ip
+        else:
+            hostname = self.public_ip
+
+        if not self.wait_port(hostname):
+            raise ProvisionerError(f"Host {hostname} is not reachable")
+
+        logger.info(f"Connection to {hostname} successful")
+        time.sleep(0.5)
+
+        SFTPFileObject(self.ssh_key, self.username, hostname, fl, target).copy_file()
 
         return 0
 

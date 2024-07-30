@@ -1,6 +1,7 @@
 ##
 ##
 
+import io
 import logging
 from couchformation.exception import FatalError
 from couchformation.config import get_project_dir, get_base_dir
@@ -48,7 +49,7 @@ class Project(object):
 
     def deploy(self, service=None, skip_provision=False):
         password = NodeGroup(self.options).create_credentials()
-        private_key = NodeGroup(self.options).create_private_key()
+        private_key, ca_cert = NodeGroup(self.options).create_ca()
         for group in NodeGroup(self.options).get_node_groups():
             self._test_cloud(group)
         for group in NodeGroup(self.options).get_node_groups():
@@ -59,7 +60,7 @@ class Project(object):
             region = group[0].get('region') if group[0].get('region') else "local"
             if strategy.deployer == DeployMode.node.value:
                 self._deploy_network(cloud, region)
-                self._deploy_node(group, password, private_key, skip_provision)
+                self._deploy_node(group, password, private_key, ca_cert, skip_provision)
             elif strategy.deployer == DeployMode.saas.value:
                 self._deploy_saas(group, password)
 
@@ -165,7 +166,7 @@ class Project(object):
 
         runner.foreground(module, instance, deploy, main_params)
 
-    def _deploy_node(self, group, password, private_key, skip_provision=False):
+    def _deploy_node(self, group, password, private_key, ca_cert, skip_provision=False):
         number = 0
         runner = JobDispatch()
 
@@ -198,7 +199,7 @@ class Project(object):
                             public_host_list=public_host_list,
                             service_list=service_list) for item in result_list]
         result_list = [dict(item, password=password) if 'password' not in item else item for item in result_list]
-        result_list = [dict(item, private_key=private_key) if 'private_key' not in item else item for item in result_list]
+        # result_list = [dict(item, private_key=private_key) if 'private_key' not in item else item for item in result_list]
 
         if skip_provision:
             return
@@ -258,7 +259,20 @@ class Project(object):
             p_module = provisioner.driver
             p_instance = provisioner.module
             p_method = provisioner.method
+            p_files = provisioner.files
             p_list = [provisioner.parameter_gen(result, group[0].as_dict) for result in result_list]
+            for file in build_config.files:
+                destination = build_config.files[file]
+                if file == 'ca_cert':
+                    fl = io.BytesIO(ca_cert.encode())
+                elif file == 'ca_key':
+                    fl = io.BytesIO(private_key.encode())
+                else:
+                    fl = open(file, 'rb')
+                logger.info(f"Copying file {file} to {destination}")
+                for p_set in p_list:
+                    copy_class = runner.get_class(p_module, p_instance, p_set, '', build_config.root)
+                    runner.run_method(copy_class, p_files, fl, destination)
             for step, command in enumerate(build_config.commands):
                 for p_set in p_list:
                     logger.info(f"Provisioning node {p_set.get('name')} - build step #{step + 1}")

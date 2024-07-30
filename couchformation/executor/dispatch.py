@@ -27,6 +27,14 @@ class JobDispatch(object):
     def foreground(*args, **kwargs):
         return worker.main(*args, **kwargs)
 
+    @staticmethod
+    def get_class(*args, **kwargs):
+        return worker.get_class(*args, **kwargs)
+
+    @staticmethod
+    def run_method(*args, **kwargs):
+        return worker.run_method(*args, **kwargs)
+
     def join(self):
         while self.tasks:
             done, self.tasks = concurrent.futures.wait(self.tasks, return_when=concurrent.futures.ALL_COMPLETED)

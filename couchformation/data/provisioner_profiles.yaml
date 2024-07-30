@@ -4,6 +4,7 @@ remote:
   module: RemoteProvisioner
   method: run
   upload: upload
+  files: copy_file
   when: os_id != "windows"
   parameters:
     - name
@@ -34,6 +35,7 @@ docker:
   module: ContainerExec
   method: run
   upload: copy
+  files: copy_file
   when: cloud == "docker"
   parameters:
     - name
@@ -50,6 +52,7 @@ winrm:
   module: WinRMProvisioner
   method: run
   upload: upload
+  files: copy_file
   when: os_id == "windows"
   parameters:
     - name

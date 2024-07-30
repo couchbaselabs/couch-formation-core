@@ -52,6 +52,10 @@ class ContainerExec(object):
     def copy():
         logger.warning("File copy not implemented")
 
+    @staticmethod
+    def copy_file(fl, target):
+        logger.warning("File copy not implemented")
+
     def run(self):
         working_dir = get_state_dir(self.project, self.service)
         file_output = logging.getLogger('couchformation.provisioner.output')

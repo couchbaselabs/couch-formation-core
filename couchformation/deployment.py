@@ -7,11 +7,7 @@ import os
 import json
 import argparse
 import yaml
-import base64
 import couchformation.constants as C
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.backends import default_backend
 from typing import Optional, List, Tuple, Union, Any
 from enum import Enum
 from couchformation.exception import FatalError
@@ -19,6 +15,7 @@ from couchformation.config import BaseConfig, NodeConfig, Parameters, AuthMode, 
 from couchformation.util import FileManager, dict_merge, dict_merge_not_none
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import PasswordUtility, UUIDGen
+from couchformation.certificates import CertMgr
 
 DEPLOYMENT = "deployment.db"
 logger = logging.getLogger('couchformation.deployment')
@@ -382,24 +379,22 @@ class NodeGroup(object):
 
         return self.credentials.get('password')
 
-    def create_private_key(self):
+    def create_ca(self):
         document = f"credentials:{self.project}"
 
         self.credentials.document(document)
-        if not self.credentials.get('private_key'):
-            private_key = rsa.generate_private_key(
-                public_exponent=65537,
-                key_size=2048,
-                backend=default_backend(),
-            )
-            pem = private_key.private_bytes(
-                encoding=serialization.Encoding.DER,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            )
-            self.credentials['private_key'] = base64.b64encode(pem).decode()
 
-        return self.credentials.get('private_key')
+        if not self.credentials.get('private_key'):
+            private_key = CertMgr().private_key()
+            self.credentials['private_key'] = private_key
+        else:
+            private_key = self.credentials.get('private_key')
+
+        if not self.credentials.get('ca_cert'):
+            ca_cert = CertMgr().certificate_ca(private_key)
+            self.credentials['ca_cert'] = ca_cert
+
+        return self.credentials.get('private_key'), self.credentials.get('ca_cert')
 
     def remove_credentials(self):
         document = f"credentials:{self.project}"

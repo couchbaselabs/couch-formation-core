@@ -89,6 +89,7 @@ class BuildConfig:
     root: bool = attr.ib()
     commands: List[str] = attr.ib()
     exclude: Optional[List[str]] = attr.ib(default=[])
+    files: Optional[dict] = attr.ib(default={})
 
 
 @attr.s
@@ -121,6 +122,7 @@ class Provisioner:
     module: str = attr.ib()
     method: str = attr.ib()
     upload: str = attr.ib()
+    files: str = attr.ib()
     when: str = attr.ib()
     options: List[str] = attr.ib()
     parameters: Dict = attr.ib()
@@ -270,7 +272,7 @@ class BuildProfile(object):
                     sequence = BuildConfigSequence(name, [])
                     for element in settings:
                         profile = BuildConfig(element.get('provisioner'), element.get('root'),
-                                              element.get('commands'), element.get('exclude', []))
+                                              element.get('commands'), element.get('exclude', []), element.get('files', {}))
                         sequence.add(profile)
                     self.config.add(sequence)
             except yaml.YAMLError as err:
@@ -321,10 +323,11 @@ class ProvisionerProfile(object):
         module = settings.get('module')
         method = settings.get('method')
         upload = settings.get('upload')
+        files = settings.get('files')
         when = settings.get('when')
         options = settings.get('parameters')
         parameters = {}
-        return name, driver, module, method, upload, when, options, parameters
+        return name, driver, module, method, upload, files, when, options, parameters
 
 
 class DeployStrategy(object):
