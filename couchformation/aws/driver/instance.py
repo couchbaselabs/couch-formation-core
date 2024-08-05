@@ -48,7 +48,8 @@ class Instance(CloudBase):
             instance_type="t2.micro",
             placement: PlacementType = PlacementType.ZONE,
             host_id: str = None,
-            enable_winrm: bool = False):
+            enable_winrm: bool = False,
+            tags: dict = None):
         volume_type = "gp3"
         kwargs = {}
         try:
@@ -66,7 +67,11 @@ class Instance(CloudBase):
             AWSEbsDisk.build(f"{root_disk_prefix}b", EbsVolume(volume_type, swap_size, swap_iops)).as_dict,
             AWSEbsDisk.build(f"{root_disk_prefix}c", EbsVolume(volume_type, data_size, data_iops)).as_dict,
         ]
-        instance_tag = [AWSTagStruct.build("instance").add(AWSTag("Name", name)).as_dict]
+        i_tag = AWSTagStruct.build("instance")
+        i_tag.add(AWSTag("Name", name))
+        if tags:
+            for k, v in tags.items():
+                i_tag.add(AWSTag(k, str(v)))
 
         if placement == PlacementType.ZONE:
             placement = {"AvailabilityZone": zone}
@@ -93,7 +98,7 @@ class Instance(CloudBase):
                                                    SecurityGroupIds=security_groups,
                                                    SubnetId=subnet,
                                                    Placement=placement,
-                                                   TagSpecifications=instance_tag,
+                                                   TagSpecifications=[i_tag.as_dict],
                                                    **kwargs)
         except Exception as err:
             raise AWSDriverError(f"error running instance: {err}")

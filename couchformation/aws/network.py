@@ -20,7 +20,7 @@ from couchformation.deployment import MetadataManager
 from couchformation.ssh import SSHUtil
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
-from couchformation.util import FileManager, synchronize, UUIDGen
+from couchformation.util import FileManager, synchronize, UUIDGen, parameter_to_dict
 
 logger = logging.getLogger('couchformation.aws.network')
 logger.addHandler(logging.NullHandler())
@@ -43,6 +43,7 @@ class AWSNetwork(object):
         self.cloud = parameters.get('cloud')
         self.domain = parameters.get('domain')
         self.hosted_zone = parameters.get('hosted_zone')
+        self.tags = parameters.get('tags') if parameters.get('tags') else {}
         self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
         self.build_ports = PortSettingSet().create().items()
 
@@ -191,7 +192,7 @@ class AWSNetwork(object):
 
             if not self.state.get('vpc_id'):
                 vpc_cidr = cidr_util.get_next_network()
-                vpc_id = Network(self.parameters).create(self.vpc_name, vpc_cidr)
+                vpc_id = Network(self.parameters).create(self.vpc_name, vpc_cidr, parameter_to_dict(self.tags))
                 Network(self.parameters).enable_dns_hostnames(vpc_id)
                 self.state['vpc_id'] = vpc_id
                 self.state['vpc_cidr'] = vpc_cidr
@@ -205,26 +206,29 @@ class AWSNetwork(object):
             subnet_cycle = cycle(subnet_list[1:])
 
             if not self.state.get('security_group_id'):
-                sg_id = SecurityGroup(self.parameters).create(self.sg_name, f"Couch Formation project {self.project}", vpc_id)
+                sg_id = SecurityGroup(self.parameters).create(self.sg_name,
+                                                              f"Couch Formation project {self.project}",
+                                                              vpc_id,
+                                                              parameter_to_dict(self.tags))
                 SecurityGroup(self.parameters).add_ingress(sg_id, "-1", 0, 0, vpc_cidr)
                 SecurityGroup(self.parameters).add_ingress(sg_id, "tcp", 22, 22, self.allow)
                 self.state['security_group_id'] = sg_id
                 logger.info(f"Created security group {sg_id}")
 
             if not self.state.get('ssh_key'):
-                ssh_key_name = SSHKey(self.parameters).create(self.key_name, ssh_pub_key_text)
+                ssh_key_name = SSHKey(self.parameters).create(self.key_name, ssh_pub_key_text, parameter_to_dict(self.tags))
                 self.state['ssh_key'] = ssh_key_name
                 logger.info(f"Created SSH Key {ssh_key_name}")
 
             if not self.state.get('internet_gateway_id'):
-                ig_id = InternetGateway(self.parameters).create(self.ig_name, vpc_id)
+                ig_id = InternetGateway(self.parameters).create(self.ig_name, vpc_id, parameter_to_dict(self.tags))
                 self.state['internet_gateway_id'] = ig_id
                 logger.info(f"Created internet gateway {ig_id}")
             else:
                 ig_id = self.state.get('internet_gateway_id')
 
             if not self.state.get('route_table_id'):
-                rt_id = RouteTable(self.parameters).create(self.rt_name, vpc_id)
+                rt_id = RouteTable(self.parameters).create(self.rt_name, vpc_id, parameter_to_dict(self.tags))
                 self.state['route_table_id'] = rt_id
                 RouteTable(self.parameters).add_route("0.0.0.0/0", ig_id, rt_id)
                 logger.info(f"Created route table {rt_id}")
@@ -239,7 +243,7 @@ class AWSNetwork(object):
                     if not self.state.list_exists('zone', network_cidr):
                         break
                 subnet_name = f"{self.asset_prefix}-subnet-{n+1:02d}"
-                subnet_id = Subnet(self.parameters).create(subnet_name, vpc_id, zone, network_cidr)
+                subnet_id = Subnet(self.parameters).create(subnet_name, vpc_id, zone, network_cidr, parameter_to_dict(self.tags))
                 RouteTable(self.parameters).associate(rt_id, subnet_id)
                 self.state.list_add('zone', zone, network_cidr, subnet_id)
                 logger.info(f"Created subnet {subnet_id} in zone {zone}")

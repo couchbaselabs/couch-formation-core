@@ -56,10 +56,14 @@ class Network(CloudBase):
         except EmptyResultSet:
             return iter(())
 
-    def create(self, name: str, cidr: str) -> str:
-        vpc_tag = [AWSTagStruct.build("vpc").add(AWSTag("Name", name)).as_dict]
+    def create(self, name: str, cidr: str, tags: dict = None) -> str:
+        vpc_tag = AWSTagStruct.build("vpc")
+        vpc_tag.add(AWSTag("Name", name))
+        if tags:
+            for k, v in tags.items():
+                vpc_tag.add(AWSTag(k, str(v)))
         try:
-            result = self.ec2_client.create_vpc(CidrBlock=cidr, TagSpecifications=vpc_tag)
+            result = self.ec2_client.create_vpc(CidrBlock=cidr, TagSpecifications=[vpc_tag.as_dict])
         except Exception as err:
             raise AWSDriverError(f"error creating VPC: {err}")
 
@@ -192,10 +196,14 @@ class Subnet(CloudBase):
 
         return subnet_list
 
-    def create(self, name: str, vpc_id: str, zone: str, cidr: str) -> str:
-        subnet_tag = [AWSTagStruct.build("subnet").add(AWSTag("Name", name)).as_dict]
+    def create(self, name: str, vpc_id: str, zone: str, cidr: str, tags: dict = None) -> str:
+        subnet_tag = AWSTagStruct.build("subnet")
+        subnet_tag.add(AWSTag("Name", name))
+        if tags:
+            for k, v in tags.items():
+                subnet_tag.add(AWSTag(k, str(v)))
         try:
-            result = self.ec2_client.create_subnet(VpcId=vpc_id, AvailabilityZone=zone, CidrBlock=cidr, TagSpecifications=subnet_tag)
+            result = self.ec2_client.create_subnet(VpcId=vpc_id, AvailabilityZone=zone, CidrBlock=cidr, TagSpecifications=[subnet_tag.as_dict])
             subnet_id = result['Subnet']['SubnetId']
             self.ec2_client.modify_subnet_attribute(SubnetId=subnet_id, MapPublicIpOnLaunch={'Value': True})
             return subnet_id

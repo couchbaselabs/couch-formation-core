@@ -18,7 +18,7 @@ from couchformation.deployment import MetadataManager
 from couchformation.config import get_state_file, get_state_dir, PortSettingSet
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
-from couchformation.util import FileManager, Synchronize, UUIDGen
+from couchformation.util import FileManager, Synchronize, UUIDGen, parameter_to_dict
 
 logger = logging.getLogger('couchformation.aws.node')
 logger.addHandler(logging.NullHandler())
@@ -49,6 +49,7 @@ class AWSDeployment(object):
         self.number = parameters.get('number')
         self.machine_type = parameters.get('machine_type')
         self.ports = parameters.get('ports')
+        self.tags = parameters.get('tags') if parameters.get('tags') else {}
         self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
         self.volume_size = parameters.get('volume_size') if parameters.get('volume_size') else "256"
         self.volume_iops = parameters.get('volume_iops') if parameters.get('volume_iops') \
@@ -194,7 +195,8 @@ class AWSDeployment(object):
                                                     instance_type=machine_name,
                                                     placement=placement,
                                                     host_id=host_id,
-                                                    enable_winrm=enable_winrm)
+                                                    enable_winrm=enable_winrm,
+                                                    tags=parameter_to_dict(self.tags))
 
         self.state['instance_id'] = instance_id
         self.state['name'] = self.node_encoded

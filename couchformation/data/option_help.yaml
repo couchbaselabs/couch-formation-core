@@ -62,6 +62,9 @@ ssh_key:
 sw_version:
   type_class: str
   help: Software version to deploy (build specific)
+tags:
+  type_class: str
+  help: Custom tags (comma separated key value pairs formatted as key:value)
 type:
   type_class: str
   help: Capella asset deployment type ("database" - default, or "mobile" for App Services)

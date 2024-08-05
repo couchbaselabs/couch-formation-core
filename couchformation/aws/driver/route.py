@@ -46,10 +46,14 @@ class RouteTable(CloudBase):
         else:
             return table_list
 
-    def create(self, name: str, vpc_id: str) -> str:
-        table_tag = [AWSTagStruct.build("route-table").add(AWSTag("Name", name)).as_dict]
+    def create(self, name: str, vpc_id: str, tags: dict = None) -> str:
+        table_tag = AWSTagStruct.build("route-table")
+        table_tag.add(AWSTag("Name", name))
+        if tags:
+            for k, v in tags.items():
+                table_tag.add(AWSTag(k, str(v)))
         try:
-            result = self.ec2_client.create_route_table(VpcId=vpc_id, TagSpecifications=table_tag)
+            result = self.ec2_client.create_route_table(VpcId=vpc_id, TagSpecifications=[table_tag.as_dict])
         except Exception as err:
             raise AWSDriverError(f"error creating Route Table: {err}")
 

@@ -48,6 +48,16 @@ def dict_merge_not_none(source, target):
     return new_dict
 
 
+def parameter_to_dict(parameter: Union[str, None]) -> dict:
+    if parameter is None:
+        return {}
+    result = {}
+    for item in parameter.split(','):
+        key, value = item.split(':')
+        result[key] = value
+    return result
+
+
 def progress_bar(iteration, total, decimals=1, length=100, fill='#', end="\r"):
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
     filled = int(length * iteration // total)

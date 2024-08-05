@@ -41,6 +41,7 @@ aws:
     - domain
     - ports
     - hosted_zone
+    - tags
   required:
     - region
     - ssh_key

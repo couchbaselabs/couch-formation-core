@@ -44,10 +44,14 @@ class InternetGateway(CloudBase):
         else:
             return ig_list
 
-    def create(self, name: str, vpc_id: str) -> str:
-        ig_tag = [AWSTagStruct.build("internet-gateway").add(AWSTag("Name", name)).as_dict]
+    def create(self, name: str, vpc_id: str, tags: dict = None) -> str:
+        ig_tag = AWSTagStruct.build("internet-gateway")
+        ig_tag.add(AWSTag("Name", name))
+        if tags:
+            for k, v in tags.items():
+                ig_tag.add(AWSTag(k, str(v)))
         try:
-            result = self.ec2_client.create_internet_gateway(TagSpecifications=ig_tag)
+            result = self.ec2_client.create_internet_gateway(TagSpecifications=[ig_tag.as_dict])
             ig_id = result['InternetGateway']['InternetGatewayId']
             self.ec2_client.attach_internet_gateway(InternetGatewayId=ig_id, VpcId=vpc_id)
         except Exception as err:
