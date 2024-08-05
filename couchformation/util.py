@@ -49,13 +49,19 @@ def dict_merge_not_none(source, target):
 
 
 def parameter_to_dict(parameter: Union[str, None]) -> dict:
-    if parameter is None:
+    if parameter is None or parameter == '':
         return {}
     result = {}
     for item in parameter.split(','):
         key, value = item.split(':')
         result[key] = value
     return result
+
+
+def csv_dict_concat(parameter: dict, data: str) -> str:
+    result = parameter_to_dict(data)
+    result.update(parameter)
+    return ','.join([f"{k}:{result[k]}" for k in result])
 
 
 def progress_bar(iteration, total, decimals=1, length=100, fill='#', end="\r"):

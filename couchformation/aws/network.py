@@ -20,7 +20,7 @@ from couchformation.deployment import MetadataManager
 from couchformation.ssh import SSHUtil
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
-from couchformation.util import FileManager, synchronize, UUIDGen, parameter_to_dict
+from couchformation.util import FileManager, synchronize, UUIDGen, parameter_to_dict, csv_dict_concat
 
 logger = logging.getLogger('couchformation.aws.network')
 logger.addHandler(logging.NullHandler())
@@ -43,7 +43,7 @@ class AWSNetwork(object):
         self.cloud = parameters.get('cloud')
         self.domain = parameters.get('domain')
         self.hosted_zone = parameters.get('hosted_zone')
-        self.tags = parameters.get('tags') if parameters.get('tags') else {}
+        self.tags = parameters.get('tags') if parameters.get('tags') else ''
         self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
         self.build_ports = PortSettingSet().create().items()
 
@@ -60,6 +60,9 @@ class AWSNetwork(object):
         self.state = KeyValueStore(filename, document)
 
         self.aws_network = Network(self.parameters)
+
+        self.tags = csv_dict_concat({"Project": self.project}, self.tags)
+        self.tags = csv_dict_concat({"Service": self.name}, self.tags)
 
         project_uid = MetadataManager(self.project).project_uid
         self.asset_prefix = f"cf-{project_uid}"

@@ -118,6 +118,7 @@ class CloudBase(object):
                 self.sso_account_id = contents.get('sso_account_id')
                 self.sso_role_name = contents.get('sso_role_name')
                 self.profile_region = contents.get('region')
+                break
 
         for section, contents in self.config_data.items():
             if section.startswith('sso-session'):

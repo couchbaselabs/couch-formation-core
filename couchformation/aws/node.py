@@ -18,7 +18,7 @@ from couchformation.deployment import MetadataManager
 from couchformation.config import get_state_file, get_state_dir, PortSettingSet
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
-from couchformation.util import FileManager, Synchronize, UUIDGen, parameter_to_dict
+from couchformation.util import FileManager, Synchronize, UUIDGen, parameter_to_dict, csv_dict_concat
 
 logger = logging.getLogger('couchformation.aws.node')
 logger.addHandler(logging.NullHandler())
@@ -49,7 +49,7 @@ class AWSDeployment(object):
         self.number = parameters.get('number')
         self.machine_type = parameters.get('machine_type')
         self.ports = parameters.get('ports')
-        self.tags = parameters.get('tags') if parameters.get('tags') else {}
+        self.tags = parameters.get('tags') if parameters.get('tags') else ''
         self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
         self.volume_size = parameters.get('volume_size') if parameters.get('volume_size') else "256"
         self.volume_iops = parameters.get('volume_iops') if parameters.get('volume_iops') \
@@ -61,6 +61,9 @@ class AWSDeployment(object):
         self.node_name = f"{self.name}-node-{self.number:02d}"
         node_code = UUIDGen().text_hash(self.node_name)
         self.node_encoded = f"{self.asset_prefix}-{node_code}-node"
+
+        self.tags = csv_dict_concat({"Project": self.project}, self.tags)
+        self.tags = csv_dict_concat({"Service": self.name}, self.tags)
 
         filename = get_state_file(self.project, self.name)
 
