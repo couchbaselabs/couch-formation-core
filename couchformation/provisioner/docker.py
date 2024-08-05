@@ -42,19 +42,18 @@ class ContainerExec(object):
         self.public_ip = self.parameters.get('public_ip')
         self.private_ip = self.parameters.get('private_ip')
         self.services = self.parameters.get('services')
+        self.upload_file = self.parameters.get('upload')
         self.connect = ','.join(self.parameters.get('connect')) \
             if self.parameters.get('connect') and type(self.parameters.get('connect')) is list \
             else self.parameters.get('connect')
         self.private_ip_list = ','.join(self.parameters.get('private_ip_list'))
         self.use_private_ip = self.parameters.get('use_private_ip') if self.parameters.get('use_private_ip') else False
 
-    @staticmethod
-    def copy():
-        logger.warning("File copy not implemented")
+    def upload(self):
+        Container(self.parameters).copy_file_to_container(self.container_name, self.upload_file, "/var/tmp")
 
-    @staticmethod
-    def copy_file(fl, target):
-        logger.warning("File copy not implemented")
+    def copy_file(self, fl, target):
+        Container(self.parameters).copy_io_to_container(self.container_name, fl, target)
 
     def run(self):
         working_dir = get_state_dir(self.project, self.service)
@@ -75,7 +74,7 @@ class ContainerExec(object):
 
         file_output.info(f"{self.container_name}: [{_command}] begins")
 
-        exit_code, output = Container(self.parameters).run_in_container(self.container_name, _command)
+        exit_code, output = Container(self.parameters).run_in_container(self.container_name, _command, root=self.root)
 
         for line in output.readlines():
             if not line:

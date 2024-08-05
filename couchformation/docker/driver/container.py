@@ -6,13 +6,13 @@ import os
 import logging
 import docker
 import jinja2
+import tarfile
 from jinja2.meta import find_undeclared_variables
 from docker.errors import APIError
 from docker.models.containers import Container as ContainerClass
 from typing import Union, List, Set
 from couchformation.docker.driver.base import CloudBase, DockerDriverError
 from couchformation.docker.util import ContainerProfile, ContainerSpec
-from couchformation.docker.driver.constants import ContainerBuildMap
 from couchformation.util import FileManager
 from couchformation.config import get_project_dir
 
@@ -97,7 +97,7 @@ class Container(CloudBase):
             volume_mount = ip.volume.directory
             if ip.volume.size:
                 volume_size = ip.volume.size
-        if not dir_mount and ip.volume.run:
+        if not dir_mount and ip.volume and ip.volume.run:
             host_path = os.path.join(get_project_dir(self.project), self.name, 'mounts', name)
             dir_mount = host_path
             if ip.volume.run:
@@ -105,7 +105,7 @@ class Container(CloudBase):
             else:
                 run_cmd = None
             FileManager().dir_populate(str(host_path), run_cmd)
-        if not command and ip.volume.command:
+        if not command and ip.volume and ip.volume.command:
             command = ip.volume.command
 
         port_struct = self.create_port_dict(self.expand_ranges(ports))
@@ -138,8 +138,11 @@ class Container(CloudBase):
         return container_id
 
     @staticmethod
-    def map(name: str):
-        return ContainerBuildMap().image(name)
+    def map(build: str):
+        try:
+            return ContainerProfile().by_build(build).name
+        except AttributeError:
+            return None
 
     def get_container(self, container_id: str):
         return self.get_container_id(container_id)
@@ -200,17 +203,49 @@ class Container(CloudBase):
         raw_template = jinja2.Template(profile.volume.run)
         return raw_template.render(parameters)
 
-    def run_in_container(self, name: str, command: Union[str, List[str]], directory: Union[str, None] = None):
+    def run_in_container(self, name: str, command: Union[str, List[str]], directory: Union[str, None] = None, root: bool = True):
         buffer = io.BytesIO()
         cmd_prefix = ['sh', '-c']
         container_id = self.get_container_id(name)
         if type(command) is str:
             command = [command]
         cmd_prefix.extend(command)
-        exit_code, output = container_id.exec_run(cmd_prefix, workdir=directory)
+        if root:
+            exit_code, output = container_id.exec_run(cmd_prefix, workdir=directory, user="root")
+        else:
+            exit_code, output = container_id.exec_run(cmd_prefix, workdir=directory)
         buffer.write(output)
         buffer.seek(0)
         return exit_code, buffer
+
+    def get_home_path(self, name: str) -> Union[str, None]:
+        exit_code, output = self.run_in_container(name, "printf %s ~")
+        if exit_code != 0:
+            return None
+        else:
+            return output.read().decode('utf-8')
+
+    def copy_file_to_container(self, name: str, src: str, dst: str):
+        container_id = self.get_container_id(name)
+        stream = io.BytesIO()
+        with tarfile.open(fileobj=stream, mode='w|') as tar, open(src, 'rb') as file:
+            info = tar.gettarinfo(fileobj=file)
+            info.name = os.path.basename(src)
+            tar.addfile(info, file)
+        container_id.put_archive(dst, stream.getvalue())
+
+    def copy_io_to_container(self, name: str, fl: io, dst: str):
+        fl.seek(0)
+        container_id = self.get_container_id(name)
+        home_path = self.get_home_path(name)
+        if not home_path:
+            home_path = "/root"
+        stream = io.BytesIO()
+        with tarfile.open(fileobj=stream, mode='w|') as tar:
+            info = tarfile.TarInfo(name=dst)
+            info.size = fl.getbuffer().nbytes
+            tar.addfile(info, fl)
+        container_id.put_archive(home_path, stream.getvalue())
 
     def terminate(self, name: str) -> None:
         container_id = self.get_container_id(name)

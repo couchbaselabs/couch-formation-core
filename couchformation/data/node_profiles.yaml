@@ -13,6 +13,11 @@ default:
     commands:
       - >-
         iex "& {$(irm https://raw.githubusercontent.com/couchbaselabs/host-prep-lib/main/bin/bootstrap.ps1)}"
+  - provisioner: docker
+    root: true
+    exclude: []
+    commands:
+      - curl -sfL https://raw.githubusercontent.com/couchbaselabs/host-prep-lib/main/bin/setup.sh | bash -s - -s -p pyhostprep
 generic:
   - provisioner: remote
     root: true
@@ -54,6 +59,17 @@ winsql:
 cbs:
   - provisioner: remote
     root: true
+    commands:
+      - bundlemgr -b CBS -V {{ SOFTWARE_VERSION }}
+      - swmgr cluster create -n {{ SERVICE_NAME }} -g {{ NODE_ZONE }} -D /cbdata -l {{ IP_LIST }} -p '{{ PASSWORD }}' -h {{ HOST_LIST }} -L {{ SERVICE_LIST }}
+      - swmgr cluster rebalance -l {{ IP_LIST }} -p '{{ PASSWORD }}'
+  - provisioner: docker
+    root: true
+    commands:
+      - swmgr cluster create -n {{ SERVICE_NAME }} -s {{ SERVICES }}
+cbscert:
+  - provisioner: remote
+    root: true
     files:
       ca_cert: ca.pem
       ca_key: ca.key
@@ -66,9 +82,14 @@ cbs:
       - swmgr cluster cert_auth -l {{ IP_LIST }} -p '{{ PASSWORD }}' -h {{ HOST_LIST }}
   - provisioner: docker
     root: true
+    files:
+      ca_cert: ca.pem
+      ca_key: ca.key
     commands:
-      - curl -sfL https://raw.githubusercontent.com/couchbaselabs/host-prep-lib/main/bin/setup.sh | bash -s - -s -p pyhostprep
       - swmgr cluster create -n {{ SERVICE_NAME }} -s {{ SERVICES }}
+      - swmgr cluster ca_cert
+      - swmgr cluster node_cert
+      - swmgr cluster cert_auth
 sgw:
   - provisioner: remote
     root: true

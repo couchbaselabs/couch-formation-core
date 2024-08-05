@@ -3,6 +3,8 @@ cbs:
   deployer: node
 cbsc:
   deployer: node
+cbscert:
+  deployer: node
 sgw:
   deployer: node
 generic:

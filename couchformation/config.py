@@ -362,6 +362,7 @@ class PortSettings:
         tcp_ports = []
         udp_ports = []
         for spec in port_config:
+            spec = str(spec)
             port_spec = spec.split('/')
             port_nums = port_spec[0]
             if len(port_spec) > 1:

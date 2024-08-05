@@ -34,7 +34,7 @@ docker:
   driver: couchformation.provisioner.docker
   module: ContainerExec
   method: run
-  upload: copy
+  upload: upload
   files: copy_file
   when: cloud == "docker"
   parameters:
@@ -47,6 +47,7 @@ docker:
     - private_ip_list
     - use_private_ip
     - copy
+    - upload
 winrm:
   driver: couchformation.provisioner.winrm
   module: WinRMProvisioner

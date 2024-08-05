@@ -19,6 +19,7 @@ class VolumeSpec:
 @attr.s
 class ContainerSpec:
     name: str = attr.ib()
+    builds: List[str] = attr.ib()
     volume: Optional[VolumeSpec] = attr.ib(default=None)
     ports: Optional[str] = attr.ib(default="80,443")
 
@@ -39,6 +40,9 @@ class ContainerSet:
     def get(self, image):
         return next((p for p in self.profiles if p.name == image), None)
 
+    def get_by_build(self, build):
+        return next((p for p in self.profiles if build in p.builds), None)
+
 
 class ContainerProfile(object):
 
@@ -50,6 +54,12 @@ class ContainerProfile(object):
     def get(self, image) -> Union[ContainerSpec, None]:
         profile = self.config.get(image)
         if not profile:
+            return ContainerSpec(image, [])
+        return profile
+
+    def by_build(self, build: str) -> Union[ContainerSpec, None]:
+        profile = self.config.get_by_build(build)
+        if not profile:
             return None
         return profile
 
@@ -57,7 +67,7 @@ class ContainerProfile(object):
         with open(self.cfg_file, "r") as f:
             try:
                 for image, settings in yaml.safe_load(f).items():
-                    profile = ContainerSpec(image)
+                    profile = ContainerSpec(image, settings.get('builds').split(','))
                     if settings.get('ports'):
                         profile.add_ports(settings.get('ports'))
                     if settings.get('volume'):

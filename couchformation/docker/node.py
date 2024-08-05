@@ -3,7 +3,7 @@
 
 import logging
 from couchformation.docker.driver.container import Container
-from couchformation.config import get_state_file, get_state_dir
+from couchformation.config import get_state_file, get_state_dir, PortSettingSet, PortSettings
 from couchformation.docker.network import DockerNetwork
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
@@ -61,8 +61,15 @@ class DockerDeployment(object):
         net_name = self.docker_network.network
         services = self.services
 
+        build_ports = PortSettingSet().create().get(self.build)
+        if build_ports:
+            port_cfg = PortSettings().create(self.name, build_ports.tcp_ports)
+            ports = ','.join(list(port_cfg.tcp_as_ranges()))
+        else:
+            ports = None
+
         logger.info(f"Creating container {self.node_name}")
-        container = Container(self.parameters).run(self.image, self.node_name, network=net_name)
+        container = Container(self.parameters).run(self.image, self.node_name, network=net_name, ports=ports)
 
         public_ip = NetworkUtil().local_ip_address()
         private_ip = Container(self.parameters).get_container_ip(self.node_name)
