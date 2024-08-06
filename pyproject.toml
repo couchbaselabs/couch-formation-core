@@ -83,7 +83,7 @@ six = ">=1.16.0"
 pytest = ">=5.0.0"
 pytest-asyncio = ">=0.20.1"
 pytest-rerunfailures = ">=10.0"
-pytest-order = ">=1.0.0"
+pytest-order = "<=1.2.0"
 
 [tool.poetry.group.dev.dependencies]
 bumpversion = "^0.6.0"
