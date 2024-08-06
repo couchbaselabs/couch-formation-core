@@ -108,7 +108,7 @@ class GCPImageProjects(object):
             "description": "Windows Server",
             "os_id": "windows",
             "user": "adminuser",
-            "pattern": r"windows-server-(.+?)-dc-v*"
+            "pattern": r"windows-server-(.+?)-dc-v[0-9]+"
         }
     ]
 
