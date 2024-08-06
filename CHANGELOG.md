@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - Added build target "cbscert" which uses project CA to create cluster and node certificates and enables cert auth
 - Docker default build step to install host prep package
 - Custom tag support for AWS via the ```--tags``` parameter
+- Extended flag (```-E```) for list operation to show additional information such as the CA certificate in PEM format
 
 ### Changed
 
