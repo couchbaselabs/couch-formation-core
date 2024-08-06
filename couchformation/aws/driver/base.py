@@ -80,7 +80,8 @@ class CloudBase(object):
         try:
             self.ec2_client = boto3.client('ec2', region_name=self.aws_region)
             self.dns_client = boto3.client('route53')
-            self.cost_client = boto3.client('pricing', region_name='us-east-1')
+            self.sts_client = boto3.client('sts')
+            # self.cost_client = boto3.client('pricing', region_name='us-east-1')
         except Exception as err:
             raise AWSDriverError(f"can not initialize AWS driver: {err}")
 
@@ -235,7 +236,9 @@ class CloudBase(object):
             accountId=account_id,
         )
         roles = account_roles['roleList']
-        role = roles[0]
+        role = next((r for r in roles if r.get('roleName') == self.sso_role_name), None)
+        if not role:
+            AWSDriverError(f"Role {self.sso_role_name} is not available for account {self.sso_account_id}")
         role_creds = sso.get_role_credentials(
             roleName=role['roleName'],
             accountId=account_id,

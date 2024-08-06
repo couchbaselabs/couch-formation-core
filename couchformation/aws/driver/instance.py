@@ -100,6 +100,18 @@ class Instance(CloudBase):
                                                    Placement=placement,
                                                    TagSpecifications=[i_tag.as_dict],
                                                    **kwargs)
+        except botocore.exceptions.ClientError as err:
+            response = err.response
+            message = response.get('Error', {}).get('Message')
+            if message:
+                parts = message.split('failure message: ')
+                if len(parts) == 2:
+                    decoded = self.sts_client.decode_authorization_message(EncodedMessage=parts[1])
+                    decoded_message = decoded.get('DecodedMessage')
+                    if decoded_message:
+                        import json
+                        logger.debug(f"Decoded Error:\n{json.dumps(json.loads(decoded_message), indent=2)}")
+            raise AWSDriverError(f"AWS client error: {err}")
         except Exception as err:
             raise AWSDriverError(f"error running instance: {err}")
 
