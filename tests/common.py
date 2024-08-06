@@ -177,6 +177,7 @@ def create_cred_package(file_name: str):
         tar.add(aws_config_dir, arcname=os.path.relpath(aws_config_dir, Path.home()), recursive=True)
         tar.add(gcp_config_dir, arcname=os.path.relpath(gcp_config_dir, Path.home()), recursive=True)
         tar.add(azure_config_dir, arcname=os.path.relpath(azure_config_dir, Path.home()), recursive=True)
+        tar.add(local_config_file, arcname=os.path.relpath(local_config_file, Path.home()))
 
 
 def copy_home_env_to_container(container_id: Container, dst: str, uid=0, gid=0, uname="root", gname="root"):
