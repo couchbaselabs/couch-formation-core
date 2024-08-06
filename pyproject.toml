@@ -30,6 +30,10 @@ include = [
 cloudmgr = "couchformation.cli.cloudmgr:main"
 dbdump = "couchformation.cli.dbdump:main"
 
+[[tool.poetry.source]]
+name = "pypi-public"
+url = "https://pypi.org/simple/"
+
 [tool.poetry.dependencies]
 python = ">=3.8,<4"
 attrs = ">=23.1.0"
@@ -37,7 +41,6 @@ boto3 = ">=1.34.17"
 botocore = ">=1.34.17"
 cryptography = ">=42.0.7"
 dnspython = ">=2.1.0"
-docutils = ">=0.20.1"
 google-api-core = ">=2.4.0"
 google-api-python-client = ">=2.34.0"
 google-auth = ">=2.3.3"
@@ -83,7 +86,7 @@ six = ">=1.16.0"
 pytest = ">=5.0.0"
 pytest-asyncio = ">=0.20.1"
 pytest-rerunfailures = ">=10.0"
-pytest-order = "<=1.2.0"
+pytest-order = ">=1.2.0"
 
 [tool.poetry.group.dev.dependencies]
 bumpversion = "^0.6.0"
