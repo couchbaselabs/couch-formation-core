@@ -25,7 +25,8 @@ from couchformation.aws.driver.route import RouteTable
 from couchformation.aws.driver.sshkey import SSHKey
 from couchformation.aws.driver.image import Image
 from couchformation.ssh import SSHUtil
-from tests.common import ssh_key_path
+from couchformation.util import parameter_to_dict
+from tests.common import ssh_key_path, get_aws_tags
 
 
 @pytest.mark.cf_aws
@@ -57,13 +58,15 @@ class TestMainAWS(unittest.TestCase):
               "quantity": "3",
               "services": None,
               "volume_iops": None,
-              "volume_size": None
+              "volume_size": None,
+              "tags": get_aws_tags()
             }
         self.project = self.parameters.get('project')
         self.ssh_key = self.parameters.get('ssh_key')
         self.os_id = self.parameters.get('os_id')
         self.os_version = self.parameters.get('os_version')
         self.machine_type = self.parameters.get('machine_type')
+        self.tags = self.parameters.get('tags')
 
     def tearDown(self):
         time.sleep(1)
@@ -117,7 +120,8 @@ class TestMainAWS(unittest.TestCase):
                                                     ssh_key_name,
                                                     sg_id, subnet_id,
                                                     zone_list[0],
-                                                    instance_type=machine['name'])
+                                                    instance_type=machine['name'],
+                                                    tags=parameter_to_dict(self.tags))
 
         sg_list = SecurityGroup(self.parameters).list(vpc_id)
         new_vpc_list = Network(self.parameters).list()

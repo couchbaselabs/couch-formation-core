@@ -2,6 +2,7 @@
 export LOGPATH := $(shell pwd)/tests/log
 export PROJECT_NAME := $$(basename $$(pwd))
 export PROJECT_VERSION := $(shell cat VERSION)
+export TEST_PATH := $(shell pwd)/tests
 
 commit:
 		git commit -am "Version $(shell cat VERSION)"
@@ -39,6 +40,10 @@ remote_download:
 		-t "Release $(PROJECT_VERSION)" \
 		-n "Release $(PROJECT_VERSION)" \
 		$(PROJECT_VERSION)
+container:
+		docker system prune -f
+		docker buildx prune -f
+		docker buildx build --load --platform linux/amd64,linux/arm64 -t cftest -f $(TEST_PATH)/Dockerfile .
 test_kvdb:
 		python -m pytest tests/test_kvdb.py
 test_aws_drv:

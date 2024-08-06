@@ -20,6 +20,7 @@ import tarfile
 import warnings
 import logging
 import subprocess
+import configparser
 
 warnings.filterwarnings("ignore")
 current = os.path.dirname(os.path.realpath(__file__))
@@ -38,7 +39,22 @@ capella_config_relative_path = os.path.relpath(capella_config_path, Path.home())
 aws_config_dir = os.path.join(Path.home(), '.aws')
 gcp_config_dir = os.path.join(Path.home(), '.config', 'gcloud')
 azure_config_dir = os.path.join(Path.home(), '.azure')
+local_config_file = os.path.join(Path.home(), '.config', 'couch-formation', 'local.conf')
 linux_image_name = "ubuntu:jammy"
+
+
+def get_aws_tags():
+    if os.environ.get('AWS_TEST_TAGS'):
+        return os.environ.get('AWS_TEST_TAGS')
+    elif os.path.exists(local_config_file):
+        config_data = configparser.ConfigParser()
+        config_data.read(local_config_file)
+        if 'pytest' in config_data:
+            pytest_config = config_data['pytest']
+            if pytest_config.get('tags'):
+                return pytest_config.get('tags')
+    else:
+        return None
 
 
 def make_local_dir(name: str):

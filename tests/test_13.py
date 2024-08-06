@@ -13,7 +13,7 @@ from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 from couchformation.aws.driver.base import CloudBase
 from tests.interactive import aws_base
-from tests.common import start_container, stop_container, run_in_container, copy_home_env_to_container, ssh_key_relative_path, get_cmd_output
+from tests.common import start_container, stop_container, run_in_container, copy_home_env_to_container, ssh_key_relative_path, get_cmd_output, get_aws_tags
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger('couchformation.aws.driver.base')
@@ -53,7 +53,7 @@ class TestInstallAWS(object):
         platform = f"linux/{os.uname().machine}"
         cls.environment = CloudBase(aws_base).get_auth_config()
         cls.container_id = start_container('cftest', cls.container_name, platform=platform)
-        copy_home_env_to_container(cls.container_id,'/home/ubuntu', uid=1000, gid=1000)
+        copy_home_env_to_container(cls.container_id, '/home/ubuntu', uid=1000, gid=1000)
         command = ['pip3', 'install', '--user', 'git+https://github.com/mminichino/couch-formation-core']
         result = run_in_container(cls.container_id, command)
         assert result is True
@@ -69,6 +69,8 @@ class TestInstallAWS(object):
         command = ["cloudmgr", "create", "--build", "cbs", "--cloud", "aws", "--project", "pytest-aws", "--name", "test-cluster",
                    "--region", "us-east-2", "--quantity", "3", "--os_id", "ubuntu", "--os_version", "22.04",
                    "--ssh_key", self.ssh_key_path, "--machine_type", "4x16"]
+        if get_aws_tags():
+            command.extend(["--tags", get_aws_tags()])
         result = run_in_container(self.container_id, command, environment=self.environment)
         assert result is True
 
