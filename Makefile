@@ -1,4 +1,4 @@
-.PHONY:	setup push pypi test
+.PHONY:	pypi publish test commit build patch minor major
 export LOGPATH := $(shell pwd)/tests/log
 export PROJECT_NAME := $$(basename $$(pwd))
 export PROJECT_VERSION := $(shell cat VERSION)
@@ -31,6 +31,8 @@ twine:
 		twine upload $(REV_FILE)
 pypi:
 		poetry build
+		poetry publish
+publish:
 		poetry publish
 download:
 		gh release create -R "mminichino/$(PROJECT_NAME)" \
