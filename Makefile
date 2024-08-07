@@ -26,10 +26,12 @@ major:
 		bumpversion --allow-dirty major
 setup:
 		python setup.py sdist
-push:
+twine:
 		$(eval REV_FILE := $(shell ls -tr dist/*.gz | tail -1))
 		twine upload $(REV_FILE)
-pypi: setup push
+pypi:
+		poetry build
+		poetry publish
 download:
 		gh release create -R "mminichino/$(PROJECT_NAME)" \
 		-t "Release $(PROJECT_VERSION)" \
