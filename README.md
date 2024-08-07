@@ -24,12 +24,15 @@ export PATH=$(python -m site --user-base)/bin:$PATH
 ````
 ### Install (virtual environment method):
 #### Linux
+Create virtual environment:
 ````
 python -m venv couchformation
 ````
+Activate virtual environment:
 ````
 . couchformation/bin/activate
 ````
+Install Couch Formation into the virtual environment:
 ````
 pip install couchformation
 ````
@@ -79,6 +82,11 @@ cloudmgr create --build generic --cloud aws --project dev01 --name app01 --regio
 ```
 ```
 cloudmgr create --build generic --cloud aws --project dev01 --name app02 --region us-east-2 --quantity 1 --os_id windows --os_version 2022 --ssh_key /Users/jdoe/.ssh/jdoe-default-key-pair.pem --machine_type 8x32
+```
+
+## Providing tags in AWS
+```
+cloudmgr create --build cbs --cloud aws --project test-db --name testdb --region us-east-1 --auth_mode sso --ssh_key /Users/jdoe/.ssh/jdoe-default-key-pair.pem --os_id ubuntu --os_version 22.04 --machine_type 8x32 --quantity 3 --tags user:john.doe@example.com
 ```
 
 ## Custom services example
