@@ -17,27 +17,33 @@ Toolset for running and managing Couchbase assets in the cloud.
 ## Quick Start
 ### Install (pip user local method):
 ````
-pip3 install --user couchformation
+pip install --user couchformation
 ````
 ````
-export PATH=$(python3 -m site --user-base)/bin:$PATH
+export PATH=$(python -m site --user-base)/bin:$PATH
 ````
 ### Install (virtual environment method):
+#### Linux
 ````
-python3 -m venv couchformation
-````
-````
-cd couchformation
+python -m venv couchformation
 ````
 ````
-. bin/activate
+. couchformation/bin/activate
 ````
 ````
-pip3 install couchformation
+pip install couchformation
+````
+#### Activate Windows virtual environment using cmd
+````
+couchformation\Scripts\activate.bat
+````
+#### Active Windows virtual environment using PowerShell
+````
+couchformation\Scripts\Activate.ps1
 ````
 ### Install directly from GitHub repo:
 ````
-pip3 install --user git+https://github.com/couchbaselabs/couch-formation-core
+pip install --user git+https://github.com/couchbaselabs/couch-formation-core
 ````
 
 ## Basic example
