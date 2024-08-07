@@ -24,7 +24,8 @@ include = [
 ]
 
 [tool.poetry.urls]
-"Homepage" = "https://github.com/mminichino/couch-formation-core"
+"Homepage" = "https://github.com/couchbaselabs/couch-formation-core"
+"Changelog" = "https://github.com/couchbaselabs/couch-formation-core/blob/master/CHANGELOG.md"
 
 [tool.poetry.scripts]
 cloudmgr = "couchformation.cli.cloudmgr:main"
