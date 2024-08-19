@@ -119,6 +119,10 @@ class CloudBase(object):
                 self.sso_account_id = contents.get('sso_account_id')
                 self.sso_role_name = contents.get('sso_role_name')
                 self.profile_region = contents.get('region')
+                if not self.sso_session:
+                    self.sso_start_url = contents.get('sso_start_url')
+                    self.sso_region = contents.get('sso_region')
+                    self.sso_registration_scopes = 'sso:account:access'
                 break
 
         for section, contents in self.config_data.items():

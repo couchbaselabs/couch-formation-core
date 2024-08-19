@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.0.0a380]
+
+### Added
+
+- Nothing new was added
+
+### Changed
+
+- Nothing was changed
+
+### Fixed
+
+- Fixed issue with AWS SSO auth if a ```sso-session``` is not configured
+
+### Removed
+
+- Nothing was removed in this release
+
 ## [4.0.0a370]
 
 ### Added
