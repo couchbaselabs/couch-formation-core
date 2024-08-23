@@ -457,3 +457,10 @@ class Project(object):
     @property
     def location(self):
         return get_project_dir(self.options.project)
+
+    def login(self):
+        for n, group in enumerate(NodeGroup(self.options).get_node_groups()):
+            self._test_cloud(group)
+            cloud = group[0].get('cloud')
+            logger.info(f"Node group {n + 1}: cloud {cloud.upper()}")
+        logger.info(f"Cloud providers authenticated")

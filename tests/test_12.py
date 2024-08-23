@@ -23,7 +23,7 @@ sys.path.append(current)
 
 from couchformation.project import Project
 from couchformation.cli.cloudmgr import CloudMgrCLI
-from tests.common import ssh_key_path
+from tests.common import ssh_key_path, get_aws_tags
 
 
 class BasicAuth(AuthBase):
@@ -43,10 +43,11 @@ class BasicAuth(AuthBase):
         return r
 
 
-@pytest.mark.cf_azure
+@pytest.mark.cf_aws
 @pytest.mark.cf_windows
-@pytest.mark.order(6)
-class TestMainAzure(unittest.TestCase):
+@pytest.mark.cf_posix
+@pytest.mark.order(12)
+class TestMainAWS(unittest.TestCase):
     command = None
 
     def setUp(self):
@@ -61,32 +62,36 @@ class TestMainAzure(unittest.TestCase):
                 logger.removeHandler(handler)
 
     def test_1(self):
-        args = ["create", "--build", "cbs", "--cloud", "azure", "--project", "pytest-azure", "--name", "test-cluster",
-                "--region", "eastus", "--quantity", "3", "--os_id", "ubuntu", "--os_version", "22.04",
+        args = ["create", "--build", "cbs", "--cloud", "aws", "--project", "pytest-aws", "--name", "test-cluster", "--auth_mode", "sso",
+                "--region", "us-east-2", "--quantity", "3", "--os_id", "ubuntu", "--os_version", "22.04",
                 "--ssh_key", ssh_key_path, "--machine_type", "4x16"]
+        if get_aws_tags():
+            args.extend(["--tags", get_aws_tags()])
         result, output = cli_run(self.command, *args)
         p = re.compile("Creating new service")
         assert p.search(output) is not None
         assert result == 0
 
     def test_2(self):
-        args = ["add", "--build", "cbs", "--cloud", "azure", "--project", "pytest-azure", "--name", "test-cluster",
-                "--region", "eastus", "--quantity", "2", "--os_id", "ubuntu", "--os_version", "22.04",
+        args = ["add", "--build", "cbs", "--cloud", "aws", "--project", "pytest-aws", "--name", "test-cluster", "--auth_mode", "sso",
+                "--region", "us-east-2", "--quantity", "2", "--os_id", "ubuntu", "--os_version", "22.04",
                 "--ssh_key", ssh_key_path, "--machine_type", "4x16", "--services", "analytics"]
+        if get_aws_tags():
+            args.extend(["--tags", get_aws_tags()])
         result, output = cli_run(self.command, *args)
         p = re.compile("Adding node group to service")
         assert p.search(output) is not None
         assert result == 0
 
     def test_3(self):
-        args = ["deploy", "--project", "pytest-azure"]
+        args = ["deploy", "--project", "pytest-aws"]
         result, output = cli_run(self.command, *args)
         p = re.compile("Cluster Initialized")
         assert p.search(output) is not None
         assert result == 0
 
     def test_4(self):
-        args = ["list", "--project", "pytest-azure"]
+        args = ["list", "--project", "pytest-aws"]
         username = "Administrator"
         cm = CloudMgrCLI(args)
         project = Project(cm.options, cm.remainder)
@@ -107,7 +112,7 @@ class TestMainAzure(unittest.TestCase):
         assert response.status_code == 200
 
     def test_5(self):
-        args = ["destroy", "--project", "pytest-azure"]
+        args = ["destroy", "--project", "pytest-aws"]
         result, output = cli_run(self.command, *args)
         p = re.compile("Removing")
         assert p.search(output) is not None

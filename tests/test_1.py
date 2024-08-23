@@ -31,6 +31,7 @@ from tests.common import ssh_key_path, get_aws_tags
 
 @pytest.mark.cf_aws
 @pytest.mark.cf_windows
+@pytest.mark.cf_posix
 @pytest.mark.order(1)
 class TestMainAWS(unittest.TestCase):
 

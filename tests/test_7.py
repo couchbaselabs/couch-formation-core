@@ -44,7 +44,8 @@ class BasicAuth(AuthBase):
 
 @pytest.mark.cf_capella
 @pytest.mark.cf_windows
-@pytest.mark.order(3)
+@pytest.mark.cf_posix
+@pytest.mark.order(7)
 class TestMainCapella(unittest.TestCase):
 
     def setUp(self):

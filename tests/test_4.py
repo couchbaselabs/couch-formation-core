@@ -43,7 +43,8 @@ class BasicAuth(AuthBase):
 
 @pytest.mark.cf_aws
 @pytest.mark.cf_windows
-@pytest.mark.order(2)
+@pytest.mark.cf_posix
+@pytest.mark.order(4)
 class TestMainAWS(unittest.TestCase):
 
     def setUp(self):

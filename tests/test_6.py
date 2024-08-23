@@ -43,7 +43,8 @@ class BasicAuth(AuthBase):
 
 @pytest.mark.cf_azure
 @pytest.mark.cf_windows
-@pytest.mark.order(2)
+@pytest.mark.cf_posix
+@pytest.mark.order(6)
 class TestMainAzure(unittest.TestCase):
 
     def setUp(self):

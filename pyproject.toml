@@ -118,7 +118,9 @@ markers = [
     "cf_aws: marks a test as an AWS test",
     "cf_gcp: marks a test as a GCP test",
     "cf_azure: marks a test as a Azure test",
-    "cf_docker: marks a test as a Azure test",
-    "cf_capella: marks a test as a Azure test",
+    "cf_docker: marks a test as a Docker test",
+    "cf_capella: marks a test as a Capella test",
+    "cf_columnar: marks a test as a Columnar test",
     "cf_windows: marks a test as a Windows safe test",
+    "cf_posix: marks a test as a macOS or Linux safe test",
 ]

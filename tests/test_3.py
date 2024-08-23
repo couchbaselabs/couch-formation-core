@@ -27,7 +27,8 @@ from tests.common import ssh_key_path
 
 @pytest.mark.cf_azure
 @pytest.mark.cf_windows
-@pytest.mark.order(1)
+@pytest.mark.cf_posix
+@pytest.mark.order(3)
 class TestMainAzure(unittest.TestCase):
 
     def setUp(self):

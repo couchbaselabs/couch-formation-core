@@ -1,25 +1,29 @@
 #!/usr/bin/env python3
 
 import os
+import sys
+import logging
 import warnings
-import pytest
-import time
 import requests
 import base64
-import logging
-import json
+import unittest
+import pytest
+import time
+import re
 from requests.auth import AuthBase
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
-from couchformation.aws.driver.base import CloudBase
-from tests.interactive import aws_base
-from tests.common import start_container, stop_container, run_in_container, copy_home_env_to_container, ssh_key_relative_path, get_cmd_output, get_aws_tags
+from tests.common import cli_run
 
 warnings.filterwarnings("ignore")
-logger = logging.getLogger('couchformation.aws.driver.base')
-logger.addHandler(logging.NullHandler())
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
+sys.path.append(parent)
+sys.path.append(current)
+
+from couchformation.project import Project
+from couchformation.cli.cloudmgr import CloudMgrCLI
+from tests.common import ssh_key_path
 
 
 class BasicAuth(AuthBase):
@@ -39,54 +43,57 @@ class BasicAuth(AuthBase):
         return r
 
 
-@pytest.mark.cf_aws
-@pytest.mark.order(7)
-class TestInstallAWS(object):
-    container_id = None
-    environment = {}
-    container_name = 'pytest'
-    ssh_key_path = os.path.join('/home/ubuntu', ssh_key_relative_path)
+@pytest.mark.cf_gcp
+@pytest.mark.cf_windows
+@pytest.mark.cf_posix
+@pytest.mark.order(13)
+class TestMainGCP(unittest.TestCase):
+    command = None
 
-    @classmethod
-    def setup_class(cls):
-        logger.info("Starting Linux container")
-        platform = f"linux/{os.uname().machine}"
-        cls.environment = CloudBase(aws_base).get_auth_config()
-        cls.container_id = start_container('cftest', cls.container_name, platform=platform)
-        copy_home_env_to_container(cls.container_id, '/home/ubuntu', uid=1000, gid=1000)
-        command = ['pip3', 'install', '--user', 'git+https://github.com/mminichino/couch-formation-core']
-        result = run_in_container(cls.container_id, command)
-        assert result is True
-        time.sleep(1)
+    def setUp(self):
+        self.command = 'cloudmgr'
 
-    @classmethod
-    def teardown_class(cls):
-        logger.info("Stopping test container")
-        stop_container(cls.container_name)
+    def tearDown(self):
         time.sleep(1)
+        loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
+        for logger in loggers:
+            handlers = getattr(logger, 'handlers', [])
+            for handler in handlers:
+                logger.removeHandler(handler)
 
     def test_1(self):
-        command = ["cloudmgr", "create", "--build", "cbs", "--cloud", "aws", "--project", "pytest-aws", "--name", "test-cluster",
-                   "--region", "us-east-2", "--quantity", "3", "--os_id", "ubuntu", "--os_version", "22.04",
-                   "--ssh_key", self.ssh_key_path, "--machine_type", "4x16"]
-        if get_aws_tags():
-            command.extend(["--tags", get_aws_tags()])
-        result = run_in_container(self.container_id, command, environment=self.environment)
-        assert result is True
+        args = ["create", "--build", "cbs", "--cloud", "gcp", "--project", "pytest-gcp", "--name", "test-cluster",
+                "--region", "us-central1", "--quantity", "3", "--os_id", "ubuntu", "--os_version", "22.04",
+                "--ssh_key", ssh_key_path, "--machine_type", "4x16"]
+        result, output = cli_run(self.command, *args)
+        p = re.compile("Creating new service")
+        assert p.search(output) is not None
+        assert result == 0
 
     def test_2(self):
-        command = ["cloudmgr", "deploy", "--project", "pytest-aws"]
-        result = run_in_container(self.container_id, command, environment=self.environment)
-        assert result is True
+        args = ["add", "--build", "cbs", "--cloud", "gcp", "--project", "pytest-gcp", "--name", "test-cluster",
+                "--region", "us-central1", "--quantity", "2", "--os_id", "ubuntu", "--os_version", "22.04",
+                "--ssh_key", ssh_key_path, "--machine_type", "4x16", "--services", "analytics"]
+        result, output = cli_run(self.command, *args)
+        p = re.compile("Adding node group to service")
+        assert p.search(output) is not None
+        assert result == 0
 
     def test_3(self):
-        command = ["cloudmgr", "list", "--project", "pytest-aws", "--json"]
-        exit_code, output = get_cmd_output(self.container_id, command, environment=self.environment)
-        assert exit_code == 0
-        nodes = json.loads(output)
+        args = ["deploy", "--project", "pytest-gcp"]
+        result, output = cli_run(self.command, *args)
+        p = re.compile("Cluster Initialized")
+        assert p.search(output) is not None
+        assert result == 0
+
+    def test_4(self):
+        args = ["list", "--project", "pytest-gcp"]
         username = "Administrator"
+        cm = CloudMgrCLI(args)
+        project = Project(cm.options, cm.remainder)
+        nodes = list(project.list(api=True))
         connect_ip = nodes[0].get('public_ip')
-        password = nodes[0].get('project_password')
+        password = project.credential()
 
         time.sleep(1)
         session = requests.Session()
@@ -100,7 +107,9 @@ class TestInstallAWS(object):
 
         assert response.status_code == 200
 
-    def test_4(self):
-        command = ["cloudmgr", "destroy", "--project", "pytest-aws"]
-        result = run_in_container(self.container_id, command, environment=self.environment)
-        assert result is True
+    def test_5(self):
+        args = ["destroy", "--project", "pytest-gcp"]
+        result, output = cli_run(self.command, *args)
+        p = re.compile("Removing")
+        assert p.search(output) is not None
+        assert result == 0

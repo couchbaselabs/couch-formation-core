@@ -6,11 +6,14 @@ import logging
 import warnings
 import requests
 import base64
+import unittest
 import pytest
 import time
+import re
 from requests.auth import AuthBase
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
+from tests.common import cli_run
 
 warnings.filterwarnings("ignore")
 current = os.path.dirname(os.path.realpath(__file__))
@@ -20,6 +23,7 @@ sys.path.append(current)
 
 from couchformation.project import Project
 from couchformation.cli.cloudmgr import CloudMgrCLI
+from tests.common import ssh_key_path
 
 
 class BasicAuth(AuthBase):
@@ -39,13 +43,17 @@ class BasicAuth(AuthBase):
         return r
 
 
-@pytest.mark.cf_docker
+@pytest.mark.cf_azure
+@pytest.mark.cf_windows
 @pytest.mark.cf_posix
-@pytest.mark.order(10)
-class TestMainDocker(object):
+@pytest.mark.order(14)
+class TestMainAzure(unittest.TestCase):
+    command = None
 
-    @classmethod
-    def teardown_class(cls):
+    def setUp(self):
+        self.command = 'cloudmgr'
+
+    def tearDown(self):
         time.sleep(1)
         loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
         for logger in loggers:
@@ -54,35 +62,43 @@ class TestMainDocker(object):
                 logger.removeHandler(handler)
 
     def test_1(self):
-        args = ["create", "--build", "cbs", "--cloud", "docker", "--project", "pytest-docker", "--name", "test-cluster"]
-        cm = CloudMgrCLI(args)
-        project = Project(cm.options, cm.remainder)
-        project.create()
+        args = ["create", "--build", "cbs", "--cloud", "azure", "--project", "pytest-azure", "--name", "test-cluster",
+                "--region", "eastus", "--quantity", "3", "--os_id", "ubuntu", "--os_version", "22.04",
+                "--ssh_key", ssh_key_path, "--machine_type", "4x16"]
+        result, output = cli_run(self.command, *args)
+        p = re.compile("Creating new service")
+        assert p.search(output) is not None
+        assert result == 0
 
     def test_2(self):
-        args = ["create", "--build", "sgw", "--cloud", "docker", "--project", "pytest-docker", "--name", "test-gateway"]
-        cm = CloudMgrCLI(args)
-        project = Project(cm.options, cm.remainder)
-        project.create()
+        args = ["add", "--build", "cbs", "--cloud", "azure", "--project", "pytest-azure", "--name", "test-cluster",
+                "--region", "eastus", "--quantity", "2", "--os_id", "ubuntu", "--os_version", "22.04",
+                "--ssh_key", ssh_key_path, "--machine_type", "4x16", "--services", "analytics"]
+        result, output = cli_run(self.command, *args)
+        p = re.compile("Adding node group to service")
+        assert p.search(output) is not None
+        assert result == 0
 
     def test_3(self):
-        args = ["deploy", "--project", "pytest-docker"]
-        cm = CloudMgrCLI(args)
-        project = Project(cm.options, cm.remainder)
-        project.deploy()
+        args = ["deploy", "--project", "pytest-azure"]
+        result, output = cli_run(self.command, *args)
+        p = re.compile("Cluster Initialized")
+        assert p.search(output) is not None
+        assert result == 0
 
     def test_4(self):
-        args = ["list", "--project", "pytest-docker"]
+        args = ["list", "--project", "pytest-azure"]
         username = "Administrator"
-        password = "password"
         cm = CloudMgrCLI(args)
         project = Project(cm.options, cm.remainder)
         nodes = list(project.list(api=True))
         connect_ip = nodes[0].get('public_ip')
+        password = project.credential()
 
+        time.sleep(1)
         session = requests.Session()
-        retries = Retry(total=60,
-                        backoff_factor=0.1,
+        retries = Retry(total=10,
+                        backoff_factor=0.01,
                         status_forcelist=[500, 501, 503])
         session.mount('http://', HTTPAdapter(max_retries=retries))
         session.mount('https://', HTTPAdapter(max_retries=retries))
@@ -92,7 +108,8 @@ class TestMainDocker(object):
         assert response.status_code == 200
 
     def test_5(self):
-        args = ["destroy", "--project", "pytest-docker"]
-        cm = CloudMgrCLI(args)
-        project = Project(cm.options, cm.remainder)
-        project.destroy()
+        args = ["destroy", "--project", "pytest-azure"]
+        result, output = cli_run(self.command, *args)
+        p = re.compile("Removing")
+        assert p.search(output) is not None
+        assert result == 0
