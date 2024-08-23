@@ -21,3 +21,5 @@ container:
   deployer: node
 capella:
   deployer: saas
+columnar:
+  deployer: saas

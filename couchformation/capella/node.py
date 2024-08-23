@@ -26,6 +26,7 @@ class CapellaDeployment(object):
         self.deploy_type = parameters.get('type') if parameters.get('type') else "database"
         self.cluster_id = parameters.get('instance_id')
         self.project = parameters.get('project')
+        self.build = parameters.get('build')
         self.region = parameters.get('region') if parameters.get('region') else "us-east-1"
         self.cloud = parameters.get('cloud')
         self.provider = parameters.get('provider') if parameters.get('provider') else "aws"
@@ -78,10 +79,13 @@ class CapellaDeployment(object):
         group['services'] = self.parameters.get('services') if self.parameters.get('services') else "data,index,query"
 
     def deploy(self):
-        if self.deploy_type == "mobile":
-            self.deploy_app_svc()
+        if self.build == "columnar":
+            pass
         else:
-            self.deploy_database()
+            if self.deploy_type == "mobile":
+                self.deploy_app_svc()
+            else:
+                self.deploy_database()
 
     def deploy_app_svc(self):
         state_db = KeyValueStore(self.state_file)
@@ -211,6 +215,9 @@ class CapellaDeployment(object):
         logger.info("Capella database successfully created")
 
         return self.state.as_dict
+
+    def deploy_columnar(self):
+        pass
 
     def destroy(self):
         project = self.state.get('project')
