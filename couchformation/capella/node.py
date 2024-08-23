@@ -9,6 +9,15 @@ from couchformation.kvdb import KeyValueStore
 from couchformation.util import FileManager, Synchronize
 from couchformation.capella.driver.cb_capella import Capella, CapellaCluster, AllowedCIDR, Credentials, AppService
 from couchformation.util import PasswordUtility
+from libcapella.config import CapellaConfig
+from libcapella.organization import CapellaOrganization
+from libcapella.project import CapellaProject
+from libcapella.columnar import CapellaColumnar
+from libcapella.columnar_allowed_cidr import ColumnarAllowedCIDR
+from libcapella.user import CapellaUser
+from libcapella.logic.columnar import CapellaColumnarBuilder
+from libcapella.logic.allowed_cidr import AllowedCIDRBuilder
+from libcapella.logic.project import CapellaProjectBuilder
 
 logger = logging.getLogger('couchformation.capella.node')
 logger.addHandler(logging.NullHandler())
@@ -29,6 +38,8 @@ class CapellaDeployment(object):
         self.build = parameters.get('build')
         self.region = parameters.get('region') if parameters.get('region') else "us-east-1"
         self.cloud = parameters.get('cloud')
+        self.machine_type = parameters.get('machine_type')
+        self.quantity = parameters.get('quantity')
         self.provider = parameters.get('provider') if parameters.get('provider') else "aws"
         self.username = parameters.get('username') if parameters.get('username') else "Administrator"
         self.password = parameters.get('password')
@@ -80,7 +91,7 @@ class CapellaDeployment(object):
 
     def deploy(self):
         if self.build == "columnar":
-            pass
+            self.deploy_columnar()
         else:
             if self.deploy_type == "mobile":
                 self.deploy_app_svc()
@@ -217,7 +228,71 @@ class CapellaDeployment(object):
         return self.state.as_dict
 
     def deploy_columnar(self):
-        pass
+        config = CapellaConfig(profile=self.profile)
+
+        if not self.account_email:
+            self.account_email = config.account_email
+
+        if not self.account_email:
+            raise CapellaNodeError("Capella account email not set")
+
+        if not config.token:
+            raise CapellaNodeError("Capella v4 API token not set")
+
+        org = CapellaOrganization(config)
+        project = CapellaProject(org, self.project, self.account_email)
+        if not project.id:
+            logger.info(f"Creating project {self.project}")
+            builder = CapellaProjectBuilder()
+            builder = builder.name(self.project)
+            config = builder.build()
+            project.create(config)
+
+            user = CapellaUser(org, self.account_email)
+            user.set_project_owner(project.id)
+
+        self.state['project'] = self.project
+        self.state['project_id'] = project.id
+
+        cluster = CapellaColumnar(project, self.name)
+        if not cluster.id:
+            logger.info(f"Creating Columnar cluster {self.name}")
+            builder = CapellaColumnarBuilder(self.provider)
+            builder = builder.name(self.name)
+            builder = builder.description("Pytest created cluster")
+            builder = builder.region(self.region)
+            builder = builder.compute(self.machine_type, self.quantity)
+            config = builder.build()
+            cluster.create(config)
+            logger.info("Waiting for cluster creation to complete")
+            cluster.wait("deploying")
+        else:
+            logger.info(f"Columnar cluster {self.db_name} already exists")
+
+        logger.info(f"Cluster ID: {cluster.id}")
+
+        self.state['instance_id'] = cluster.id
+        self.state['provider'] = self.provider
+        self.state['region'] = self.region
+        self.state['cidr'] = self.cidr
+        self.state['name'] = self.name
+        self.state['cloud'] = self.cloud
+
+        allowed_cidr = ColumnarAllowedCIDR(cluster, self.allow)
+        if not allowed_cidr.id:
+            logger.info(f"Configuring allowed CIDR {self.allow}")
+            builder = AllowedCIDRBuilder()
+            builder.cidr(self.allow)
+            config = builder.build()
+            allowed_cidr.create(config)
+        else:
+            logger.info(f"Allow list already set to {self.allow}")
+
+        self.state['allow'] = self.allow
+
+        logger.info("Columnar cluster successfully created")
+
+        return self.state.as_dict
 
     def destroy(self):
         project = self.state.get('project')
@@ -227,10 +302,13 @@ class CapellaDeployment(object):
         project_id = project_data.get('id')
         logger.info(f"Project {project} ID {project_id}")
 
-        if self.state.get('type') == "mobile":
-            self.destroy_app_svc(project_id)
+        if self.build == "columnar":
+            self.destroy_columnar()
         else:
-            self.destroy_database(project, project_id)
+            if self.state.get('type') == "mobile":
+                self.destroy_app_svc(project_id)
+            else:
+                self.destroy_database(project, project_id)
 
     def destroy_app_svc(self, project_id):
         app_svc_name = self.state['name']
@@ -259,6 +337,28 @@ class CapellaDeployment(object):
                 Capella(profile=self.profile).delete_project(project)
             else:
                 logger.warning(f"Project {project} has active clusters, it will not be removed")
+
+        self.state.clear()
+
+    def destroy_columnar(self):
+        config = CapellaConfig(profile=self.profile)
+
+        if not config.token:
+            raise CapellaNodeError("Capella v4 API token not set")
+
+        org = CapellaOrganization(config)
+        project = CapellaProject(org, self.project, self.account_email)
+        cluster = CapellaColumnar(project, self.name)
+
+        if cluster.id:
+            logger.info(f"Destroying Columnar cluster {self.name}")
+            cluster.delete()
+            logger.info("Waiting for cluster removal to complete")
+            cluster.wait("destroying")
+        else:
+            logger.info(f"Columnar cluster {self.db_name} does not exist")
+
+        logger.info("Columnar cluster successfully removed")
 
         self.state.clear()
 
