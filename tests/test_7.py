@@ -61,14 +61,14 @@ class TestMainCapella(unittest.TestCase):
 
     def test_1(self):
         args = ["create", "--build", "capella", "--cloud", "capella", "--project", "pytest-project", "--name", "test-cluster",
-                "--region", "us-east-2", "--quantity", "3", "--provider", "aws", "--machine_type", "4x16", "--profile", "pytest", "--cidr", "10.99.98.0/23"]
+                "--region", "us-east-2", "--quantity", "3", "--provider", "aws", "--machine_type", "4x16", "--profile", "pytest"]
         cm = CloudMgrCLI(args)
         project = Project(cm.options, cm.remainder)
         project.create()
 
     def test_2(self):
         args = ["add", "--build", "capella", "--cloud", "capella", "--project", "pytest-project", "--name", "test-cluster", "--region", "us-east-2", "--quantity", "2",
-                "--provider", "aws", "--machine_type", "4x16", "--services", "analytics", "--profile", "pytest", "--cidr", "10.99.98.0/23"]
+                "--provider", "aws", "--machine_type", "4x16", "--services", "analytics", "--profile", "pytest"]
         cm = CloudMgrCLI(args)
         project = Project(cm.options, cm.remainder)
         project.add()
