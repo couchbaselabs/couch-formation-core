@@ -163,7 +163,8 @@ class Project(object):
                 raise ProjectError(f"Connect: No services in {group[0].get('connect')}")
             logger.info(f"Connecting service {group[0].get('name')} to {group[0].get('connect')}")
             main_params.update({
-                'instance_id': connect_list[0].get('instance_id')
+                'instance_id': connect_list[0].get('instance_id'),
+                'instance_name': connect_list[0].get('name'),
             })
 
         runner.foreground(module, instance, deploy, main_params)
