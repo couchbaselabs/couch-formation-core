@@ -107,11 +107,16 @@ cloudmgr create --build sgw --cloud aws --project sgw-dev01 --name gateway --reg
 ## Capella example
 For Capella the Couch Formation project aligns with the Capella project.
 ```
-cloudmgr create --build capella --cloud capella --project test-project --name test-cluster --region us-east-2 --quantity 3 --provider aws --machine_type 4x16
+cloudmgr create --build capella --cloud capella --project test-project --name test-cluster --profile pytest --region us-east-2 --quantity 3 --provider aws --machine_type 4x16
 ```
 Optionally create an app service (Sync Gateway in Capella) and attach it to a Capella database.
 ```
-cloudmgr create --build capella --cloud capella --project test-project --name test-app-svc --quantity 2 --machine_type 4x8 --type mobile --connect test-cluster
+cloudmgr create --build capella --cloud capella --project test-project --name test-app-svc --profile pytest --quantity 2 --machine_type 4x8 --type mobile --connect test-cluster
+```
+
+## Columnar example
+```
+cloudmgr create --build columnar --cloud capella --project test-project --name test-cluster --profile pytest --provider aws --region us-east-1 --machine_type 4x32 --quantity 1
 ```
 
 ## Additional commands
@@ -225,8 +230,11 @@ pip3 install couchformation
 | Build Type | Description                     |
 |------------|---------------------------------|
 | cbs        | Couchbase Server                |
+| cbscert    | Couchbase Server with cert auth |
+| cbsc       | Couchbase Community Edition     |
 | sgw        | Sync Gateway                    |
 | capella    | Capella Database                |
+| columnar   | Capella Columnar                |
 | generic    | Base configured node from image |
 | database   | Generic database node           |
 | windev     | Windows development host        |
