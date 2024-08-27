@@ -238,8 +238,17 @@ class MetadataManager(object):
                 for attribute in vars(options):
                     if getattr(options, attribute) is None:
                         continue
-                    logger.info(f"Setting parameter {attribute} to \"{getattr(options, attribute)}\"")
+                    logger.info(f"Setting service {service} parameter {attribute} to \"{getattr(options, attribute)}\"")
                     db[attribute] = getattr(options, attribute)
+                region = db.get('region', 'local')
+                document = f"network:{cloud}:{region}"
+                net = KeyValueStore(self.network)
+                net.document(document)
+                for attribute in vars(options):
+                    if getattr(options, attribute) is None:
+                        continue
+                    logger.debug(f"Setting network db parameter {attribute} to \"{getattr(options, attribute)}\"")
+                    net[attribute] = getattr(options, attribute)
         self.print_project(options, name)
 
 

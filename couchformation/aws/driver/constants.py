@@ -156,6 +156,15 @@ class AWSImageOwners(object):
             "version": r"ubuntu/images/hvm-ssd/ubuntu-.*-(.+?)-.*-server-.*"
         },
         {
+            "owner_id": "099720109477",
+            "description": "Ubuntu Linux",
+            "os_id": "ubuntu-pro",
+            "user": "ubuntu",
+            "feature": None,
+            "pattern": r"ubuntu-pro-server/images/hvm-ssd/ubuntu-*-pro-server-*",
+            "version": r"ubuntu-pro-server/images/hvm-ssd/ubuntu-.*-(.+?)-.*-pro-server-.*"
+        },
+        {
             "owner_id": "125523088429",
             "description": "CentOS Linux",
             "os_id": "centos",

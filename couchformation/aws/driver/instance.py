@@ -8,6 +8,7 @@ import time
 import botocore.exceptions
 from datetime import datetime, timezone
 from typing import Union, List
+
 from couchformation.aws.driver.base import CloudBase, AWSDriverError
 from couchformation.aws.driver.constants import AWSEbsDisk, AWSTagStruct, EbsVolume, AWSTag, PlacementType
 from couchformation.ssh import SSHUtil
@@ -240,7 +241,7 @@ class Instance(CloudBase):
             ]
         }
         try:
-            result = self.ec2_client.describe_images(Filters=[ami_filter])
+            result = self.ec2_client.describe_images(Filters=[ami_filter], IncludeDeprecated=True)
         except Exception as err:
             raise AWSDriverError(f"error getting AMI details: {err}")
 

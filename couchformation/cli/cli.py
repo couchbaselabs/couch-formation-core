@@ -70,11 +70,11 @@ class CustomMinimalDisplayFormatter(logging.Formatter):
 
 class CustomLogFormatter(logging.Formatter):
     FORMATS = {
-        logging.DEBUG: f"{C.FORMAT_TIMESTAMP} [{C.FORMAT_LEVEL}] {C.FORMAT_MESSAGE}",
-        logging.INFO: f"{C.FORMAT_TIMESTAMP} [{C.FORMAT_LEVEL}] {C.FORMAT_MESSAGE}",
-        logging.WARNING: f"{C.FORMAT_TIMESTAMP} [{C.FORMAT_LEVEL}] {C.FORMAT_MESSAGE}",
-        logging.ERROR: f"{C.FORMAT_TIMESTAMP} [{C.FORMAT_LEVEL}] {C.FORMAT_MESSAGE}",
-        logging.CRITICAL: f"{C.FORMAT_TIMESTAMP} [{C.FORMAT_LEVEL}] {C.FORMAT_MESSAGE}"
+        logging.DEBUG: f"{C.FORMAT_TIMESTAMP} [{C.FORMAT_LEVEL}] ({C.FORMAT_THREAD}) {C.FORMAT_MESSAGE}",
+        logging.INFO: f"{C.FORMAT_TIMESTAMP} [{C.FORMAT_LEVEL}] ({C.FORMAT_THREAD}) {C.FORMAT_MESSAGE}",
+        logging.WARNING: f"{C.FORMAT_TIMESTAMP} [{C.FORMAT_LEVEL}] ({C.FORMAT_THREAD}) {C.FORMAT_MESSAGE}",
+        logging.ERROR: f"{C.FORMAT_TIMESTAMP} [{C.FORMAT_LEVEL}] ({C.FORMAT_THREAD}) {C.FORMAT_MESSAGE}",
+        logging.CRITICAL: f"{C.FORMAT_TIMESTAMP} [{C.FORMAT_LEVEL}] ({C.FORMAT_THREAD}) {C.FORMAT_MESSAGE}"
     }
 
     @staticmethod

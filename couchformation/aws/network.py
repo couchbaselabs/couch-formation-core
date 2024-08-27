@@ -20,7 +20,7 @@ from couchformation.deployment import MetadataManager
 from couchformation.ssh import SSHUtil
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
-from couchformation.util import FileManager, synchronize, UUIDGen, parameter_to_dict, csv_dict_concat
+from couchformation.util import FileManager, synchronize, UUIDGen, parameter_to_dict, csv_dict_concat, dump_class_variables
 
 logger = logging.getLogger('couchformation.aws.network')
 logger.addHandler(logging.NullHandler())
@@ -192,6 +192,7 @@ class AWSNetwork(object):
         ssh_pub_key_text = SSHUtil().get_ssh_public_key(self.ssh_key)
 
         try:
+            logger.debug(f"AWS VPC create input variables:\n{dump_class_variables(vars(self))}")
 
             if not self.state.get('vpc_id'):
                 vpc_cidr = cidr_util.get_next_network()
@@ -251,6 +252,7 @@ class AWSNetwork(object):
                 self.state.list_add('zone', zone, network_cidr, subnet_id)
                 logger.info(f"Created subnet {subnet_id} in zone {zone}")
 
+            logger.debug(f"DNS domain name: {self.domain}")
             if self.domain and not self.state.get('domain'):
                 domain_prefix = ''.join(random.choice(string.ascii_lowercase) for _ in range(7))
                 domain_name = f"{domain_prefix}.{self.domain}"

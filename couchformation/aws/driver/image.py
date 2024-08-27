@@ -65,7 +65,7 @@ class Image(CloudBase):
         logger.debug(f"Searching images by owner {owner_id} and name {name}")
 
         try:
-            images = self.ec2_client.describe_images(Filters=ami_filter, Owners=owner_filter)
+            images = self.ec2_client.describe_images(Filters=ami_filter, Owners=owner_filter, IncludeDeprecated=True)
         except Exception as err:
             raise AWSDriverError(f"error getting AMIs: {err}")
 
@@ -101,7 +101,8 @@ class Image(CloudBase):
                     continue
                 filtered_images = []
                 for image in image_list:
-                    logger.debug(f"Found image {image}")
+                    if C.DEBUG_VERBOSE_LEVEL >= 3:
+                        logger.debug(f"Found image {image}")
                     if image['arch'] != architecture:
                         continue
                     match = re.search(image_type['version'], image['description'])

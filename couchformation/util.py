@@ -10,6 +10,7 @@ import random
 import tarfile
 import hashlib
 import threading
+import json
 from typing import Union, List, Callable
 from uuid import UUID
 from shutil import copyfile
@@ -71,6 +72,10 @@ def progress_bar(iteration, total, decimals=1, length=100, fill='#', end="\r"):
     print(f'\rProgress: |{bar}| {percent}% Complete', end=end)
     if iteration == total:
         print()
+
+
+def dump_class_variables(data: dict):
+    return json.dumps(data, indent=2, default=lambda o: '<not serializable>')
 
 
 def synchronize() -> Callable:

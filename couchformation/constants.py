@@ -11,6 +11,8 @@ from pathlib import Path
 
 GLOBAL_LOCK = multiprocessing.Lock()
 
+DEBUG_VERBOSE_LEVEL = 1
+
 ROOT_DIRECTORY = os.path.join(Path.home(), '.config', 'couch-formation')
 STATE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'state')
 LOG_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'log')
@@ -43,17 +45,19 @@ FORMAT_MESSAGE = "%(message)s"
 FORMAT_LINE = "(%(filename)s:%(lineno)d)"
 FORMAT_EXTRA = " [%(name)s](%(filename)s:%(lineno)d)"
 FORMAT_TIMESTAMP = "%(asctime)s"
+FORMAT_THREAD = "%(threadName)s"
 
 OS_VERSION_LIST = {
     'amzn': ['2', '2023'],
     'rhel': ['8', '9'],
-    'centos': ['8'],
+    'centos': ['8', '9'],
     'ol': ['8', '9'],
     'rocky': ['8', '9'],
     'fedora': ['34'],
     'sles': ['12', '15'],
     'opensuse-leap': ['15'],
-    'ubuntu': ['20.04', '22.04'],
+    'ubuntu': ['14.04', '16.04', '18.04', '20.04', '22.04'],
+    'ubuntu-pro': ['16.04', '18.04', '20.04', '22.04'],
     'debian': ['10', '11'],
     'windows': ['2019', '2022'],
     'macos': ['13', '14'],
