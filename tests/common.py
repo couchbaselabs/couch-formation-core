@@ -41,6 +41,10 @@ gcp_config_dir = os.path.join(Path.home(), '.config', 'gcloud')
 azure_config_dir = os.path.join(Path.home(), '.azure')
 local_config_file = os.path.join(Path.home(), '.config', 'couch-formation', 'local.conf')
 linux_image_name = "ubuntu:jammy"
+if os.name == 'nt':
+    WINDOWS = True
+else:
+    WINDOWS = False
 
 
 def get_aws_tags():
@@ -95,7 +99,7 @@ def cli_run(cmd: str, *args: str, input_file: str = None):
         *args
     ]
 
-    p = subprocess.Popen(run_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    p = subprocess.Popen(run_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=WINDOWS)
 
     if input_file:
         with open(input_file, 'rb') as input_data:
