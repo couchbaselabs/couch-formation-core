@@ -46,6 +46,7 @@ class BasicAuth(AuthBase):
 @pytest.mark.cf_aws
 @pytest.mark.cf_windows
 @pytest.mark.cf_posix
+@pytest.mark.cf_cli
 @pytest.mark.order(12)
 class TestMainAWS(unittest.TestCase):
     command = None

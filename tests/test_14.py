@@ -46,6 +46,7 @@ class BasicAuth(AuthBase):
 @pytest.mark.cf_azure
 @pytest.mark.cf_windows
 @pytest.mark.cf_posix
+@pytest.mark.cf_cli
 @pytest.mark.order(14)
 class TestMainAzure(unittest.TestCase):
     command = None
