@@ -26,6 +26,9 @@ image:
 machine_type:
   type_class: str
   help: Cloud independent machine size CxM (CPUs + "x" + RAM in GiB) - e.g. 4x16
+options:
+  type_class: str
+  help: String that can be used in a provisioner to pass arguments to a program
 os_arch:
   type_class: str
   help: Machine architecture (if supported - e.g. x86_64)

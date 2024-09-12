@@ -34,6 +34,7 @@ aws:
     - machine_type
     - quantity
     - services
+    - options
     - volume_iops
     - volume_size
     - sw_version
@@ -83,6 +84,7 @@ gcp:
     - machine_type
     - quantity
     - services
+    - options
     - volume_size
     - sw_version
     - upload
@@ -129,6 +131,7 @@ azure:
     - machine_type
     - quantity
     - services
+    - options
     - volume_iops
     - volume_size
     - volume_tier
@@ -174,6 +177,7 @@ capella:
     - machine_type
     - quantity
     - services
+    - options
     - volume_size
     - allow
     - username
@@ -211,6 +215,7 @@ docker:
     - image
     - quantity
     - services
+    - options
     - volume_size
     - dir_mount
     - ports

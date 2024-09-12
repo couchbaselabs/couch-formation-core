@@ -16,6 +16,7 @@ remote:
     - ssh_key
     - zone
     - services
+    - options
     - connect
     - private_ip_list
     - public_ip_list
@@ -44,6 +45,7 @@ docker:
     - public_ip
     - private_ip
     - services
+    - options
     - private_ip_list
     - use_private_ip
     - copy
@@ -64,6 +66,7 @@ winrm:
     - public_ip
     - private_ip
     - services
+    - options
     - connect
     - private_ip_list
     - public_ip_list

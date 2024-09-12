@@ -36,6 +36,7 @@ class WinRMProvisioner(object):
         self.upload_file = self.parameters.get('upload')
         self.sw_version = self.parameters.get('sw_version') if 'sw_version' in self.parameters else 'latest'
         self.services = self.parameters.get('services')
+        self.options = self.parameters.get('options') if self.parameters.get('options') else 'default'
         self.connect = ','.join(self.parameters.get('connect')) \
             if self.parameters.get('connect') and type(self.parameters.get('connect')) is list \
             else self.parameters.get('connect')
@@ -140,6 +141,7 @@ class WinRMProvisioner(object):
             PRIVATE_IP_LIST=self.private_ip_list,
             PUBLIC_IP_LIST=self.public_ip_list,
             SERVICE_LIST=self.service_list,
+            OPTIONS=self.options,
             IP_LIST=self.public_ip_list if self.public else self.private_ip_list,
             HOST_LIST=self.public_host_list if self.public else self.private_host_list,
             NODE_ZONE=self.zone,

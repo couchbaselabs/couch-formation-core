@@ -61,7 +61,7 @@ cbs:
     root: true
     commands:
       - bundlemgr -b CBS -V {{ SOFTWARE_VERSION }}
-      - swmgr cluster create -n {{ SERVICE_NAME }} -g {{ NODE_ZONE }} -D /cbdata -l {{ IP_LIST }} -p '{{ PASSWORD }}' -h {{ HOST_LIST }} -L {{ SERVICE_LIST }}
+      - swmgr cluster create -n {{ SERVICE_NAME }} -g {{ NODE_ZONE }} -D /cbdata -l {{ IP_LIST }} -p '{{ PASSWORD }}' -h {{ HOST_LIST }} -L {{ SERVICE_LIST }} -o {{ OPTIONS }}
       - swmgr cluster rebalance -l {{ IP_LIST }} -p '{{ PASSWORD }}'
   - provisioner: docker
     root: true
@@ -75,7 +75,7 @@ cbscert:
       ca_key: ca.key
     commands:
       - bundlemgr -b CBS -V {{ SOFTWARE_VERSION }}
-      - swmgr cluster create -n {{ SERVICE_NAME }} -g {{ NODE_ZONE }} -D /cbdata -l {{ IP_LIST }} -p '{{ PASSWORD }}' -h {{ HOST_LIST }} -L {{ SERVICE_LIST }}
+      - swmgr cluster create -n {{ SERVICE_NAME }} -g {{ NODE_ZONE }} -D /cbdata -l {{ IP_LIST }} -p '{{ PASSWORD }}' -h {{ HOST_LIST }} -L {{ SERVICE_LIST }} -o {{ OPTIONS }}
       - swmgr cluster rebalance -l {{ IP_LIST }} -p '{{ PASSWORD }}'
       - swmgr cluster ca_cert -l {{ IP_LIST }} -p '{{ PASSWORD }}' -h {{ HOST_LIST }}
       - swmgr cluster node_cert -l {{ IP_LIST }} -p '{{ PASSWORD }}' -h {{ HOST_LIST }}
@@ -86,7 +86,7 @@ cbscert:
       ca_cert: ca.pem
       ca_key: ca.key
     commands:
-      - swmgr cluster create -n {{ SERVICE_NAME }} -s {{ SERVICES }}
+      - swmgr cluster create -n {{ SERVICE_NAME }} -s {{ SERVICES }} -o {{ OPTIONS }}
       - swmgr cluster ca_cert
       - swmgr cluster node_cert
       - swmgr cluster cert_auth

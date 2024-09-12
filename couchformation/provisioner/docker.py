@@ -43,6 +43,7 @@ class ContainerExec(object):
         self.private_ip = self.parameters.get('private_ip')
         self.services = self.parameters.get('services')
         self.upload_file = self.parameters.get('upload')
+        self.options = self.parameters.get('options') if self.parameters.get('options') else 'default'
         self.connect = ','.join(self.parameters.get('connect')) \
             if self.parameters.get('connect') and type(self.parameters.get('connect')) is list \
             else self.parameters.get('connect')
@@ -100,6 +101,7 @@ class ContainerExec(object):
             SERVICE_NAME=self.service,
             PRIVATE_IP_LIST=self.private_ip_list,
             SERVICES=self.services,
+            OPTIONS=self.options,
             CONNECT_SERVICE=self.connect,
             CONNECT_IP=self.connect,
             CONNECT_LIST=self.connect if self.connect else '127.0.0.1'
