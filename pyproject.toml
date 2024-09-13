@@ -1,11 +1,11 @@
 [tool.poetry]
 name = "couchformation"
 description = "Couchbase Cloud Automation"
-version = "4.0.0a390"
+version = "4.0.0"
 readme = "README.md"
 authors = ["Michael Minichino <info@unix.us.com>"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "License :: OSI Approved :: Apache Software License",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",

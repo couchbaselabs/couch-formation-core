@@ -1,4 +1,4 @@
-.PHONY:	pypi publish test commit build patch minor major
+.PHONY:	pypi publish test commit patch minor major download remote_download remote
 export LOGPATH := $(shell pwd)/tests/log
 export PROJECT_NAME := $$(basename $$(pwd))
 export PROJECT_VERSION := $(shell cat VERSION)
@@ -16,8 +16,6 @@ merge:
 		git push origin main
 remote:
 		git push cblabs main
-build:
-		bumpversion --allow-dirty build
 patch:
 		bumpversion --allow-dirty patch
 minor:
@@ -44,6 +42,7 @@ remote_download:
 		-t "Release $(PROJECT_VERSION)" \
 		-n "Release $(PROJECT_VERSION)" \
 		$(PROJECT_VERSION)
+release: commit pypi download remote_download remote
 container:
 		docker system prune -f
 		docker buildx prune -f
