@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.0.0a390]
+
+### Added
+
+- Added Columnar support to the Capella driver
+- Migrated Capella driver to use [`libcapella`](https://pypi.org/project/libcapella/)
+- The AWS driver now supports deprecated images allowing the deploy of older OS revisions (hostprep does not support these so they need to be deployed with the `--raw` option)
+- Added an `options` parameter that can be used to pass arguments to scripts that are run by a provisioner
+- Added support for creating Couchbase Server clusters with memory optimized indexes via `--options memopt` optional parameter
+
+### Changed
+
+- Refactored regression tests
+
+### Fixed
+
+- Fixed several issues with Capella deployments
+
+### Removed
+
+- Nothing was removed in this release
+
 ## [4.0.0a380]
 
 ### Added
