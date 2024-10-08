@@ -50,6 +50,7 @@ class CapellaDeployment(object):
         self.sw_version = self.parameters.get('sw_version') if self.parameters.get('sw_version') else "latest"
         self.cidr = parameters.get('cidr') if parameters.get('cidr') else "10.0.0.0/23"
         self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
+        self.peer = parameters.get('peer')
         self.db_name = f"{self.name}-database"
 
         self.state_file = get_state_file(self.project_name, self.name)
@@ -269,6 +270,9 @@ class CapellaDeployment(object):
         logger.info("Columnar cluster successfully created")
 
         return self.state.as_dict
+
+    def peer_cluster(self):
+        pass
 
     def destroy(self):
         if self.build == "columnar":

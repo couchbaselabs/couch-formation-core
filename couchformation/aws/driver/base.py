@@ -85,6 +85,10 @@ class CloudBase(object):
         except Exception as err:
             raise AWSDriverError(f"can not initialize AWS driver: {err}")
 
+    @property
+    def account_id(self):
+        return self.sts_client.get_caller_identity()["Account"]
+
     def test_session(self):
         try:
             client = boto3.client('s3', region_name=self.aws_region)

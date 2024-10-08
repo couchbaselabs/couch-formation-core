@@ -191,8 +191,15 @@ class AWSNetwork(object):
 
         ssh_pub_key_text = SSHUtil().get_ssh_public_key(self.ssh_key)
 
+        account_id = self.aws_network.account_id
+        logger.info(f"Creating VPC as Account ID {account_id}")
+        logger.info(f"VPC Region: {self.region}")
+
         try:
             logger.debug(f"AWS VPC create input variables:\n{dump_class_variables(vars(self))}")
+
+            if not self.state.get('account_id'):
+                self.state['account_id'] = account_id
 
             if not self.state.get('vpc_id'):
                 vpc_cidr = cidr_util.get_next_network()
@@ -201,6 +208,7 @@ class AWSNetwork(object):
                 self.state['vpc_id'] = vpc_id
                 self.state['vpc_cidr'] = vpc_cidr
                 logger.info(f"Created VPC {vpc_id}")
+                logger.info(f"VPC CIDR: {vpc_cidr}")
             else:
                 vpc_id = self.state.get('vpc_id')
                 vpc_cidr = self.state.get('vpc_cidr')

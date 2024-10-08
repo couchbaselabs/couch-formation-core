@@ -45,8 +45,9 @@ class CloudMgrCLI(CLI):
         command_subparser.add_parser('destroy', help="Destroy Services", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('remove', help="Remove Services", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('clean', help="Clean Project", parents=[opt_parser], add_help=False)
-        command_subparser.add_parser('list', help="Display Information", parents=[opt_parser], add_help=False)
-        command_subparser.add_parser('show', help="Show Project Information", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('list', help="List Projects", parents=[opt_parser], add_help=False)
+        command_subparser.add_parser('show', help="Project Information", parents=[opt_parser], add_help=False, aliases=['info'])
+        command_subparser.add_parser('parameters', help="Show Project Parameters", parents=[opt_parser], add_help=False, aliases=['param', 'parm'])
         command_subparser.add_parser('dump', help="Create Debug Bundle", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('cli', help="Get Project Create CLI", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('update', help="Edit Service Settings", parents=[opt_parser], add_help=False)
@@ -105,11 +106,11 @@ class CloudMgrCLI(CLI):
             project.remove()
         elif self.options.command == "clean":
             project.clean()
-        elif self.options.command == "list":
+        elif self.options.command == "show" or self.options.command == "list" or self.options.command == "info":
             results = project.list(api=self.options.json)
             if self.options.json:
                 print(json.dumps(results, indent=2))
-        elif self.options.command == "show":
+        elif self.options.command == "param" or self.options.command == "parameters" or self.options.command == "parm":
             project.project_show()
         elif self.options.command == "cli":
             project.project_cli()
