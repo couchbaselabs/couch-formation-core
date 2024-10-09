@@ -53,7 +53,8 @@ class CapellaDeployment(object):
         self.sw_version = self.parameters.get('sw_version') if self.parameters.get('sw_version') else "latest"
         self.cidr = parameters.get('cidr') if parameters.get('cidr') else "10.0.0.0/23"
         self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
-        self.peer = parameters.get('peer')
+        self.peer_project = parameters.get('peer_project')
+        self.peer_region = parameters.get('peer_region')
         self.db_name = f"{self.name}-database"
 
         self.state_file = get_state_file(self.project_name, self.name)
@@ -275,13 +276,15 @@ class CapellaDeployment(object):
         return self.state.as_dict
 
     def peer_cluster(self):
-        peer_project = self.peer
+        peer_project = self.peer_project
         if not MetadataManager(peer_project).exists:
             raise CapellaNodeError(f"Can not peer with project {peer_project}: project does not exist")
 
         cluster_name = self.state['cluster_name']
+        peer_region = self.peer_region if self.peer_region else self.region
         database = CapellaDatabase(self.project, cluster_name)
-        state_data = MetadataManager(peer_project).get_network(self.provider, self.region)
+        state_data = MetadataManager(peer_project).get_network_state(self.provider, peer_region)
+        parameters = MetadataManager(peer_project).get_network_params(self.provider, peer_region)
 
         network_peer = CapellaNetworkPeers(database)
         if not network_peer.id:

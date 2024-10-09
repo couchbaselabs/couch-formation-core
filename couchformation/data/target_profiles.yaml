@@ -185,7 +185,8 @@ capella:
     - account_email
     - type
     - sw_version
-    - peer
+    - peer_project
+    - peer_region
   required:
     - machine_type
     - quantity

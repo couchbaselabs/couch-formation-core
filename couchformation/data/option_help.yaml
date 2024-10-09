@@ -41,9 +41,12 @@ os_version:
 password:
   type_class: str
   help: Password (if omitted required passwords will be auto generated)
-peer:
+peer_project:
   type_class: str
   help: Peer with a project
+peer_region:
+  type_class: str
+  help: Peer project region
 ports:
   type_class: str
   help: Ports to expose/open

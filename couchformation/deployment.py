@@ -123,11 +123,16 @@ class MetadataManager(object):
         doc_list = db.doc_id_startswith(service)
         return [KeyValueStore(filename, doc) for doc in doc_list]
 
-    def get_network(self, cloud: str, region: str):
+    def get_network_state(self, cloud: str, region: str):
         filename = get_state_file(self.project, f"network-{region}")
         document = f"network:{cloud}"
         state = KeyValueStore(filename, document)
         return state.as_dict
+
+    def get_network_params(self, cloud: str, region: str):
+        document = f"network:{cloud}:{region}"
+        parameters = KeyValueStore(self.network, document)
+        return parameters.as_dict
 
     def get_project_ca(self):
         document = f"credentials:{self.project}"
