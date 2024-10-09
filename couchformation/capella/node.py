@@ -9,6 +9,7 @@ from couchformation.kvdb import KeyValueStore
 from couchformation.util import FileManager, Synchronize
 from couchformation.util import PasswordUtility
 from couchformation.deployment import MetadataManager
+from couchformation.project import Project
 from libcapella.columnar import CapellaColumnar
 from libcapella.columnar_allowed_cidr import ColumnarAllowedCIDR
 from libcapella.database import CapellaDatabase
@@ -109,6 +110,8 @@ class CapellaDeployment(object):
                 self.deploy_app_svc()
             else:
                 self.deploy_database()
+        if self.peer_project:
+            self.peer_cluster()
 
     def deploy_app_svc(self):
         document = f"{self.name}-node-group-01"
@@ -280,9 +283,8 @@ class CapellaDeployment(object):
         if not MetadataManager(peer_project).exists:
             raise CapellaNodeError(f"Can not peer with project {peer_project}: project does not exist")
 
-        cluster_name = self.state['cluster_name']
         peer_region = self.peer_region if self.peer_region else self.region
-        database = CapellaDatabase(self.project, cluster_name)
+        database = CapellaDatabase(self.project, self.name)
         state_data = MetadataManager(peer_project).get_network_state(self.provider, peer_region)
         parameters = MetadataManager(peer_project).get_network_params(self.provider, peer_region)
 
@@ -300,6 +302,25 @@ class CapellaDeployment(object):
                 config = builder.build()
                 network_peer.create(config)
                 network_peer.refresh()
+                hosted_zone = network_peer.hosted_zone_id
+                parameters['hosted_zone'] = hosted_zone
+                self.state['peer_hosted_zone'] = hosted_zone
+                logger.info(f"Capella hosted zone ID: {hosted_zone}")
+            elif self.provider == "gcp":
+                raise CapellaNodeError(f"Can not peer with project {self.provider}: GCP is currently not supported")
+            elif self.provider == "azure":
+                raise CapellaNodeError(f"Can not peer with project {self.provider}: Azure is currently not supported")
+            else:
+                raise CapellaNodeError(f"Can not peer with project {self.provider}: unsupported cloud provider {self.provider}")
+
+        self.state['network_peer_id'] = network_peer.id
+
+        logger.info(f"Network Peer ID: {network_peer.id}")
+
+        logger.info(f"Invoking peer acceptance module for cloud {self.provider}")
+        Project.peer_network(self.provider, parameters)
+        database.wait("peering")
+        logger.info(f"Peering complete")
 
     def destroy(self):
         if self.build == "columnar":

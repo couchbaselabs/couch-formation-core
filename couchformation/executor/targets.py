@@ -189,6 +189,52 @@ class CloudTypeSet:
         return next((c for c in self.clouds if c.cloud == name), None)
 
 
+class CloudProfileBase(object):
+
+    def __init__(self, cloud: str):
+        self.cloud = cloud
+        cfg_file = C.TARGET_PROFILES
+        with open(cfg_file, "r") as f:
+            try:
+                for cloud_name, settings in yaml.safe_load(f).items():
+                    if cloud == cloud_name:
+                        base = CloudDriverBase(*self.construct_driver(settings, 'base'))
+                        network = Profile(*self.construct_profile(settings, 'network'))
+                        node = Profile(*self.construct_profile(settings, 'node'))
+                        self._profile = CloudProfile(cloud, base, network, node, Parameters(settings.get('parameters'), settings.get('required', []), settings.get('boolean', [])))
+                        break
+            except yaml.YAMLError as err:
+                raise RuntimeError(f"Can not open target config file {cfg_file}: {err}")
+
+    @property
+    def profile(self) -> CloudProfile:
+        if not self._profile:
+            raise ValueError(f"Cloud {self.cloud} is not supported")
+        return self._profile
+
+    @staticmethod
+    def construct_profile(settings, key):
+        config = settings.get(key)
+        driver = list(config.keys())[0]
+        elements = config.get(driver)
+        module = elements.get('module')
+        deploy = elements.get('deploy')
+        destroy = elements.get('destroy')
+        peer = elements.get('peer')
+        info = elements.get('info')
+        compose = elements.get('compose')
+        return driver, module, deploy, destroy, peer, info, compose
+
+    @staticmethod
+    def construct_driver(settings, key):
+        config = settings.get(key)
+        driver = list(config.keys())[0]
+        elements = config.get(driver)
+        module = elements.get('module')
+        test = elements.get('test')
+        return driver, module, test
+
+
 class TargetProfile(object):
 
     def __init__(self, options):

@@ -6,7 +6,7 @@ import logging
 from couchformation.exception import FatalError
 from couchformation.config import get_project_dir, get_base_dir
 from couchformation.deployment import NodeGroup, MetadataManager, BuildManager
-from couchformation.executor.targets import TargetProfile, ProvisionerProfile, BuildProfile, DeployStrategy, DeployMode
+from couchformation.executor.targets import TargetProfile, ProvisionerProfile, BuildProfile, DeployStrategy, DeployMode, CloudProfileBase
 from couchformation.executor.dispatch import JobDispatch
 from couchformation.util import FileManager
 
@@ -128,6 +128,15 @@ class Project(object):
         instance = profile.network.module
         method = profile.network.deploy
         runner.foreground(module, instance, method, net.as_dict)
+
+    @staticmethod
+    def peer_network(cloud, parameters):
+        runner = JobDispatch()
+        profile = CloudProfileBase(cloud).profile
+        module = profile.network.driver
+        instance = profile.network.module
+        method = profile.network.peer
+        runner.foreground(module, instance, method, parameters)
 
     def _accept_peering(self, cloud, region):
         runner = JobDispatch()
