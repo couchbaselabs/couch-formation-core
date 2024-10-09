@@ -8,6 +8,7 @@ from couchformation.config import get_state_file, get_state_dir
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import FileManager, Synchronize
 from couchformation.util import PasswordUtility
+from couchformation.deployment import MetadataManager
 from libcapella.columnar import CapellaColumnar
 from libcapella.columnar_allowed_cidr import ColumnarAllowedCIDR
 from libcapella.database import CapellaDatabase
@@ -272,7 +273,11 @@ class CapellaDeployment(object):
         return self.state.as_dict
 
     def peer_cluster(self):
-        pass
+        peer_project = self.peer
+        if not MetadataManager(peer_project).exists:
+            raise CapellaNodeError(f"Can not peer with project {peer_project}: project does not exist")
+
+        peer_project_state = MetadataManager(peer_project).get_network(self.provider, self.region)
 
     def destroy(self):
         if self.build == "columnar":

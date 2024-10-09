@@ -11,7 +11,7 @@ import couchformation.constants as C
 from typing import Optional, List, Tuple, Union, Any
 from enum import Enum
 from couchformation.exception import FatalError
-from couchformation.config import BaseConfig, NodeConfig, Parameters, AuthMode, get_project_dir
+from couchformation.config import BaseConfig, NodeConfig, Parameters, AuthMode, get_project_dir, get_state_file
 from couchformation.util import FileManager, dict_merge, dict_merge_not_none
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import PasswordUtility, UUIDGen
@@ -124,7 +124,10 @@ class MetadataManager(object):
         return [KeyValueStore(filename, doc) for doc in doc_list]
 
     def get_network(self, cloud: str, region: str):
-        document = f"network:{cloud}:{region}"
+        filename = get_state_file(self.project, f"network-{region}")
+        document = f"network:{cloud}"
+        state = KeyValueStore(filename, document)
+        return state.as_dict
 
     def get_project_ca(self):
         document = f"credentials:{self.project}"
