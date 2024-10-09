@@ -15,11 +15,13 @@ from libcapella.database import CapellaDatabase
 from libcapella.database_allowed_cidr import CapellaAllowedCIDR
 from libcapella.database_credentials import CapellaDatabaseCredentials
 from libcapella.app_service import CapellaAppService
+from libcapella.network_peers import CapellaNetworkPeers
 from libcapella.logic.columnar import CapellaColumnarBuilder
 from libcapella.logic.allowed_cidr import AllowedCIDRBuilder
 from libcapella.logic.database import CapellaDatabaseBuilder
 from libcapella.logic.credentials import DatabaseCredentialsBuilder
 from libcapella.logic.app_service import CapellaAppServiceBuilder
+from libcapella.logic.network_peers import NetworkPeerBuilder
 
 logger = logging.getLogger('couchformation.capella.node')
 logger.addHandler(logging.NullHandler())
@@ -277,7 +279,24 @@ class CapellaDeployment(object):
         if not MetadataManager(peer_project).exists:
             raise CapellaNodeError(f"Can not peer with project {peer_project}: project does not exist")
 
-        peer_project_state = MetadataManager(peer_project).get_network(self.provider, self.region)
+        cluster_name = self.state['cluster_name']
+        database = CapellaDatabase(self.project, cluster_name)
+        state_data = MetadataManager(peer_project).get_network(self.provider, self.region)
+
+        network_peer = CapellaNetworkPeers(database)
+        if not network_peer.id:
+            if self.provider == "aws":
+                account_id = state_data.get('account_id')
+                vpc_id = state_data.get('vpc_id')
+                vpc_cidr = state_data.get('vpc_cidr')
+                builder = NetworkPeerBuilder()
+                builder.account_id(account_id)
+                builder.vpc_id(vpc_id)
+                builder.region(self.region)
+                builder.cidr(vpc_cidr)
+                config = builder.build()
+                network_peer.create(config)
+                network_peer.refresh()
 
     def destroy(self):
         if self.build == "columnar":
