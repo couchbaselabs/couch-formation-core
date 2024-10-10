@@ -66,6 +66,15 @@ class ProvisionMode(Enum):
     private = 1
 
 
+class State(Enum):
+    IDLE = 0
+    DEPLOYING = 1
+    DEPLOYED = 2
+    DESTROYING = 3
+    FAILED = 4
+    ERROR = 5
+
+
 @attr.s
 class Parameters:
     project: Optional[str] = attr.ib(default=None)

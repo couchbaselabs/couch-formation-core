@@ -15,7 +15,7 @@ from couchformation.aws.driver.nsg import SecurityGroup
 from couchformation.aws.driver.route import RouteTable
 from couchformation.aws.driver.dns import DNS
 import couchformation.aws.driver.constants as C
-from couchformation.config import get_state_file, get_state_dir, PortSettingSet, PortSettings
+from couchformation.config import get_state_file, get_state_dir, PortSettingSet, PortSettings, State
 from couchformation.deployment import MetadataManager
 from couchformation.ssh import SSHUtil
 from couchformation.exception import FatalError
@@ -196,6 +196,7 @@ class AWSNetwork(object):
         logger.info(f"VPC Region: {self.region}")
 
         try:
+            self.state['state'] = State.DEPLOYING.value
             logger.debug(f"AWS VPC create input variables:\n{dump_class_variables(vars(self))}")
 
             if not self.state.get('account_id'):
@@ -292,6 +293,7 @@ class AWSNetwork(object):
                     self.state['parent_zone_ns_records'] = ','.join(ns_names)
                     logger.info(f"Added {len(ns_names)} NS record(s) to domain {parent_domain}")
 
+            self.state['state'] = State.DEPLOYED.value
         except Exception as err:
             raise AWSNetworkError(f"Error creating VPC: {err}")
 
@@ -378,6 +380,7 @@ class AWSNetwork(object):
 
         self.check_state()
         try:
+            self.state['state'] = State.DESTROYING.value
 
             for n, zone_state in reversed(list(enumerate(self.state.list_get('zone')))):
                 subnet_id = zone_state[2]
@@ -467,6 +470,7 @@ class AWSNetwork(object):
                 del self.state['domain']
                 logger.info(f"Removing project domain {domain_name}")
 
+            self.state['state'] = State.IDLE.value
         except Exception as err:
             raise AWSNetworkError(f"Error removing VPC: {err}")
 
