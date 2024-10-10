@@ -13,7 +13,7 @@ from couchformation.gcp.driver.image import Image
 from couchformation.gcp.driver.dns import DNS
 from couchformation.gcp.network import GCPNetwork
 from couchformation.deployment import MetadataManager
-from couchformation.config import get_state_file, get_state_dir, PortSettingSet
+from couchformation.config import get_state_file, get_state_dir, PortSettingSet, State
 from couchformation.ssh import SSHUtil
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
@@ -99,6 +99,8 @@ class GCPDeployment(object):
     def deploy(self):
         self.check_state()
         subnet_list = []
+
+        self.state['state'] = State.DEPLOYING.value
 
         if self.state.get('instance_id'):
             logger.info(f"Node {self.node_name} already exists")
@@ -226,9 +228,11 @@ class GCPDeployment(object):
             self.state['host_password'] = password
 
         logger.info(f"Created instance {self.node_encoded}")
+        self.state['state'] = State.DEPLOYED.value
         return self.state.as_dict
 
     def destroy(self):
+        self.state['state'] = State.DESTROYING.value
         if self.state.get('public_hostname'):
             domain_id = self.state['public_zone_id']
             name = self.state['public_hostname']
@@ -253,6 +257,7 @@ class GCPDeployment(object):
             self.state.clear()
             self.gcp_network.remove_service(self.node_name)
             logger.info(f"Removed instance {instance_name}")
+            self.state['state'] = State.IDLE.value
 
     def info(self):
         return self.state.as_dict

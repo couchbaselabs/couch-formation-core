@@ -3,7 +3,7 @@
 
 import logging
 from couchformation.docker.driver.container import Container
-from couchformation.config import get_state_file, get_state_dir, PortSettingSet, PortSettings
+from couchformation.config import get_state_file, get_state_dir, PortSettingSet, PortSettings, State
 from couchformation.docker.network import DockerNetwork
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
@@ -58,6 +58,8 @@ class DockerDeployment(object):
             logger.info(f"Node {self.node_name} already exists")
             return self.state.as_dict
 
+        self.state['state'] = State.DEPLOYING.value
+
         net_name = self.docker_network.network
         services = self.services
 
@@ -82,14 +84,17 @@ class DockerDeployment(object):
         self.docker_network.add_service(self.node_name)
 
         logger.info(f"Created container {self.node_name}")
+        self.state['state'] = State.DEPLOYED.value
         return self.state.as_dict
 
     def destroy(self):
+        self.state['state'] = State.DESTROYING.value
         if self.state.get('instance_id'):
             Container(self.parameters).terminate(self.node_name)
             self.state.clear()
             self.docker_network.remove_service(self.node_name)
             logger.info(f"Removed container {self.node_name}")
+        self.state['state'] = State.IDLE.value
 
     def info(self):
         return self.state.as_dict

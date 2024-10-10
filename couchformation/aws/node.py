@@ -15,7 +15,7 @@ from couchformation.aws.driver.dns import DNS
 from couchformation.aws.driver.nsg import SecurityGroup
 from couchformation.aws.network import AWSNetwork
 from couchformation.deployment import MetadataManager
-from couchformation.config import get_state_file, get_state_dir, PortSettingSet
+from couchformation.config import get_state_file, get_state_dir, PortSettingSet, State
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import FileManager, Synchronize, UUIDGen, parameter_to_dict, csv_dict_concat
@@ -98,6 +98,8 @@ class AWSDeployment(object):
         self.check_state()
         subnet_list = []
         nsg_list = []
+
+        self.state['state'] = State.DEPLOYING.value
 
         if self.state.get('instance_id'):
             logger.info(f"Node {self.node_name} already exists")
@@ -233,9 +235,11 @@ class AWSDeployment(object):
             self.state['host_password'] = password
 
         logger.info(f"Created instance {instance_id}")
+        self.state['state'] = State.DEPLOYED.value
         return self.state.as_dict
 
     def destroy(self):
+        self.state['state'] = State.DESTROYING.value
         if self.state.get('public_hostname'):
             domain_id = self.state['public_zone_id']
             name = self.state['public_hostname']
@@ -268,6 +272,7 @@ class AWSDeployment(object):
             logger.info(f"Removing security group {sg_id}")
         self.state.clear()
         self.aws_network.remove_service(self.node_name)
+        self.state['state'] = State.IDLE.value
 
     def info(self):
         return self.state.as_dict

@@ -14,11 +14,11 @@ from couchformation.gcp.driver.firewall import Firewall
 from couchformation.gcp.driver.dns import DNS
 from couchformation.gcp.driver.base import CloudBase
 import couchformation.gcp.driver.constants as C
-from couchformation.config import get_state_file, get_state_dir, PortSettingSet, PortSettings
+from couchformation.config import get_state_file, get_state_dir, PortSettingSet, PortSettings, State
 from couchformation.deployment import MetadataManager
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
-from couchformation.util import FileManager, synchronize
+from couchformation.util import FileManager, synchronize, dump_class_variables
 
 logger = logging.getLogger('couchformation.gcp.network')
 logger.addHandler(logging.NullHandler())
@@ -178,6 +178,8 @@ class GCPNetwork(object):
         zone_list = self.gcp_network.zones()
 
         try:
+            self.state['state'] = State.DEPLOYING.value
+            logger.debug(f"GCP network create input variables:\n{dump_class_variables(vars(self))}")
 
             if not self.state.get('network'):
                 vpc_cidr = cidr_util.get_next_network()
@@ -253,6 +255,7 @@ class GCPNetwork(object):
                     self.state['parent_zone_ns_records'] = ','.join(ns_names)
                     logger.info(f"Added {len(ns_names)} NS record(s) to domain {parent_domain}")
 
+            self.state['state'] = State.DEPLOYED.value
         except Exception as err:
             raise GCPNetworkError(f"Error creating network: {err}")
 
@@ -307,6 +310,7 @@ class GCPNetwork(object):
 
         self.check_state()
         try:
+            self.state['state'] = State.DESTROYING.value
 
             if self.state.get('firewall_win'):
                 firewall_win = self.state.get('firewall_win')
@@ -385,6 +389,7 @@ class GCPNetwork(object):
                 del self.state['network_link']
                 logger.info(f"Removed network {vpc_name}")
 
+            self.state['state'] = State.IDLE.value
         except Exception as err:
             raise GCPNetworkError(f"Error removing network: {err}")
 

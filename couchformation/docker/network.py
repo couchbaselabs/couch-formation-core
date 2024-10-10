@@ -4,7 +4,7 @@
 import logging
 from itertools import cycle
 from couchformation.network import NetworkDriver
-from couchformation.config import get_state_file, get_state_dir
+from couchformation.config import get_state_file, get_state_dir, State
 from couchformation.exception import FatalError
 from couchformation.util import FileManager, synchronize
 from couchformation.kvdb import KeyValueStore
@@ -57,6 +57,7 @@ class DockerNetwork(object):
             cidr_util.add_network(net)
 
         try:
+            self.state['state'] = State.DEPLOYING.value
 
             if not self.state.get('network'):
                 cidr_util.get_next_network()
@@ -68,6 +69,7 @@ class DockerNetwork(object):
                 self.state['network_cidr'] = subnet_cidr
                 logger.info(f"Created network {net_name}")
 
+            self.state['state'] = State.DEPLOYED.value
         except Exception as err:
             raise DockerNetworkError(f"Error creating network: {err}")
 
@@ -82,6 +84,7 @@ class DockerNetwork(object):
             return
 
         try:
+            self.state['state'] = State.DESTROYING.value
             if self.state.get('network'):
                 net_name = self.state.get('network')
                 Network(self.parameters).delete(net_name)
@@ -89,6 +92,7 @@ class DockerNetwork(object):
                 del self.state['network_cidr']
                 logger.info(f"Removed network {net_name}")
 
+            self.state['state'] = State.IDLE.value
         except Exception as err:
             raise DockerNetworkError(f"Error removing network: {err}")
 

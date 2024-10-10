@@ -13,11 +13,11 @@ from couchformation.azure.driver.base import CloudBase
 from couchformation.azure.driver.dns import DNS
 from couchformation.azure.driver.private_dns import PrivateDNS
 import couchformation.azure.driver.constants as C
-from couchformation.config import get_state_file, get_state_dir, PortSettingSet, PortSettings
+from couchformation.config import get_state_file, get_state_dir, PortSettingSet, PortSettings, State
 from couchformation.deployment import MetadataManager
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
-from couchformation.util import FileManager, synchronize
+from couchformation.util import FileManager, synchronize, dump_class_variables
 
 
 logger = logging.getLogger('couchformation.azure.network')
@@ -168,6 +168,8 @@ class AzureNetwork(object):
         azure_location = self.az_base.region
 
         try:
+            self.state['state'] = State.DEPLOYING.value
+            logger.debug(f"Azure VNet create input variables:\n{dump_class_variables(vars(self))}")
 
             if not self.state.get('resource_group'):
                 self.az_base.create_rg(self.rg_name, azure_location)
@@ -263,6 +265,7 @@ class AzureNetwork(object):
                     self.state['parent_zone_ns_records'] = ','.join(ns_names)
                     logger.info(f"Added {len(ns_names)} NS record(s) to domain {parent_domain}")
 
+            self.state['state'] = State.DEPLOYED.value
         except Exception as err:
             raise AzureNetworkError(f"Error creating network: {err}")
 
@@ -320,6 +323,7 @@ class AzureNetwork(object):
 
         self.check_state()
         try:
+            self.state['state'] = State.DESTROYING.value
 
             if self.state.get('resource_group'):
                 rg_name = self.state.get('resource_group')
@@ -401,6 +405,7 @@ class AzureNetwork(object):
                 del self.state['resource_group']
                 logger.info(f"Removed resource group {rg_name}")
 
+            self.state['state'] = State.IDLE.value
         except Exception as err:
             raise AzureNetworkError(f"Error removing network: {err}")
 

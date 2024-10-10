@@ -4,7 +4,7 @@
 import logging
 from couchformation.exception import FatalError
 from couchformation.capella.driver.base import CloudBase
-from couchformation.config import get_state_file, get_state_dir
+from couchformation.config import get_state_file, get_state_dir, State
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import FileManager, Synchronize
 from couchformation.util import PasswordUtility
@@ -116,6 +116,7 @@ class CapellaDeployment(object):
     def deploy_app_svc(self):
         document = f"{self.name}-node-group-01"
         group = KeyValueStore(self.state_file, document)
+        self.state['state'] = State.DEPLOYING.value
 
         self.state['project_id'] = self.project_id
         self.state['project'] = self.project_name
@@ -129,20 +130,23 @@ class CapellaDeployment(object):
         quantity = int(group.get('quantity'))
         machine = group.get('machine_type')
 
-        database = CapellaDatabase(self.project, self.cluster_name)
-        app_service = CapellaAppService(database)
-        if not app_service.id:
-            builder = CapellaAppServiceBuilder()
-            builder.name(self.name)
-            builder.compute(machine, quantity)
-            config = builder.build()
-            logger.info(f"Creating app service {self.name} with {quantity} {machine} nodes")
-            app_service.create(config)
-            logger.info("Waiting for app service creation to complete")
-            if not app_service.wait("healthy", until=True):
-                raise CapellaNodeError("Timeout waiting for app service to deploy")
-        else:
-            logger.info(f"App service {self.name} already exists")
+        try:
+            database = CapellaDatabase(self.project, self.cluster_name)
+            app_service = CapellaAppService(database)
+            if not app_service.id:
+                builder = CapellaAppServiceBuilder()
+                builder.name(self.name)
+                builder.compute(machine, quantity)
+                config = builder.build()
+                logger.info(f"Creating app service {self.name} with {quantity} {machine} nodes")
+                app_service.create(config)
+                logger.info("Waiting for app service creation to complete")
+                if not app_service.wait("healthy", until=True):
+                    raise CapellaNodeError("Timeout waiting for app service to deploy")
+            else:
+                logger.info(f"App service {self.name} already exists")
+        except Exception as err:
+            raise CapellaNodeError(f"Error creating app service: {err}")
 
         self.state['name'] = self.name
         self.state['cluster_name'] = self.cluster_name
@@ -152,11 +156,13 @@ class CapellaDeployment(object):
 
         logger.info("Capella app service successfully created")
 
+        self.state['state'] = State.DEPLOYED.value
         return self.state.as_dict
 
     def deploy_database(self):
         state_db = KeyValueStore(self.state_file)
         node_groups = state_db.doc_id_startswith(f"{self.name}-node-group")
+        self.state['state'] = State.DEPLOYING.value
 
         if len(node_groups) == 0:
             raise CapellaNodeError("no node groups present")
@@ -164,118 +170,127 @@ class CapellaDeployment(object):
         self.state['project'] = self.project_name
         self.state['type'] = self.deploy_type
 
-        database = CapellaDatabase(self.project, self.name)
-        if not database.id:
-            logger.info(f"Creating cluster {self.name}")
-            builder = CapellaDatabaseBuilder(self.provider)
-            builder = builder.name(self.name)
-            builder = builder.description("Pytest created cluster")
-            builder = builder.region(self.region)
-            builder = builder.cidr(self.cidr)
-            for group in node_groups:
-                group_db = KeyValueStore(self.state_file, group)
-                machine_type = group_db.get('machine_type')
-                quantity = group_db.get('quantity')
-                volume_size = group_db.get('volume_size')
-                services = group_db.get('services').split(',')
-                builder = builder.service_group(machine_type, quantity, volume_size, services)
-            config = builder.build()
-            database.create(config)
-            logger.info("Waiting for cluster creation to complete")
-            if not database.wait("deploying"):
-                raise CapellaNodeError("Timeout waiting for cluster to deploy")
-        else:
-            logger.info(f"Database {self.db_name} already exists")
+        try:
+            database = CapellaDatabase(self.project, self.name)
+            if not database.id:
+                logger.info(f"Creating cluster {self.name}")
+                builder = CapellaDatabaseBuilder(self.provider)
+                builder = builder.name(self.name)
+                builder = builder.description("Pytest created cluster")
+                builder = builder.region(self.region)
+                builder = builder.cidr(self.cidr)
+                for group in node_groups:
+                    group_db = KeyValueStore(self.state_file, group)
+                    machine_type = group_db.get('machine_type')
+                    quantity = group_db.get('quantity')
+                    volume_size = group_db.get('volume_size')
+                    services = group_db.get('services').split(',')
+                    builder = builder.service_group(machine_type, quantity, volume_size, services)
+                config = builder.build()
+                database.create(config)
+                logger.info("Waiting for cluster creation to complete")
+                if not database.wait("deploying"):
+                    raise CapellaNodeError("Timeout waiting for cluster to deploy")
+            else:
+                logger.info(f"Database {self.db_name} already exists")
 
-        database.refresh()
-        self.state['instance_id'] = database.id
-        self.state['provider'] = self.provider
-        self.state['region'] = self.region
-        self.state['cidr'] = self.cidr
-        self.state['name'] = self.name
-        self.state['cloud'] = self.cloud
-        self.state['connect_string'] = database.this.connectionString
+            database.refresh()
+            self.state['instance_id'] = database.id
+            self.state['provider'] = self.provider
+            self.state['region'] = self.region
+            self.state['cidr'] = self.cidr
+            self.state['name'] = self.name
+            self.state['cloud'] = self.cloud
+            self.state['connect_string'] = database.this.connectionString
 
-        logger.info(f"Cluster ID: {database.id}")
-        logger.info(f"Connect string: {database.this.connectionString}")
+            logger.info(f"Cluster ID: {database.id}")
+            logger.info(f"Connect string: {database.this.connectionString}")
 
-        allowed_cidr = CapellaAllowedCIDR(database, self.allow)
-        if not allowed_cidr.id:
-            logger.info(f"Configuring allowed CIDR {self.allow}")
-            builder = AllowedCIDRBuilder()
-            builder.cidr(self.allow)
-            config = builder.build()
-            allowed_cidr.create(config)
-        else:
-            logger.info(f"Allow list already set to {self.state.get('allow')}")
+            allowed_cidr = CapellaAllowedCIDR(database, self.allow)
+            if not allowed_cidr.id:
+                logger.info(f"Configuring allowed CIDR {self.allow}")
+                builder = AllowedCIDRBuilder()
+                builder.cidr(self.allow)
+                config = builder.build()
+                allowed_cidr.create(config)
+            else:
+                logger.info(f"Allow list already set to {self.state.get('allow')}")
 
-        self.state['allow'] = self.allow
+            self.state['allow'] = self.allow
 
-        if self.password:
-            password = self.password
-        else:
-            password = PasswordUtility().generate(16)
+            if self.password:
+                password = self.password
+            else:
+                password = PasswordUtility().generate(16)
 
-        database_credential = CapellaDatabaseCredentials(database, self.username)
-        if not database_credential.id:
-            logger.info(f"Creating database user {self.username}")
-            builder = DatabaseCredentialsBuilder(self.username, password)
-            builder.data_read_write()
-            config = builder.build()
-            database_credential.create(config)
-            self.state['password'] = password
-        else:
-            logger.info(f"Database user {self.state.get('username')} already exists")
+            database_credential = CapellaDatabaseCredentials(database, self.username)
+            if not database_credential.id:
+                logger.info(f"Creating database user {self.username}")
+                builder = DatabaseCredentialsBuilder(self.username, password)
+                builder.data_read_write()
+                config = builder.build()
+                database_credential.create(config)
+                self.state['password'] = password
+            else:
+                logger.info(f"Database user {self.state.get('username')} already exists")
+        except Exception as err:
+            raise CapellaNodeError(f"Error creating database: {err}")
 
         self.state['username'] = self.username
 
         logger.info("Capella database successfully created")
 
+        self.state['state'] = State.DEPLOYED.value
         return self.state.as_dict
 
     def deploy_columnar(self):
+        self.state['state'] = State.DEPLOYING.value
         self.state['project'] = self.project_name
         self.state['project_id'] = self.project_id
 
-        cluster = CapellaColumnar(self.project, self.name)
-        if not cluster.id:
-            logger.info(f"Creating Columnar cluster {self.name}")
-            builder = CapellaColumnarBuilder(self.provider)
-            builder = builder.name(self.name)
-            builder = builder.description("Pytest created cluster")
-            builder = builder.region(self.region)
-            builder = builder.compute(self.machine_type, self.quantity)
-            config = builder.build()
-            cluster.create(config)
-            logger.info("Waiting for cluster creation to complete")
-            if not cluster.wait("deploying"):
-                raise CapellaNodeError("Timeout waiting for cluster to deploy")
-        else:
-            logger.info(f"Columnar cluster {self.db_name} already exists")
+        try:
+            cluster = CapellaColumnar(self.project, self.name)
+            if not cluster.id:
+                logger.info(f"Creating Columnar cluster {self.name}")
+                builder = CapellaColumnarBuilder(self.provider)
+                builder = builder.name(self.name)
+                builder = builder.description("Pytest created cluster")
+                builder = builder.region(self.region)
+                builder = builder.compute(self.machine_type, self.quantity)
+                config = builder.build()
+                cluster.create(config)
+                logger.info("Waiting for cluster creation to complete")
+                if not cluster.wait("deploying"):
+                    raise CapellaNodeError("Timeout waiting for cluster to deploy")
+            else:
+                logger.info(f"Columnar cluster {self.db_name} already exists")
 
-        logger.info(f"Cluster ID: {cluster.id}")
+            logger.info(f"Cluster ID: {cluster.id}")
 
-        self.state['instance_id'] = cluster.id
-        self.state['provider'] = self.provider
-        self.state['region'] = self.region
-        self.state['cidr'] = self.cidr
-        self.state['name'] = self.name
-        self.state['cloud'] = self.cloud
+            self.state['instance_id'] = cluster.id
+            self.state['provider'] = self.provider
+            self.state['region'] = self.region
+            self.state['cidr'] = self.cidr
+            self.state['name'] = self.name
+            self.state['cloud'] = self.cloud
 
-        allowed_cidr = ColumnarAllowedCIDR(cluster, self.allow)
-        if not allowed_cidr.id:
-            logger.info(f"Configuring allowed CIDR {self.allow}")
-            builder = AllowedCIDRBuilder()
-            builder.cidr(self.allow)
-            config = builder.build()
-            allowed_cidr.create(config)
-        else:
-            logger.info(f"Allow list already set to {self.allow}")
+            allowed_cidr = ColumnarAllowedCIDR(cluster, self.allow)
+            if not allowed_cidr.id:
+                logger.info(f"Configuring allowed CIDR {self.allow}")
+                builder = AllowedCIDRBuilder()
+                builder.cidr(self.allow)
+                config = builder.build()
+                allowed_cidr.create(config)
+            else:
+                logger.info(f"Allow list already set to {self.allow}")
+        except Exception as err:
+            raise CapellaNodeError(f"Error creating cluster: {err}")
 
         self.state['allow'] = self.allow
 
         logger.info("Columnar cluster successfully created")
 
+        self.state['state'] = State.DEPLOYED.value
         return self.state.as_dict
 
     def peer_cluster(self):
@@ -283,35 +298,38 @@ class CapellaDeployment(object):
         if not MetadataManager(peer_project).exists:
             raise CapellaNodeError(f"Can not peer with project {peer_project}: project does not exist")
 
-        peer_region = self.peer_region if self.peer_region else self.region
-        database = CapellaDatabase(self.project, self.name)
-        state_data = MetadataManager(peer_project).get_network_state(self.provider, peer_region)
-        parameters = MetadataManager(peer_project).get_network_params(self.provider, peer_region)
+        try:
+            peer_region = self.peer_region if self.peer_region else self.region
+            database = CapellaDatabase(self.project, self.name)
+            state_data = MetadataManager(peer_project).get_network_state(self.provider, peer_region)
+            parameters = MetadataManager(peer_project).get_network_params(self.provider, peer_region)
 
-        network_peer = CapellaNetworkPeers(database)
-        if not network_peer.id:
-            if self.provider == "aws":
-                account_id = state_data.get('account_id')
-                vpc_id = state_data.get('vpc_id')
-                vpc_cidr = state_data.get('vpc_cidr')
-                builder = NetworkPeerBuilder()
-                builder.account_id(account_id)
-                builder.vpc_id(vpc_id)
-                builder.region(self.region)
-                builder.cidr(vpc_cidr)
-                config = builder.build()
-                network_peer.create(config)
-                network_peer.refresh()
-                hosted_zone = network_peer.hosted_zone_id
-                parameters['hosted_zone'] = hosted_zone
-                self.state['peer_hosted_zone'] = hosted_zone
-                logger.info(f"Capella hosted zone ID: {hosted_zone}")
-            elif self.provider == "gcp":
-                raise CapellaNodeError(f"Can not peer with project {self.provider}: GCP is currently not supported")
-            elif self.provider == "azure":
-                raise CapellaNodeError(f"Can not peer with project {self.provider}: Azure is currently not supported")
-            else:
-                raise CapellaNodeError(f"Can not peer with project {self.provider}: unsupported cloud provider {self.provider}")
+            network_peer = CapellaNetworkPeers(database)
+            if not network_peer.id:
+                if self.provider == "aws":
+                    account_id = state_data.get('account_id')
+                    vpc_id = state_data.get('vpc_id')
+                    vpc_cidr = state_data.get('vpc_cidr')
+                    builder = NetworkPeerBuilder()
+                    builder.account_id(account_id)
+                    builder.vpc_id(vpc_id)
+                    builder.region(self.region)
+                    builder.cidr(vpc_cidr)
+                    config = builder.build()
+                    network_peer.create(config)
+                    network_peer.refresh()
+                    hosted_zone = network_peer.hosted_zone_id
+                    parameters['hosted_zone'] = hosted_zone
+                    self.state['peer_hosted_zone'] = hosted_zone
+                    logger.info(f"Capella hosted zone ID: {hosted_zone}")
+                elif self.provider == "gcp":
+                    raise CapellaNodeError(f"Can not peer with project {self.provider}: GCP is currently not supported")
+                elif self.provider == "azure":
+                    raise CapellaNodeError(f"Can not peer with project {self.provider}: Azure is currently not supported")
+                else:
+                    raise CapellaNodeError(f"Can not peer with project {self.provider}: unsupported cloud provider {self.provider}")
+        except Exception as err:
+            raise CapellaNodeError(f"Error peering network: {err}")
 
         self.state['network_peer_id'] = network_peer.id
 
@@ -332,50 +350,65 @@ class CapellaDeployment(object):
                 self.destroy_database()
 
     def destroy_app_svc(self):
-        app_svc_name = self.state['name']
-        cluster_name = self.state['cluster_name']
-        database = CapellaDatabase(self.project, cluster_name)
-        app_service = CapellaAppService(database)
+        try:
+            self.state['state'] = State.DESTROYING.value
+            app_svc_name = self.state['name']
+            cluster_name = self.state['cluster_name']
+            database = CapellaDatabase(self.project, cluster_name)
+            app_service = CapellaAppService(database)
 
-        if app_service.id:
-            logger.info(f"Destroying app service {app_svc_name}")
-            app_service.delete()
-            if not app_service.wait("destroying"):
-                raise CapellaNodeError("Timeout waiting for app service deletion to complete")
-        else:
-            logger.info(f"Cluster {cluster_name} does not have associated app services")
+            if app_service.id:
+                logger.info(f"Destroying app service {app_svc_name}")
+                app_service.delete()
+                if not app_service.wait("destroying"):
+                    raise CapellaNodeError("Timeout waiting for app service deletion to complete")
+            else:
+                logger.info(f"Cluster {cluster_name} does not have associated app services")
 
-        self.state.clear()
+            self.state.clear()
+            self.state['state'] = State.IDLE.value
+        except Exception as err:
+            raise CapellaNodeError(f"Error destroying app service: {err}")
 
     def destroy_database(self):
-        cluster_name = self.state['name'] = self.name
-        database = CapellaDatabase(self.project, cluster_name)
+        try:
+            self.state['state'] = State.DESTROYING.value
+            cluster_name = self.state['name'] = self.name
+            database = CapellaDatabase(self.project, cluster_name)
 
-        if database.id:
-            logger.info(f"Destroying cluster {cluster_name}")
-            database.delete()
-            if not database.wait("destroying"):
-                raise CapellaNodeError("Timeout waiting for cluster deletion to complete")
-        else:
-            logger.info(f"Database {cluster_name} does not exist")
+            if database.id:
+                logger.info(f"Destroying cluster {cluster_name}")
+                database.delete()
+                if not database.wait("destroying"):
+                    raise CapellaNodeError("Timeout waiting for cluster deletion to complete")
+            else:
+                logger.info(f"Database {cluster_name} does not exist")
 
-        self.state.clear()
+            self.state.clear()
+            self.state['state'] = State.IDLE.value
+        except Exception as err:
+            raise CapellaNodeError(f"Error destroying database: {err}")
 
     def destroy_columnar(self):
-        cluster = CapellaColumnar(self.project, self.name)
+        try:
+            self.state['state'] = State.DESTROYING.value
+            cluster = CapellaColumnar(self.project, self.name)
 
-        if cluster.id:
-            logger.info(f"Destroying Columnar cluster {self.name}")
-            cluster.delete()
-            logger.info("Waiting for cluster removal to complete")
-            if not cluster.wait("destroying"):
-                raise CapellaNodeError("Timeout waiting for cluster deletion to complete")
-        else:
-            logger.info(f"Columnar cluster {self.db_name} does not exist")
+            if cluster.id:
+                logger.info(f"Destroying Columnar cluster {self.name}")
+                cluster.delete()
+                logger.info("Waiting for cluster removal to complete")
+                if not cluster.wait("destroying"):
+                    raise CapellaNodeError("Timeout waiting for cluster deletion to complete")
+            else:
+                logger.info(f"Columnar cluster {self.db_name} does not exist")
 
-        logger.info("Columnar cluster successfully removed")
+            logger.info("Columnar cluster successfully removed")
 
-        self.state.clear()
+            self.state.clear()
+            self.state['state'] = State.IDLE.value
+        except Exception as err:
+            raise CapellaNodeError(f"Error destroying cluster: {err}")
 
     def info(self):
         return self.state.as_dict

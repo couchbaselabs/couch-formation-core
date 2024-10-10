@@ -14,7 +14,7 @@ from couchformation.azure.driver.dns import DNS
 from couchformation.azure.driver.private_dns import PrivateDNS
 from couchformation.azure.network import AzureNetwork
 from couchformation.deployment import MetadataManager
-from couchformation.config import get_state_file, get_state_dir, PortSettingSet
+from couchformation.config import get_state_file, get_state_dir, PortSettingSet, State
 from couchformation.ssh import SSHUtil
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
@@ -126,6 +126,8 @@ class AzureDeployment(object):
     def deploy(self):
         self.check_state()
         subnet_list = []
+
+        self.state['state'] = State.DEPLOYING.value
 
         if self.state.get('instance_id'):
             logger.info(f"Node {self.node_name} already exists")
@@ -260,9 +262,11 @@ class AzureDeployment(object):
             self.state['private_hostname'] = host_name
 
         logger.info(f"Created instance {self.node_name}")
+        self.state['state'] = State.DEPLOYED.value
         return self.state.as_dict
 
     def destroy(self):
+        self.state['state'] = State.DESTROYING.value
         rg_name = self.state['resource_group']
         if not rg_name:
             rg_name = self.rg_name
@@ -307,6 +311,7 @@ class AzureDeployment(object):
             self.state.clear()
             self.az_network.remove_service(self.node_name)
             logger.info(f"Removed instance {instance_name}")
+            self.state['state'] = State.IDLE.value
 
     def info(self):
         return self.state.as_dict
