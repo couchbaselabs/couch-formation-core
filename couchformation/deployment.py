@@ -11,7 +11,7 @@ import couchformation.constants as C
 from typing import Optional, List, Tuple, Union, Any
 from enum import Enum
 from couchformation.exception import FatalError
-from couchformation.config import BaseConfig, NodeConfig, Parameters, AuthMode, get_project_dir, get_state_file
+from couchformation.config import BaseConfig, NodeConfig, Parameters, AuthMode, get_project_dir, get_state_file, State
 from couchformation.util import FileManager, dict_merge, dict_merge_not_none
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import PasswordUtility, UUIDGen
@@ -125,6 +125,8 @@ class MetadataManager(object):
 
     def get_network_state(self, cloud: str, region: str):
         filename = get_state_file(self.project, f"network-{region}")
+        if not os.path.exists(filename):
+            return {}
         document = f"network:{cloud}"
         state = KeyValueStore(filename, document)
         return state.as_dict
@@ -133,6 +135,14 @@ class MetadataManager(object):
         document = f"network:{cloud}:{region}"
         parameters = KeyValueStore(self.network, document)
         return parameters.as_dict
+
+    def get_service_state(self, service: str, number: int):
+        filename = get_state_file(self.project, service)
+        if not os.path.exists(filename):
+            return {}
+        node_name = f"{service}-node-{number:02d}"
+        state = KeyValueStore(filename, node_name)
+        return state.as_dict
 
     def get_project_ca(self):
         document = f"credentials:{self.project}"
@@ -171,6 +181,17 @@ class MetadataManager(object):
                 resource = KeyValueStore(db.file_name, doc)
                 resource['project'] = target
 
+    @staticmethod
+    def service_state(state_data: dict):
+        if state_data.get('state', 0) == State.DEPLOYED.value:
+            return f" : {C.GREEN_COLOR}Deployed{C.SCREEN_RESET}"
+        elif state_data.get('state', 0) == State.DEPLOYING.value:
+            return f" : {C.BLUE_COLOR}Deploying{C.SCREEN_RESET}"
+        elif state_data.get('state', 0) == State.FAILED.value:
+            return f" : {C.RED_COLOR}Failed{C.SCREEN_RESET}"
+        else:
+            return ""
+
     def print_services(self):
         log = logging.getLogger('minimum_output')
         cloud_map = {}
@@ -182,12 +203,15 @@ class MetadataManager(object):
             for service in cloud_map[cloud]:
                 log.info(f"+- [{service}]")
                 for n, group in enumerate(self.get_service_groups(service)):
+                    space = " "
+                    state_data = self.get_service_state(service, n + 1)
+                    status = self.service_state(state_data)
                     build = group['build'] if 'build' in group and group['build'] is not None else ''
                     region = group['region'] if 'region' in group and group['region'] is not None else ''
                     os_id = group['os_id'] if 'os_id' in group and group['os_id'] is not None else ''
                     machine_type = group['machine_type'] if 'machine_type' in group and group['machine_type'] is not None else ''
                     quantity = group['quantity'] if 'quantity' in group and group['quantity'] is not None else 1
-                    log.info(f"| +- [{n+1}] ({build}) {quantity}x {os_id} {machine_type} {region}")
+                    log.info(f"| +- [{n+1}] ({build}) {quantity}x {os_id}{space * bool(os_id)}{machine_type} {region}{status}")
 
     def print_cli(self, options: argparse.Namespace):
         log = logging.getLogger('minimum_output')

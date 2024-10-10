@@ -56,7 +56,7 @@ class CapellaDeployment(object):
         self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
         self.peer_project = parameters.get('peer_project')
         self.peer_region = parameters.get('peer_region')
-        self.db_name = f"{self.name}-database"
+        self.node_name = f"{self.name}-node-01"
 
         self.state_file = get_state_file(self.project_name, self.name)
         self.state_dir = get_state_dir(self.project_name, self.name)
@@ -67,7 +67,7 @@ class CapellaDeployment(object):
             except Exception as err:
                 raise CapellaNodeError(f"can not create state dir: {err}")
 
-        document = self.db_name
+        document = self.node_name
         self.state = KeyValueStore(self.state_file, document)
 
         self.base = CloudBase(self.parameters)
@@ -192,7 +192,7 @@ class CapellaDeployment(object):
                 if not database.wait("deploying"):
                     raise CapellaNodeError("Timeout waiting for cluster to deploy")
             else:
-                logger.info(f"Database {self.db_name} already exists")
+                logger.info(f"Database {self.name} already exists")
 
             database.refresh()
             self.state['instance_id'] = database.id
@@ -263,7 +263,7 @@ class CapellaDeployment(object):
                 if not cluster.wait("deploying"):
                     raise CapellaNodeError("Timeout waiting for cluster to deploy")
             else:
-                logger.info(f"Columnar cluster {self.db_name} already exists")
+                logger.info(f"Columnar cluster {self.name} already exists")
 
             logger.info(f"Cluster ID: {cluster.id}")
 
@@ -401,7 +401,7 @@ class CapellaDeployment(object):
                 if not cluster.wait("destroying"):
                     raise CapellaNodeError("Timeout waiting for cluster deletion to complete")
             else:
-                logger.info(f"Columnar cluster {self.db_name} does not exist")
+                logger.info(f"Columnar cluster {self.name} does not exist")
 
             logger.info("Columnar cluster successfully removed")
 
