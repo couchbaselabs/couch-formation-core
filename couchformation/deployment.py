@@ -117,6 +117,11 @@ class MetadataManager(object):
                 continue
             yield resource, meta[resource]
 
+    def list_cloud_net_regions(self, cloud: str):
+        db = KeyValueStore(self.network)
+        doc_list = db.doc_id_startswith(f"network:{cloud}")
+        return [doc.split(':')[2] for doc in doc_list if len(doc.split(':')) == 3]
+
     def get_service_groups(self, service: str) -> List[KeyValueStore]:
         filename = os.path.join(self.project_dir, f"{service}.db")
         db = KeyValueStore(filename)
@@ -192,14 +197,38 @@ class MetadataManager(object):
         else:
             return ""
 
+    def network_cidr(self, cloud: str, region: str, net_data: dict):
+        if not net_data:
+            net_config = self.get_network_params(cloud, region)
+            cidr = net_config.get('cidr')
+        else:
+            if net_data.get('vpc_cidr'):
+                cidr = net_data.get('vpc_cidr')
+            elif net_data.get('network_cidr'):
+                cidr = net_data.get('network_cidr')
+            else:
+                cidr = None
+        return f"CIDR: {cidr}" if cidr else ""
+
     def print_services(self):
         log = logging.getLogger('minimum_output')
         cloud_map = {}
-        log.info(f"\n<{self.project}>")
+        log.info(f"\n[[{self.project}]]")
         for service, cloud in self.list_services():
             cloud_map.setdefault(cloud, []).append(service)
         for cloud in cloud_map.keys():
-            log.info(f"[{cloud}]")
+            log.info(f"Cloud: {cloud}")
+            log.info("[network]")
+            for net_region in self.list_cloud_net_regions(cloud):
+                if net_region is None or net_region == "None":
+                    continue
+                net_data = self.get_network_state(cloud, net_region)
+                net_status = self.service_state(net_data)
+                net_cidr = self.network_cidr(cloud, net_region, net_data)
+                log.info(f"+- [{net_region}]")
+                if net_cidr:
+                    log.info(f"| +- {net_cidr}{net_status}")
+            log.info("[services]")
             for service in cloud_map[cloud]:
                 log.info(f"+- [{service}]")
                 for n, group in enumerate(self.get_service_groups(service)):
