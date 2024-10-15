@@ -323,7 +323,28 @@ class CapellaDeployment(object):
                     self.state['peer_hosted_zone'] = hosted_zone
                     logger.info(f"Capella hosted zone ID: {hosted_zone}")
                 elif self.provider == "gcp":
-                    raise CapellaNodeError(f"Can not peer with project {self.provider}: GCP is currently not supported")
+                    gcp_project_name = state_data.get('project_name')
+                    network_name = state_data.get('network')
+                    network_cidr = state_data.get('network_cidr')
+                    service_account = state_data.get('default_service_account')
+                    builder = NetworkPeerBuilder()
+                    builder.provider_type("gcp")
+                    builder.network_name(network_name)
+                    builder.cidr(network_cidr)
+                    builder.project_id(gcp_project_name)
+                    builder.service_account(service_account)
+                    config = builder.build()
+                    network_peer.create(config)
+                    network_peer.refresh()
+                    peer_project = network_peer.peer_project
+                    peer_network = network_peer.peer_network
+                    managed_zone = network_peer.managed_zone
+                    parameters['managed_gcp_zone'] = managed_zone
+                    parameters['peer_gcp_project'] = peer_project
+                    parameters['peer_gcp_network'] = peer_network
+                    logger.info(f"Capella managed zone: {managed_zone}")
+                    logger.info(f"Capella project: {peer_project}")
+                    logger.info(f"Capella network: {peer_network}")
                 elif self.provider == "azure":
                     raise CapellaNodeError(f"Can not peer with project {self.provider}: Azure is currently not supported")
                 else:

@@ -6,6 +6,7 @@ import os
 import logging
 import random
 import string
+import uuid
 from itertools import cycle
 from typing import List
 from couchformation.network import NetworkDriver
@@ -40,9 +41,9 @@ class GCPNetwork(object):
         self.ssh_key = parameters.get('ssh_key')
         self.cloud = parameters.get('cloud')
         self.domain = parameters.get('domain')
-        self.peer_project = parameters.get('peer_project')
-        self.peer_network = parameters.get('peer_network')
-        self.managed_zone = parameters.get('managed_zone')
+        self.peer_project = parameters.get('peer_gcp_project')
+        self.peer_network = parameters.get('peer_gcp_network')
+        self.managed_zone = parameters.get('managed_gcp_zone')
         self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
         self.build_ports = PortSettingSet().create().items()
 
@@ -68,8 +69,11 @@ class GCPNetwork(object):
         self.firewall_default = f"{self.vpc_name}-fw-default"
         self.firewall_ssh = f"{self.vpc_name}-fw-ssh"
         self.firewall_win = f"{self.vpc_name}-fw-win"
-        self.peer_name = f"{self.asset_prefix}-peer"
-        self.peer_managed_zone_name = f"{self.asset_prefix}-peer-managed-zone"
+
+        if self.peer_network and self.peer_project:
+            peer_name_part = uuid.uuid5(uuid.NAMESPACE_URL, self.peer_project + self.peer_network)
+            self.peer_name = f"cf-{peer_name_part}-peer"
+            self.peer_managed_zone_name = f"cf-{peer_name_part}-zone"
 
     def check_state(self):
         if self.state.get('firewall_win'):
@@ -186,13 +190,17 @@ class GCPNetwork(object):
             self.state['state'] = State.DEPLOYING.value
             logger.debug(f"GCP network create input variables:\n{dump_class_variables(vars(self))}")
 
+            if not self.state.get('project_name'):
+                self.state['project_name'] = self.gcp_base.project
+
             if not self.state.get('project_number'):
                 self.state['project_number'] = self.gcp_base.project_number
 
             if not self.state.get('default_service_account'):
                 self.state['default_service_account'] = self.gcp_base.default_sa
 
-            logger.info(f"Creating VPC in project {self.gcp_base.project} ({self.gcp_base.project_number})")
+            logger.info(f"Creating network in project {self.gcp_base.project} ({self.gcp_base.project_number})")
+            logger.info(f"Network region: {self.region}")
 
             if not self.state.get('network'):
                 vpc_cidr = cidr_util.get_next_network()
@@ -314,19 +322,23 @@ class GCPNetwork(object):
 
     @synchronize()
     def peer_vpc(self):
+        if not self.peer_project or not self.peer_network:
+            return
         self.check_state()
 
         Network(self.parameters).add_peering(self.peer_name, self.vpc_name, self.peer_project, self.peer_network)
+        logger.info(f"Added peering to network {self.peer_network} in project {self.peer_project}")
 
         if self.managed_zone:
             net_link = self.state['network_link']
             service_account = self.gcp_base.default_sa
-            managed_zone = DNS(self.parameters).create(self.managed_zone, net_link, True, self.peer_project, self.peer_network, service_account, self.peer_managed_zone_name)
-            self.state['peer_managed_zone'] = managed_zone
+            DNS(self.parameters).create(self.managed_zone, net_link, True, self.peer_project, self.peer_network, service_account, self.peer_managed_zone_name)
+            logger.info(f"Created managed zone {self.peer_managed_zone_name} ({self.managed_zone})")
 
     @synchronize()
     def unpeer_vpc(self):
-        pass
+        Network(self.parameters).remove_peering(self.peer_name, self.vpc_name)
+        DNS(self.parameters).delete(self.peer_managed_zone_name)
 
     @synchronize()
     def destroy_vpc(self):
