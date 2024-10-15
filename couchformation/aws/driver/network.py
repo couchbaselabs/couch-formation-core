@@ -131,9 +131,42 @@ class Network(CloudBase):
         else:
             return peer_list
 
+    def peering_get(self, pcx_id: str):
+        extra_args = {}
+        peers = []
+        try:
+            while True:
+                result = self.ec2_client.describe_vpc_peering_connections(VpcPeeringConnectionIds=[pcx_id], **extra_args)
+                peers.extend(result['VpcPeeringConnections'])
+                if 'NextToken' not in result:
+                    break
+                extra_args['NextToken'] = result['NextToken']
+        except botocore.exceptions.ClientError as err:
+            if err.response['Error']['Code'].endswith('NotFound'):
+                return None
+            raise AWSDriverError(f"ClientError: {err}")
+        except Exception as err:
+            raise AWSDriverError(f"error getting VPC list: {err}")
+
+        if len(peers) == 0:
+            return None
+        else:
+            peer_block = {'cidr': peers[0].get('RequesterVpcInfo', {}).get('CidrBlock'),
+                          'status': peers[0].get('Status', {}).get('Code'),
+                          'id': peers[0]['VpcPeeringConnectionId']}
+            return peer_block
+
     def peering_accept(self, peer_id: str):
         try:
             self.ec2_client.accept_vpc_peering_connection(VpcPeeringConnectionId=peer_id)
+        except botocore.exceptions.ClientError as err:
+            raise AWSDriverError(f"ClientError: {err}")
+        except Exception as err:
+            raise AWSDriverError(f"error accepting peering request: {err}")
+
+    def peering_delete(self, peer_id: str):
+        try:
+            self.ec2_client.delete_vpc_peering_connection(VpcPeeringConnectionId=peer_id)
         except botocore.exceptions.ClientError as err:
             raise AWSDriverError(f"ClientError: {err}")
         except Exception as err:

@@ -43,6 +43,7 @@ class AWSNetwork(object):
         self.cloud = parameters.get('cloud')
         self.domain = parameters.get('domain')
         self.hosted_zone = parameters.get('hosted_zone')
+        self.provider_id = parameters.get('provider_id')
         self.tags = parameters.get('tags') if parameters.get('tags') else ''
         self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
         self.build_ports = PortSettingSet().create().items()
@@ -357,24 +358,45 @@ class AWSNetwork(object):
         vpc_id = self.state.get('vpc_id')
         rt_id = self.state.get('route_table_id')
 
-        peers = Network(self.parameters).peering_details(vpc_id)
-
-        for peering in peers:
+        if self.provider_id:
+            pcx_id = self.provider_id
+            self.state['peering_id'] = pcx_id
+            peering = Network(self.parameters).peering_get(pcx_id)
             if peering.get('status') == 'pending-acceptance':
-                pcx_id = peering.get('id')
                 cidr = peering.get('cidr')
+                self.state['peer_cidr'] = cidr
                 Network(self.parameters).peering_accept(pcx_id)
                 logger.info(f"Accepted peering request {pcx_id} with CIDR {cidr}")
                 RouteTable(self.parameters).add_peer_route(cidr, pcx_id, rt_id)
                 logger.info(f"Added route for {cidr} to route table {rt_id}")
 
         if self.hosted_zone:
+            self.state['peer_hosted_zone'] = self.hosted_zone
             DNS(self.parameters).associate(self.hosted_zone, vpc_id, self.region)
             logger.info(f"Associated hosted zone {self.hosted_zone} with VPC {vpc_id}")
 
     @synchronize()
     def unpeer_vpc(self):
-        pass
+        self.check_state()
+        vpc_id = self.state.get('vpc_id')
+        rt_id = self.state.get('route_table_id')
+
+        if self.state.get('peering_id'):
+            peering = Network(self.parameters).peering_get(self.state['peering_id'])
+            if peering.get('status') != 'pending-acceptance' and peering.get('status') != 'failed' and peering.get('status') != 'rejected' and peering.get('status') != 'deleted':
+                Network(self.parameters).peering_delete(self.state['peering_id'])
+                logger.info(f"Deleted peering ID {self.state['peering_id']}")
+                del self.state['peering_id']
+
+        if self.state.get('peer_cidr'):
+            RouteTable(self.parameters).delete_route(self.state['peer_cidr'], rt_id)
+            logger.info(f"Deleted route for {self.state['peer_cidr']} in route table {rt_id}")
+            del self.state['peer_cidr']
+
+        if self.state.get('peer_hosted_zone'):
+            DNS(self.parameters).disassociate(self.state['peer_hosted_zone'], vpc_id, self.region)
+            logger.info(f"Disassociated hosted zone {self.state['peer_hosted_zone']} from VPC {vpc_id}")
+            del self.state['peer_hosted_zone']
 
     @synchronize()
     def destroy_vpc(self):

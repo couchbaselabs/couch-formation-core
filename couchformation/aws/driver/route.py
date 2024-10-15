@@ -124,5 +124,19 @@ class RouteTable(CloudBase):
         try:
             response = self.ec2_client.create_route(DestinationCidrBlock=cidr, VpcPeeringConnectionId=peer_id, RouteTableId=rt_id)
             return response['Return']
+        except botocore.exceptions.ClientError as err:
+            if err.response['Error']['Code'].endswith('RouteAlreadyExists'):
+                return
+            raise AWSDriverError(f"ClientError: {err}")
         except Exception as err:
             raise AWSDriverError(f"error creating route entry: {err}")
+
+    def delete_route(self, cidr: str, rt_id: str):
+        try:
+            self.ec2_client.delete_route(DestinationCidrBlock=cidr, RouteTableId=rt_id)
+        except botocore.exceptions.ClientError as err:
+            if err.response['Error']['Code'].endswith('NotFound'):
+                return
+            raise AWSDriverError(f"ClientError: {err}")
+        except Exception as err:
+            raise AWSDriverError(f"error deleting route entry: {err}")

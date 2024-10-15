@@ -150,3 +150,21 @@ class DNS(CloudBase):
             return result.get('ChangeInfo', {}).get('Status')
         except Exception as err:
             raise AWSDriverError(f"error associating hosted zone: {err}")
+
+    def disassociate(self, hosted_zone: str, vpc_id: str, region: str):
+        current_associations = self.list_associations(vpc_id, region)
+        if not next((z for z in current_associations if z.get('HostedZoneId') == hosted_zone), None):
+            return
+        vpc_info = {
+            'VPCRegion': region,
+            'VPCId': vpc_id
+        }
+        try:
+            result = self.dns_client.disassociate_vpc_from_hosted_zone(HostedZoneId=hosted_zone, VPC=vpc_info)
+            return result.get('ChangeInfo', {}).get('Status')
+        except botocore.exceptions.ClientError as err:
+            if err.response['Error']['Code'] == 'NoSuchHostedZone':
+                return
+            raise AWSDriverError(f"ClientError: {err}")
+        except Exception as err:
+            raise AWSDriverError(f"error associating hosted zone: {err}")
