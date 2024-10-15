@@ -337,8 +337,13 @@ class GCPNetwork(object):
 
     @synchronize()
     def unpeer_vpc(self):
+        if not self.peer_project or not self.peer_network:
+            return
+
         Network(self.parameters).remove_peering(self.peer_name, self.vpc_name)
+        logger.info(f"Removed peering {self.peer_name}")
         DNS(self.parameters).delete(self.peer_managed_zone_name)
+        logger.info(f"Removed managed zone {self.peer_managed_zone_name}")
 
     @synchronize()
     def destroy_vpc(self):

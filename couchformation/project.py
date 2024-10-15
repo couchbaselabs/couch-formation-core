@@ -138,6 +138,15 @@ class Project(object):
         method = profile.network.peer
         runner.foreground(module, instance, method, parameters)
 
+    @staticmethod
+    def unpeer_network(cloud, parameters):
+        runner = JobDispatch()
+        profile = CloudProfileBase(cloud).profile
+        module = profile.network.driver
+        instance = profile.network.module
+        method = profile.network.unpeer
+        runner.foreground(module, instance, method, parameters)
+
     def _accept_peering(self, cloud, region):
         runner = JobDispatch()
         net = NodeGroup(self.options).get_network(cloud, region)

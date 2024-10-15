@@ -318,10 +318,9 @@ class CapellaDeployment(object):
                     config = builder.build()
                     network_peer.create(config)
                     network_peer.refresh()
-                    hosted_zone = network_peer.hosted_zone_id
-                    parameters['hosted_zone'] = hosted_zone
-                    self.state['peer_hosted_zone'] = hosted_zone
-                    logger.info(f"Capella hosted zone ID: {hosted_zone}")
+                    self.state['aws_hosted_zone'] = network_peer.hosted_zone_id
+                    parameters['hosted_zone'] = self.state['aws_hosted_zone']
+                    logger.info(f"Capella hosted zone ID: {self.state['aws_hosted_zone']}")
                 elif self.provider == "gcp":
                     gcp_project_name = state_data.get('project_name')
                     network_name = state_data.get('network')
@@ -336,15 +335,15 @@ class CapellaDeployment(object):
                     config = builder.build()
                     network_peer.create(config)
                     network_peer.refresh()
-                    peer_project = network_peer.peer_project
-                    peer_network = network_peer.peer_network
-                    managed_zone = network_peer.managed_zone
-                    parameters['managed_gcp_zone'] = managed_zone
-                    parameters['peer_gcp_project'] = peer_project
-                    parameters['peer_gcp_network'] = peer_network
-                    logger.info(f"Capella managed zone: {managed_zone}")
-                    logger.info(f"Capella project: {peer_project}")
-                    logger.info(f"Capella network: {peer_network}")
+                    self.state['gcp_peer_project'] = network_peer.peer_project
+                    self.state['gcp_peer_network'] = network_peer.peer_network
+                    self.state['gcp_managed_zone'] = network_peer.managed_zone
+                    parameters['managed_gcp_zone'] = self.state['gcp_managed_zone']
+                    parameters['peer_gcp_project'] = self.state['gcp_peer_project']
+                    parameters['peer_gcp_network'] = self.state['gcp_peer_network']
+                    logger.info(f"Capella managed zone: {self.state['gcp_managed_zone']}")
+                    logger.info(f"Capella project: {self.state['gcp_peer_project']}")
+                    logger.info(f"Capella network: {self.state['gcp_peer_network']}")
                 elif self.provider == "azure":
                     raise CapellaNodeError(f"Can not peer with project {self.provider}: Azure is currently not supported")
                 else:
@@ -361,7 +360,42 @@ class CapellaDeployment(object):
         database.wait("peering")
         logger.info(f"Peering complete")
 
+    def unpeer_project(self):
+        peer_project = self.peer_project
+        if not MetadataManager(peer_project).exists:
+            logger.warning(f"Can not unpeer with project {peer_project}: project does not exist")
+            return
+
+        try:
+            peer_region = self.peer_region if self.peer_region else self.region
+            database = CapellaDatabase(self.project, self.name)
+            parameters = MetadataManager(peer_project).get_network_params(self.provider, peer_region)
+
+            network_peer = CapellaNetworkPeers(database)
+            if network_peer.id:
+                if self.provider == "aws":
+                    parameters['hosted_zone'] = self.state['aws_hosted_zone']
+                    logger.info(f"Capella hosted zone ID: {self.state['aws_hosted_zone']}")
+                elif self.provider == "gcp":
+                    parameters['managed_gcp_zone'] = self.state['gcp_managed_zone']
+                    parameters['peer_gcp_project'] = self.state['gcp_peer_project']
+                    parameters['peer_gcp_network'] = self.state['gcp_peer_network']
+                    logger.info(f"Capella managed zone: {self.state['gcp_managed_zone']}")
+                    logger.info(f"Capella project: {self.state['gcp_peer_project']}")
+                    logger.info(f"Capella network: {self.state['gcp_peer_network']}")
+                logger.info(f"Removing Capella peering {network_peer.name}")
+                network_peer.delete()
+        except Exception as err:
+            raise CapellaNodeError(f"Error unpeering network: {err}")
+
+        logger.info(f"Invoking peer removal module for cloud {self.provider}")
+        Project.unpeer_network(self.provider, parameters)
+        database.wait("peering")
+        logger.info(f"Peer removal complete")
+
     def destroy(self):
+        if self.peer_project:
+            self.unpeer_project()
         if self.build == "columnar":
             self.destroy_columnar()
         else:
