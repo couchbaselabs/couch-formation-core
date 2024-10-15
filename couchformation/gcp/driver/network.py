@@ -102,6 +102,40 @@ class Network(CloudBase):
         except Exception as err:
             raise GCPDriverError(f"error getting network: {err}")
 
+    def add_peering(self, name: str, network: str, peer_project: str, peer_network: str) -> None:
+        peering_body = {
+            "networkPeering": {
+                "name": name,
+                "network": f"projects/{peer_project}/global/networks/{peer_network}",
+                "exchangeSubnetRoutes": True
+            }
+        }
+        try:
+            request = self.gcp_client.networks().addPeering(project=self.gcp_project, network=network, body=peering_body)
+            operation = request.execute()
+            self.wait_for_global_operation(operation['name'])
+        except googleapiclient.errors.HttpError as err:
+            error_details = err.error_details[0].get('reason')
+            if error_details != "alreadyExists":
+                raise GCPDriverError(f"can not add network peering: {err}")
+        except Exception as err:
+            raise GCPDriverError(f"error adding network peering: {err}")
+
+    def remove_peering(self, name: str, network: str) -> None:
+        remove_body = {
+            "name": name
+        }
+        try:
+            request = self.gcp_client.networks().removePeering(project=self.gcp_project, network=network, body=remove_body)
+            operation = request.execute()
+            self.wait_for_global_operation(operation['name'])
+        except googleapiclient.errors.HttpError as err:
+            error_details = err.error_details[0].get('reason')
+            if error_details != "notFound":
+                raise GCPDriverError(f"can not remove network peering: {err}")
+        except Exception as err:
+            raise GCPDriverError(f"error removing network peering: {err}")
+
 
 class Subnet(CloudBase):
 

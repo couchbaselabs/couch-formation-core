@@ -373,6 +373,10 @@ class AWSNetwork(object):
             logger.info(f"Associated hosted zone {self.hosted_zone} with VPC {vpc_id}")
 
     @synchronize()
+    def unpeer_vpc(self):
+        pass
+
+    @synchronize()
     def destroy_vpc(self):
         if self.state.list_len('services') > 0:
             logger.info(f"Active services, leaving project network in place")

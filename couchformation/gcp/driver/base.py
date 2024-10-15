@@ -7,12 +7,15 @@ import logging
 import json
 import time
 import base64
+import sqlite3
 import googleapiclient.discovery
 import googleapiclient.errors
 import google.auth
 import google.auth.transport.requests
+from pathlib import Path
 from google.cloud import storage
 from google.oauth2 import service_account
+from google.cloud import resourcemanager_v3
 from couchformation.config import AuthMode
 from couchformation.exception import FatalError, NonFatalError
 from couchformation.retry import retry
@@ -103,6 +106,54 @@ class CloudBase(object):
             return credentials, project_id, service_account_email, account_email
         except Exception as err:
             raise GCPDriverError(f"error connecting to GCP: {err}")
+
+    @staticmethod
+    def get_config_dir():
+        if 'CLOUDSDK_CONFIG' in os.environ:
+            return os.environ['CLOUDSDK_CONFIG']
+        if os.name != 'nt':
+            return os.path.join(Path.home(), '.config', 'gcloud')
+        if 'APPDATA' in os.environ:
+            return os.path.join(os.environ['APPDATA'], 'gcloud')
+        drive = os.environ.get('SystemDrive', 'C:')
+        return os.path.join(drive, os.path.sep, 'gcloud')
+
+    def get_account(self, account: str):
+        account_db = os.path.join(self.get_config_dir(), 'credentials.db')
+        connection = sqlite3.connect(
+            account_db,
+            detect_types=sqlite3.PARSE_DECLTYPES,
+            isolation_level=None,
+            check_same_thread=True
+        )
+
+        cursor = connection.cursor()
+        table = cursor.execute('SELECT account_id, value FROM credentials').fetchall()
+        for row in table:
+            account_id, cred_json = row[0], row[1]
+            if account_id == account:
+                return json.loads(cred_json)
+
+        return None
+
+    def sa_auth(self, service_account_email):
+        auth_data = self.get_account(service_account_email)
+        if not auth_data:
+            raise GCPDriverError(f"Account {service_account_email} is not configured. Use gcloud auth to add the account.")
+        credentials, _ = google.auth.load_credentials_from_dict(auth_data)
+        return credentials
+
+    @property
+    def project_number(self):
+        rm = resourcemanager_v3.ProjectsClient()
+        req = resourcemanager_v3.GetProjectRequest(dict(name=f"projects/{self.gcp_project}"))
+        res = rm.get_project(request=req)
+        project_number = res.name.split('/')[1]
+        return project_number
+
+    @property
+    def default_sa(self):
+        return f"{self.project_number}-compute@developer.gserviceaccount.com"
 
     def file_auth(self):
         auth_file = get_default_credentials()

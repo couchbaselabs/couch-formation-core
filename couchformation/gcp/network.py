@@ -40,6 +40,9 @@ class GCPNetwork(object):
         self.ssh_key = parameters.get('ssh_key')
         self.cloud = parameters.get('cloud')
         self.domain = parameters.get('domain')
+        self.peer_project = parameters.get('peer_project')
+        self.peer_network = parameters.get('peer_network')
+        self.managed_zone = parameters.get('managed_zone')
         self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
         self.build_ports = PortSettingSet().create().items()
 
@@ -65,6 +68,8 @@ class GCPNetwork(object):
         self.firewall_default = f"{self.vpc_name}-fw-default"
         self.firewall_ssh = f"{self.vpc_name}-fw-ssh"
         self.firewall_win = f"{self.vpc_name}-fw-win"
+        self.peer_name = f"{self.asset_prefix}-peer"
+        self.peer_managed_zone_name = f"{self.asset_prefix}-peer-managed-zone"
 
     def check_state(self):
         if self.state.get('firewall_win'):
@@ -181,6 +186,14 @@ class GCPNetwork(object):
             self.state['state'] = State.DEPLOYING.value
             logger.debug(f"GCP network create input variables:\n{dump_class_variables(vars(self))}")
 
+            if not self.state.get('project_number'):
+                self.state['project_number'] = self.gcp_base.project_number
+
+            if not self.state.get('default_service_account'):
+                self.state['default_service_account'] = self.gcp_base.default_sa
+
+            logger.info(f"Creating VPC in project {self.gcp_base.project} ({self.gcp_base.project_number})")
+
             if not self.state.get('network'):
                 vpc_cidr = cidr_util.get_next_network()
                 network_link = Network(self.parameters).create(self.vpc_name)
@@ -188,6 +201,7 @@ class GCPNetwork(object):
                 self.state['network_cidr'] = vpc_cidr
                 self.state['network_link'] = network_link
                 logger.info(f"Created network {self.vpc_name}")
+                logger.info(f"Network CIDR: {vpc_cidr}")
             else:
                 self.vpc_name = self.state['network']
                 vpc_cidr = self.state['network_cidr']
@@ -300,7 +314,19 @@ class GCPNetwork(object):
 
     @synchronize()
     def peer_vpc(self):
-        logger.warning(f"Peering not implemented for cloud {self.cloud}")
+        self.check_state()
+
+        Network(self.parameters).add_peering(self.peer_name, self.vpc_name, self.peer_project, self.peer_network)
+
+        if self.managed_zone:
+            net_link = self.state['network_link']
+            service_account = self.gcp_base.default_sa
+            managed_zone = DNS(self.parameters).create(self.managed_zone, net_link, True, self.peer_project, self.peer_network, service_account, self.peer_managed_zone_name)
+            self.state['peer_managed_zone'] = managed_zone
+
+    @synchronize()
+    def unpeer_vpc(self):
+        pass
 
     @synchronize()
     def destroy_vpc(self):

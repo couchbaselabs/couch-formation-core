@@ -21,6 +21,7 @@ class Profile:
     deploy: str = attr.ib()
     destroy: str = attr.ib()
     peer: str = attr.ib()
+    unpeer: str = attr.ib()
     info: str = attr.ib()
     compose: str = attr.ib()
 
@@ -221,9 +222,10 @@ class CloudProfileBase(object):
         deploy = elements.get('deploy')
         destroy = elements.get('destroy')
         peer = elements.get('peer')
+        unpeer = elements.get('unpeer')
         info = elements.get('info')
         compose = elements.get('compose')
-        return driver, module, deploy, destroy, peer, info, compose
+        return driver, module, deploy, destroy, peer, unpeer, info, compose
 
     @staticmethod
     def construct_driver(settings, key):
@@ -271,9 +273,10 @@ class TargetProfile(object):
         deploy = elements.get('deploy')
         destroy = elements.get('destroy')
         peer = elements.get('peer')
+        unpeer = elements.get('unpeer')
         info = elements.get('info')
         compose = elements.get('compose')
-        return driver, module, deploy, destroy, peer, info, compose
+        return driver, module, deploy, destroy, peer, unpeer, info, compose
 
     @staticmethod
     def construct_driver(settings, key):

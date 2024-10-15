@@ -3,6 +3,7 @@
 
 import logging
 import googleapiclient.errors
+import googleapiclient.discovery
 from couchformation.gcp.driver.base import CloudBase, GCPDriverError
 
 logger = logging.getLogger('couchformation.gcp.driver.dns')
@@ -21,10 +22,27 @@ class DNS(CloudBase):
             domain = domain + '.'
         return domain
 
-    def create(self, domain: str, network_link: str = None, private: bool = False):
-        name_part = domain.replace('.', '-')
-        name = f"{name_part}-public" if not private else f"{name_part}-private"
+    def create(self,
+               domain: str,
+               network_link: str = None,
+               private: bool = False,
+               peer_project: str = None,
+               peer_network: str = None,
+               service_account: str = None,
+               zone_name: str = None):
+        if service_account:
+            dns_client = googleapiclient.discovery.build('dns', 'v1', credentials=self.sa_auth(service_account))
+        else:
+            dns_client = googleapiclient.discovery.build('dns', 'v1', credentials=self.credentials)
+
+        if zone_name:
+            name = zone_name
+        else:
+            name_part = domain.replace('.', '-')
+            name = f"{name_part}-public" if not private else f"{name_part}-private"
+
         visibility = 'private' if private else 'public'
+
         dns_body = {
             'kind': 'dns#managedZone',
             'name': name,
@@ -32,6 +50,7 @@ class DNS(CloudBase):
             'description': 'Couch Formation Managed Zone',
             'visibility': visibility
         }
+
         if private and network_link:
             dns_body['privateVisibilityConfig'] = {
                 "kind": "dns#managedZonePrivateVisibilityConfig",
@@ -43,14 +62,24 @@ class DNS(CloudBase):
                 ]
             }
 
+        if peer_project and peer_network:
+            dns_body['peeringConfig'] = {
+                "targetNetwork": {
+                    "networkUrl": f"https://www.googleapis.com/compute/v1/projects/{peer_project}/global/networks/{peer_network}",
+                    "kind": "dns#managedZonePeeringConfigTargetNetwork"
+                },
+                "kind": "dns#managedZonePeeringConfig"
+            }
+
         try:
-            request = self.dns_client.managedZones().create(project=self.gcp_project, body=dns_body)
+            request = dns_client.managedZones().create(project=self.gcp_project, body=dns_body)
             result = request.execute()
             return result.get('name')
         except googleapiclient.errors.HttpError as err:
             error_details = err.error_details[0].get('reason')
             if error_details != "alreadyExists":
                 raise GCPDriverError(f"can not create managed zone: {err}")
+            return name
         except Exception as err:
             raise GCPDriverError(f"error creating managed zone: {err}")
 
