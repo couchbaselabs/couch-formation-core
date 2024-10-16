@@ -296,13 +296,18 @@ class CapellaDeployment(object):
     def peer_cluster(self):
         peer_project = self.peer_project
         if not MetadataManager(peer_project).exists:
-            raise CapellaNodeError(f"Can not peer with project {peer_project}: project does not exist")
+            logger.warning(f"Can not peer with project {peer_project}: project does not exist")
+            return
 
         try:
             peer_region = self.peer_region if self.peer_region else self.region
             database = CapellaDatabase(self.project, self.name)
             state_data = MetadataManager(peer_project).get_network_state(self.provider, peer_region)
             parameters = MetadataManager(peer_project).get_network_params(self.provider, peer_region)
+
+            if state_data.get('state') != State.DEPLOYED.value:
+                logger.warning(f"Project network is not deployed. Peering aborted.")
+                return
 
             network_peer = CapellaNetworkPeers(database)
             if not network_peer.id:
@@ -382,7 +387,12 @@ class CapellaDeployment(object):
         try:
             peer_region = self.peer_region if self.peer_region else self.region
             database = CapellaDatabase(self.project, self.name)
+            state_data = MetadataManager(peer_project).get_network_state(self.provider, peer_region)
             parameters = MetadataManager(peer_project).get_network_params(self.provider, peer_region)
+
+            if state_data.get('state') != State.DEPLOYED.value:
+                logger.warning(f"Project network is not deployed. Peering removal aborted.")
+                return
 
             network_peer = CapellaNetworkPeers(database)
             if network_peer.id:
