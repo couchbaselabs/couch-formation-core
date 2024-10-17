@@ -13,7 +13,7 @@ import traceback
 import datetime
 import psutil
 import logging.handlers
-from datetime import datetime
+from datetime import datetime, timezone
 from couchformation.config import get_log_dir
 import couchformation.constants as C
 from couchformation.util import FileManager
@@ -164,7 +164,7 @@ class CLI(object):
 
     @staticmethod
     def get_timestamp():
-        return datetime.utcnow().strftime("%b %d %H:%M:%S")
+        return datetime.now(timezone.utc).strftime("%b %d %H:%M:%S")
 
     def init_parser(self):
         self.parser = argparse.ArgumentParser(add_help=False)

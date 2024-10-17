@@ -107,6 +107,14 @@ class CloudBase(object):
         if len(self.azure_availability_zones) == 0:
             raise AzureDriverError(f"Unable to determine availability zones for location {self.azure_location}")
 
+    @property
+    def subscription_id(self):
+        return self.azure_subscription_id
+
+    @property
+    def tenant_id(self):
+        return self.azure_tenant_id
+
     @staticmethod
     def disk_size_to_tier(value: Union[int, str]):
         size = int(value)

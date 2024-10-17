@@ -21,7 +21,8 @@ class DBDumpCLI(CLI):
     def local_args(self):
         self.parser.add_argument('-j', '--json', action='store_true', help="Output JSON")
         self.parser.add_argument('-R', '--regexp', action='store', help="Regexp filter", default=".*")
-        self.parser.add_argument('-K', '--keyexp', action='store', help="Key regexp filter")
+        self.parser.add_argument('-K', '--key', action='store', help="Key regexp filter")
+        self.parser.add_argument('-V', '--value', action='store', help="Value regexp filter")
 
     def run(self):
         for file in self.remainder:
@@ -32,8 +33,11 @@ class DBDumpCLI(CLI):
                     continue
                 if self.options.json:
                     print(json.dumps(document.as_dict, indent=2))
-                elif self.options.keyexp:
+                elif self.options.key:
                     for value in document.key_match(self.options.keyexp):
+                        print(value)
+                elif self.options.value:
+                    for value in document.value_match(self.options.value):
                         print(value)
                 else:
                     print(f"Document: {doc}")

@@ -11,7 +11,7 @@ import webbrowser
 import time
 import configparser
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from couchformation.exception import FatalError, NonFatalError
 from couchformation.config import AuthMode
 
@@ -150,8 +150,8 @@ class CloudBase(object):
     def auth_expired(timestamp):
         if timestamp:
             _timestamp = timestamp / 1000
-            expires = datetime.fromtimestamp(_timestamp)
-            if datetime.utcnow() < expires:
+            expires = datetime.fromtimestamp(_timestamp).astimezone(timezone.utc)
+            if datetime.now(timezone.utc) < expires:
                 return False
         return True
 

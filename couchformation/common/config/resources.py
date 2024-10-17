@@ -35,11 +35,11 @@ class Variable(object):
 
     @classmethod
     def construct(cls, name: str, value: Union[str, list, dict], description: str):
-        if type(value) == list:
+        if type(value) is list:
             v_type: str = "list(string)"
-        elif type(value) == dict:
+        elif type(value) is dict:
             v_type: str = "map"
-        elif type(value) == bool:
+        elif type(value) is bool:
             v_type: str = "bool"
         else:
             v_type: str = "string"

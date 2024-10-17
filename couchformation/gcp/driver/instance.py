@@ -156,7 +156,7 @@ class Instance(CloudBase):
         modulus = base64.b64encode(mod)
         exponent = base64.b64encode(exp)
 
-        utc_now = datetime.datetime.utcnow()
+        utc_now = datetime.datetime.now(datetime.timezone.utc)
         expire_time = utc_now + datetime.timedelta(minutes=5)
         expire = expire_time.strftime('%Y-%m-%dT%H:%M:%SZ')
 

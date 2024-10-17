@@ -34,7 +34,7 @@ class KeyValueStore(UserDict):
         self.tablename = tablename
         self.conn, self.cursor = self._connect()
         self._table(self.tablename)
-        self.conn.create_function('REGEXP', 2, lambda exp, item: re.search(exp, item) is not None)
+        self.conn.create_function('REGEXP', 2, lambda exp, item: re.search(exp, str(item)) is not None)
 
     def _table(self, tablename):
         self.conn.execute(f"""CREATE TABLE IF NOT EXISTS \"{tablename}\" (key TEXT PRIMARY KEY, value BLOB)""")
