@@ -3,10 +3,15 @@
 
 from typing import List, Optional, Dict
 from enum import Enum
+import logging
+import ast
 import attr
 import yaml
 import argparse
 import couchformation.constants as C
+
+logger = logging.getLogger('couchformation.executor.targets')
+logger.addHandler(logging.NullHandler())
 
 
 class DeployMode(Enum):
@@ -343,12 +348,24 @@ class ProvisionerProfile(object):
 
     @staticmethod
     def run(parameters, expression):
-        for key, val in parameters.items():
-            exec(key + '=val')
         try:
-            return eval(expression)
-        except NameError:
+            expression_node = ast.parse(expression, mode='eval')
+        except SyntaxError:
+            raise RuntimeError(f"provisioner profile parser: syntax error in expression {expression}")
+
+        safe_parameters = {}
+        for key, val in parameters.items():
+            if isinstance(key, str) and (isinstance(val, (int, float, str, bool, list, dict))):
+                safe_parameters[key] = val
+
+        try:
+            result = eval(compile(expression_node, '<string>', mode='eval'), {"__builtins__": None}, safe_parameters)
+            logger.debug(f"provisioner profile: evaluated expression {expression} as {result}")
+            return result
+        except TypeError:
             return False
+        except Exception as e:
+            raise RuntimeError(f"provisioner profile parser: can not evaluate expression {expression}: {e}")
 
     def search(self, parameters):
         for provisioner in self.config.provisioners:

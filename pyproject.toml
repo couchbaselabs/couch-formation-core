@@ -83,7 +83,7 @@ certifi = ">=2024.2.2"
 pyhostprep = ">=1.0.10"
 psutil = ">=5.9.5"
 six = ">=1.16.0"
-libcapella = ">=1.0.14"
+libcapella = ">=1.0.15"
 
 [tool.poetry.group.test.dependencies]
 pytest = ">=5.0.0"
