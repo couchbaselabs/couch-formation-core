@@ -44,6 +44,7 @@ aws:
     - domain
     - ports
     - hosted_zone
+    - provider_id
     - tags
   required:
     - region
@@ -94,6 +95,9 @@ gcp:
     - upload
     - domain
     - ports
+    - peer_gcp_project
+    - peer_gcp_network
+    - managed_gcp_zone
   required:
     - region
     - ssh_key

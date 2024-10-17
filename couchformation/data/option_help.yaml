@@ -20,12 +20,18 @@ domain:
 feature:
   type_class: str
   help: Feature selection (if supported - cloud and build specific)
+hosted_zone:
+  type_class: str
+  help: AWS hosted zone to associate from a peered VPC
 image:
   type_class: str
   help: Container image
 machine_type:
   type_class: str
   help: Cloud independent machine size CxM (CPUs + "x" + RAM in GiB) - e.g. 4x16
+managed_gcp_zone:
+  type_class: str
+  help: GCP peer network managed zone
 options:
   type_class: str
   help: String that can be used in a provisioner to pass arguments to a program
@@ -41,6 +47,12 @@ os_version:
 password:
   type_class: str
   help: Password (if omitted required passwords will be auto generated)
+peer_gcp_network:
+  type_class: str
+  help: GCP peer network
+peer_gcp_project:
+  type_class: str
+  help: GCP peer project
 peer_project:
   type_class: str
   help: Peer with a project
@@ -56,6 +68,9 @@ profile:
 provider:
   type_class: str
   help: Capella cloud service provider string)
+provider_id:
+  type_class: str
+  help: Provider peer ID
 quantity:
   type_class: int
   help: Quantity of nodes in service group

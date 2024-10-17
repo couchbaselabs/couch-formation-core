@@ -119,6 +119,22 @@ cloudmgr create --build capella --cloud capella --project test-project --name te
 cloudmgr create --build columnar --cloud capella --project test-project --name test-cluster --profile pytest --provider aws --region us-east-1 --machine_type 4x32 --quantity 1
 ```
 
+## Capella automatic peering
+Use the `--peer_project` argument to provide a project for peering:
+```
+cloudmgr create --build capella --cloud capella --project test-capella --name testdb --profile test --provider aws --region us-east-1 --cidr 10.12.4.0/23 --machine_type 8x32 --quantity 3 --peer_project test-node
+```
+
+Deploy the peer project (if not already deployed):
+```
+cloudmgr deploy --project test-node
+```
+Then deploy the Capella project:
+```
+cloudmgr deploy --project test-capella
+```
+NOTE: Automatic peering is only supported with AWS and GCP.
+
 ## Additional commands
 ### Destroy a project:
 ```

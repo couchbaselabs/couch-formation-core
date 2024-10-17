@@ -11,6 +11,7 @@ import tarfile
 import hashlib
 import threading
 import json
+import importlib
 from typing import Union, List, Callable
 from uuid import UUID
 from shutil import copyfile
@@ -216,3 +217,39 @@ class PasswordUtility(object):
             password = str(text)
             if self.valid_password(password, min_length=length):
                 return password
+
+
+class GenericAttrClass(dict):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __getattr__(self, item):
+        return self[item]
+
+    def __setattr__(self, key, value):
+        self[key] = value
+
+    def __dir__(self):
+        return dir(super(GenericAttrClass, self)) + list(self.keys())
+
+    @property
+    def as_dict(self):
+        return {k: self[k] for k in self.keys()}
+
+
+class CloudUtility(object):
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def get_default_region(cloud: str) -> Union[str, None]:
+        module_name = f"couchformation.{cloud.lower()}"
+        try:
+            module = importlib.import_module(module_name)
+            if hasattr(module, "default_region"):
+                return module.default_region
+        except ModuleNotFoundError:
+            pass
+        return None

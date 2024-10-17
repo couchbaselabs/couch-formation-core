@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.0.0]
+
+### Notes
+- Couchformation 4.0 GA
+
+### Added
+- Automatic peering for Capella with AWS and GCP
+- Support for Python 3.13
+- Deployment stage has been added to project state
+
+### Changed
+- The `show` subcommand should be used to display project IP addresses, hostnames, and credentials
+- The `list` subcommand now shows which projects are in a deployed state
+- The `list` subcommand output has been enhanced
+- Versions going forward will be GA versions
+
+### Fixed
+- Fixed numerous bugs and refactored code to better handle exceptions
+
+### Removed
+- Prerelease code designation
+
 ## [4.0.0a390]
 
 ### Added

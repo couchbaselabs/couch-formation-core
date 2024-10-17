@@ -450,3 +450,14 @@ class CloudConfig(object):
     def construct_strategy(name, settings):
         provisioner = settings.get('provisioner')
         return name, provisioner
+
+
+class OptionsUtility(object):
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def get_args_as_dict(arguments: List[str], cloud: str) -> dict:
+        profile = TargetProfile(arguments).get(cloud)
+        return vars(profile.options)

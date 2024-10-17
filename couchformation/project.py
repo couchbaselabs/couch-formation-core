@@ -8,7 +8,7 @@ from couchformation.config import get_project_dir, get_base_dir
 from couchformation.deployment import NodeGroup, MetadataManager, BuildManager
 from couchformation.executor.targets import TargetProfile, ProvisionerProfile, BuildProfile, DeployStrategy, DeployMode, CloudProfileBase
 from couchformation.executor.dispatch import JobDispatch
-from couchformation.util import FileManager
+from couchformation.util import FileManager, GenericAttrClass, CloudUtility, dict_merge_not_none
 
 logger = logging.getLogger('couchformation.exec.process')
 logger.addHandler(logging.NullHandler())
@@ -118,7 +118,10 @@ class Project(object):
         runner = JobDispatch()
         cloud = group[0].get('cloud')
         profile = TargetProfile(self.remainder).get(cloud)
-        runner.foreground(profile.base.driver, profile.base.module, profile.base.test, group[0].as_dict)
+        base_parameters = dict_merge_not_none(vars(profile.options), group[0].as_dict)
+        if not base_parameters.get('region'):
+            base_parameters['region'] = CloudUtility.get_default_region(cloud)
+        runner.foreground(profile.base.driver, profile.base.module, profile.base.test, base_parameters)
 
     def _deploy_network(self, cloud, region):
         runner = JobDispatch()
@@ -477,7 +480,11 @@ class Project(object):
     def location(self):
         return get_project_dir(self.options.project)
 
-    def login(self):
+    def login(self, cloud: str = None):
+        if cloud:
+            self._test_cloud([GenericAttrClass(vars(self.options))])
+            logger.info(f"Cloud {cloud.upper()} authenticated")
+            return
         for n, group in enumerate(NodeGroup(self.options).get_node_groups()):
             self._test_cloud(group)
             cloud = group[0].get('cloud')

@@ -70,6 +70,10 @@ class CloudMgrCLI(CLI):
             Project(self.options, self.remainder).list_projects()
             return
 
+        if self.options.command == "login" and self.options.cloud:
+            Project(self.options, self.remainder).login(self.options.cloud)
+            return
+
         if self.options.command == "help":
             logger.info("General parameters:\n")
             self.parser.print_help()
