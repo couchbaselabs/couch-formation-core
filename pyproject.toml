@@ -138,19 +138,21 @@ no_package = true
 [tool.tox.env_run_base]
 skip_install = true
 allowlist_externals = ["poetry"]
-commands_pre = [["poetry", "install"]]
 
 [tool.tox.env.py38]
 description = "Posix 3.8 full test"
 env_python = "python3.8"
+commands_pre = [["poetry", "env", "use", "3.8"], ["poetry", "install"]]
 commands = [["poetry", "run", "pytest", "-m", "cf_posix"]]
 
 [tool.tox.env.py312]
 description = "Posix 3.12 full test"
 env_python = "python3.12"
+commands_pre = [["poetry", "env", "use", "3.12"], ["poetry", "install"]]
 commands = [["poetry", "run", "pytest", "-m", "cf_posix"]]
 
 [tool.tox.env.py313]
 description = "Posix 3.13 full test"
 env_python = "python3.13"
+commands_pre = [["poetry", "env", "use", "3.13"], ["poetry", "install"]]
 commands = [["poetry", "run", "pytest", "-m", "cf_posix"]]

@@ -39,6 +39,7 @@ class EmptyResultSet(NonFatalError):
 
 
 class CloudBase(object):
+    cache = {}
 
     def __init__(self, parameters: dict):
         self.parameters = parameters
@@ -55,7 +56,21 @@ class CloudBase(object):
         socket.setdefaulttimeout(120)
 
         if not parameters.get('auth_mode') or AuthMode[parameters.get('auth_mode')] == AuthMode.default:
-            self.credentials, self.gcp_project, self._service_account_email, self._user_account_email = self.default_auth()
+            if not CloudBase.cache.get('credentials') or not CloudBase.cache.get('gcp_project'):
+                self.credentials, self.gcp_project = self.default_auth()
+                CloudBase.cache['credentials'] = self.credentials
+                CloudBase.cache['gcp_project'] = self.gcp_project
+            else:
+                self.credentials = CloudBase.cache.get('credentials')
+                self.gcp_project = CloudBase.cache.get('gcp_project')
+
+            if not CloudBase.cache.get('service_account_email') or not CloudBase.cache.get('user_account_email'):
+                self._service_account_email, self._user_account_email = self.get_account_email()
+                CloudBase.cache['service_account_email'] = self._service_account_email
+                CloudBase.cache['user_account_email'] = self._user_account_email
+            else:
+                self._service_account_email = CloudBase.cache.get('service_account_email')
+                self._user_account_email = CloudBase.cache.get('user_account_email')
         elif AuthMode[parameters.get('auth_mode')] == AuthMode.file:
             self.credentials, self.gcp_project, self._service_account_email = self.file_auth()
         else:
@@ -85,17 +100,23 @@ class CloudBase(object):
     def default_auth():
         try:
             credentials, project_id = google.auth.default()
-            if hasattr(credentials, "service_account_email"):
-                service_account_email = credentials.service_account_email
+            return credentials, project_id
+        except Exception as err:
+            raise GCPDriverError(f"error connecting to GCP: {err}")
+
+    def get_account_email(self):
+        try:
+            if hasattr(self.credentials, "service_account_email"):
+                service_account_email = self.credentials.service_account_email
                 account_email = None
-            elif hasattr(credentials, "signer_email"):
-                service_account_email = credentials.signer_email
+            elif hasattr(self.credentials, "signer_email"):
+                service_account_email = self.credentials.signer_email
                 account_email = None
             else:
                 service_account_email = None
                 request = google.auth.transport.requests.Request()
-                credentials.refresh(request=request)
-                token_payload = credentials.id_token.split('.')[1]
+                self.credentials.refresh(request=request)
+                token_payload = self.credentials.id_token.split('.')[1]
                 input_bytes = token_payload.encode('utf-8')
                 rem = len(input_bytes) % 4
                 if rem > 0:
@@ -103,9 +124,9 @@ class CloudBase(object):
                 json_data = base64.urlsafe_b64decode(input_bytes).decode('utf-8')
                 token_data = json.loads(json_data)
                 account_email = token_data.get('email')
-            return credentials, project_id, service_account_email, account_email
+            return service_account_email, account_email
         except Exception as err:
-            raise GCPDriverError(f"error connecting to GCP: {err}")
+            raise GCPDriverError(f"error getting GCP account email: {err}")
 
     @staticmethod
     def get_config_dir():
