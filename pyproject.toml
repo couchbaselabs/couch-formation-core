@@ -100,6 +100,8 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "session"
+asyncio_mode = "auto"
 addopts = "-rE --no-header -v -p no:warnings"
 log_file = "pytest.log"
 log_file_level = "DEBUG"
@@ -127,3 +129,28 @@ markers = [
     "cf_posix: marks a test as a macOS or Linux safe test",
     "cf_cli: marks a test as a CLI simulation test"
 ]
+
+[tool.tox]
+requires = ["tox>=4.19"]
+env_list = ["py313", "py312", "py38"]
+no_package = true
+
+[tool.tox.env_run_base]
+skip_install = true
+allowlist_externals = ["poetry"]
+commands_pre = [["poetry", "install"]]
+
+[tool.tox.env.py38]
+description = "Posix 3.8 full test"
+env_python = "python3.8"
+commands = [["poetry", "run", "pytest", "-m", "cf_posix"]]
+
+[tool.tox.env.py312]
+description = "Posix 3.12 full test"
+env_python = "python3.12"
+commands = [["poetry", "run", "pytest", "-m", "cf_posix"]]
+
+[tool.tox.env.py313]
+description = "Posix 3.13 full test"
+env_python = "python3.13"
+commands = [["poetry", "run", "pytest", "-m", "cf_posix"]]
