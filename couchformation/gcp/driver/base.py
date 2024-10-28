@@ -87,7 +87,12 @@ class CloudBase(object):
         if not self.gcp_region:
             raise GCPDriverError("region not specified")
 
-        self.zones()
+        try:
+            self.zones()
+        except GCPDriverTransientError:
+            raise GCPDriverError(f"There is likely an auth config or firewall problem - make sure you can access the GCP API and use \"gcloud auth\" to configure access")
+        except Exception as err:
+            raise GCPDriverError(f"error getting availability zones: {err}")
 
     def test_session(self):
         try:
