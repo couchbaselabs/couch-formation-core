@@ -160,6 +160,6 @@ commands = [["poetry", "run", "pytest", "-m", "cf_posix"]]
 [tool.tox.env.win312]
 description = "Windows 3.12 full test"
 env_python = "python312"
-pass_env = "LOCALAPPDATA"
+pass_env = ["LOCALAPPDATA"]
 commands_pre = [["poetry", "env", "use", "312"], ["poetry", "install"]]
 commands = [["poetry", "run", "pytest", "-m", "cf_windows"]]
