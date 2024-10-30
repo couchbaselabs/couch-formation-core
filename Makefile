@@ -1,4 +1,4 @@
-.PHONY:	pypi publish test commit patch minor major download remote_download remote
+.PHONY:	pypi build publish test commit patch minor major download remote_download remote
 export LOGPATH := $(shell pwd)/tests/log
 export PROJECT_NAME := $$(basename $$(pwd))
 export PROJECT_VERSION := $(shell cat VERSION)
@@ -22,14 +22,11 @@ minor:
 		bumpversion --allow-dirty minor
 major:
 		bumpversion --allow-dirty major
-setup:
-		python setup.py sdist
-twine:
-		$(eval REV_FILE := $(shell ls -tr dist/*.gz | tail -1))
-		twine upload $(REV_FILE)
 pypi:
 		poetry build
 		poetry publish
+build:
+		poetry build
 publish:
 		poetry publish
 download:

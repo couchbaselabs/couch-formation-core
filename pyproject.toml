@@ -78,8 +78,6 @@ PyYAML = { version = "!=6.0.0,!=5.4.0,!=5.4.1" }
 rsa = ">=4.9"
 pywinrm = ">=0.4.3"
 aiohttp = ">=3.9.3"
-python-certifi-win32 = ">=1.6.1"
-certifi = ">=2024.2.2"
 pyhostprep = ">=1.0.57"
 psutil = ">=5.9.5"
 six = ">=1.16.0"
