@@ -52,7 +52,7 @@ class CapellaDeployment(object):
         self.account_email = parameters.get('account_email')
         self.profile = parameters.get('profile') if parameters.get('profile') else 'default'
         self.sw_version = self.parameters.get('sw_version') if self.parameters.get('sw_version') else "latest"
-        self.cidr = parameters.get('cidr') if parameters.get('cidr') else "10.0.0.0/23"
+        self.cidr = parameters.get('cidr')
         self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
         self.peer_project = parameters.get('peer_project')
         self.peer_region = parameters.get('peer_region')
@@ -178,7 +178,8 @@ class CapellaDeployment(object):
                 builder = builder.name(self.name)
                 builder = builder.description("Pytest created cluster")
                 builder = builder.region(self.region)
-                builder = builder.cidr(self.cidr)
+                if self.cidr:
+                    builder = builder.cidr(self.cidr)
                 for group in node_groups:
                     group_db = KeyValueStore(self.state_file, group)
                     machine_type = group_db.get('machine_type')
