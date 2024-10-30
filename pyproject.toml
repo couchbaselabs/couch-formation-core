@@ -80,10 +80,10 @@ pywinrm = ">=0.4.3"
 aiohttp = ">=3.9.3"
 python-certifi-win32 = ">=1.6.1"
 certifi = ">=2024.2.2"
-pyhostprep = ">=1.0.10"
+pyhostprep = ">=1.0.57"
 psutil = ">=5.9.5"
 six = ">=1.16.0"
-libcapella = ">=1.0.16"
+libcapella = ">=1.0.17"
 
 [tool.poetry.group.test.dependencies]
 pytest = ">=5.0.0"
@@ -132,7 +132,7 @@ markers = [
 
 [tool.tox]
 requires = ["tox>=4.19"]
-env_list = ["py313", "py312", "py38", "win312"]
+env_list = ["py313", "py312", "py38", "win312", "win38"]
 no_package = true
 
 [tool.tox.env_run_base]
@@ -157,9 +157,14 @@ env_python = "python3.13"
 commands_pre = [["poetry", "env", "use", "3.13"], ["poetry", "install"]]
 commands = [["poetry", "run", "pytest", "-m", "cf_posix"]]
 
+[tool.tox.env.win38]
+description = "Windows 3.8 full test"
+env_python = "python38"
+commands_pre = [["poetry", "env", "remove", "38"], ["poetry", "env", "use", "38"], ["poetry", "install"]]
+commands = [["poetry", "run", "pytest", "-m", "cf_windows"]]
+
 [tool.tox.env.win312]
 description = "Windows 3.12 full test"
 env_python = "python312"
-pass_env = ["LOCALAPPDATA"]
-commands_pre = [["poetry", "env", "use", "312"], ["poetry", "install"]]
+commands_pre = [["poetry", "env", "remove", "312"], ["poetry", "env", "use", "312"], ["poetry", "install"]]
 commands = [["poetry", "run", "pytest", "-m", "cf_windows"]]
