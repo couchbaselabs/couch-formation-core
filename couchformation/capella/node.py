@@ -26,6 +26,7 @@ from libcapella.logic.network_peers import NetworkPeerBuilder
 
 logger = logging.getLogger('couchformation.capella.node')
 logger.addHandler(logging.NullHandler())
+logging.getLogger("restfull").setLevel(logging.ERROR)
 
 
 class CapellaNodeError(FatalError):
@@ -197,14 +198,17 @@ class CapellaDeployment(object):
 
             database.refresh()
             self.state['instance_id'] = database.id
-            self.state['provider'] = self.provider
-            self.state['region'] = self.region
-            self.state['cidr'] = self.cidr
-            self.state['name'] = self.name
+            self.state['provider'] = database.this.cloudProvider.type
+            self.state['region'] = database.this.cloudProvider.region
+            self.state['cidr'] = database.this.cloudProvider.cidr
+            self.state['name'] = database.this.name
             self.state['cloud'] = self.cloud
             self.state['connect_string'] = database.this.connectionString
 
             logger.info(f"Cluster ID: {database.id}")
+            logger.info(f"Cloud provider: {database.this.cloudProvider.type}")
+            logger.info(f"Cloud region: {database.this.cloudProvider.region}")
+            logger.info(f"Cluster CIDR: {database.this.cloudProvider.cidr}")
             logger.info(f"Connect string: {database.this.connectionString}")
 
             allowed_cidr = CapellaAllowedCIDR(database, self.allow)
@@ -268,11 +272,11 @@ class CapellaDeployment(object):
 
             logger.info(f"Cluster ID: {cluster.id}")
 
+            cluster.refresh()
             self.state['instance_id'] = cluster.id
-            self.state['provider'] = self.provider
-            self.state['region'] = self.region
-            self.state['cidr'] = self.cidr
-            self.state['name'] = self.name
+            self.state['provider'] = cluster.this.cloudProvider
+            self.state['region'] = cluster.this.region
+            self.state['name'] = cluster.this.name
             self.state['cloud'] = self.cloud
 
             allowed_cidr = ColumnarAllowedCIDR(cluster, self.allow)

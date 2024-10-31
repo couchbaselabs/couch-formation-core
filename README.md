@@ -197,24 +197,14 @@ For Google Cloud use ```gcloud auth application-default login``` to configure CL
 For Azure use ```az login``` to configure CLI access. Check [here](https://learn.microsoft.com/en-us/cli/azure/authenticate-azure-cli-interactively) for more information.
 
 ## Capella Support
-### Credentials Directory
-The automation for Capella uses the v4 public API. To use the automation, create an API key in the Capella UI and save it to a file named ```default-api-key-token.txt``` in a directory named ```.capella``` in your home directory.
+The automation for Capella uses the v4 public API. To use the automation, set the `capella.token` and `capella.user` configuration parameters.
 ```
-.capella
-├── credentials
-├── default-api-key-token.txt
-├── project-api-key-token.txt
-└── test-api-key-token.txt
+cloudmgr config set capella.token abcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcd==
+cloudmgr config set capella.user michael.minichino@couchbase.com
 ```
-Credentials file format:
+By default, the Couch Formation project is used as the Capella project. To use a different Capella project, set the `capella.project` parameter.
 ```
-[default]
-api_host = cloudapi.cloud.couchbase.com
-token_file = default-api-key-token.txt
-account_email = john.doe@example.com
-
-[project]
-token_file = project-api-key-token.txt
+cloudmgr config set capella.project my-project
 ```
 ## Windows
 Download and install a 64-bit version of Python 3.8+ from [here](https://www.python.org/downloads/windows/). Use the ```Run as Administrator``` option to start PowerShell and then install Couch Formation with ```pip```. Once the installation is complete, it will be available for all users (launch a PowerShell window as your login user to use Couch Formation). You should install the ```wheel``` pacakge before you install Couch Formation.
@@ -224,6 +214,13 @@ pip3 install wheel
 ```
 pip3 install couchformation
 ```
+## Configuration Parameters
+| Parameter       | Description                |
+|-----------------|----------------------------|
+| capella.token   | Capella API token          |
+| capella.user    | Capella user email address |
+| capella.user.id | Capella user ID            |
+| capella.project | Capella project            |
 ## Operating System Information
 
 | ID            | Operating System         | Versions     | AWS User      | GCP User  | Azure User |

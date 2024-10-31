@@ -9,6 +9,7 @@ from overrides import override
 import couchformation
 from couchformation.cli.cli import CLI
 from couchformation.project import Project
+from couchformation.resources.config_manager import ConfigurationManager
 from couchformation.support.debug import CreateDebugPackage
 
 warnings.filterwarnings("ignore")
@@ -55,11 +56,21 @@ class CloudMgrCLI(CLI):
         command_subparser.add_parser('login', help="Cloud Login", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('help', help="Show Supported Options", parents=[opt_parser], add_help=False)
 
+        config_cmd = command_subparser.add_parser('config', help="Configuration Manager", parents=[opt_parser], add_help=False)
+        config_parser = config_cmd.add_subparsers(dest='config_command')
+        config_parser.add_parser('get', help="Get Config Elements", parents=[opt_parser], add_help=False)
+        config_parser.add_parser('set', help="Get Config Elements", parents=[opt_parser], add_help=False)
+        config_parser.add_parser('unset', help="Get Config Elements", parents=[opt_parser], add_help=False)
+
     def run(self):
         if not hasattr(self.options, 'json'):
             logger.info(f"Couch Formation v{couchformation.__version__}")
 
         if self.options.show_version:
+            return
+
+        if self.options.command == "config":
+            self.config_mgr(self.options.config_command)
             return
 
         if self.options.command == "dump":
@@ -133,6 +144,33 @@ class CloudMgrCLI(CLI):
             handlers = getattr(log, 'handlers', [])
             for handler in handlers:
                 handler.flush()
+
+    def config_mgr(self, command: str):
+        cm = ConfigurationManager()
+        if command == "get":
+            if len(self.remainder) == 0:
+                contents = cm.list()
+                for key in contents:
+                    print(f"{key} = {contents[key]}")
+                return
+            elif len(self.remainder) == 1:
+                value = cm.get(self.remainder[0])
+                if value is not None:
+                    print(f"{self.remainder[0]} = {value}")
+            else:
+                logger.error(f"Usage: get [key_name]")
+        elif command == "set":
+            if len(self.remainder) == 2:
+                cm.set(self.remainder[0], self.remainder[1])
+            else:
+                logger.error(f"Usage: set key_name value")
+        elif command == "unset":
+            if len(self.remainder) == 1:
+                cm.delete(self.remainder[0])
+            else:
+                logger.error(f"Usage: unset key_name")
+        else:
+            logger.error(f"Unknown config command: {command}")
 
 
 def main(args=None):

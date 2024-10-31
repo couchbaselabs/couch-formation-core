@@ -81,7 +81,7 @@ aiohttp = ">=3.9.3"
 pyhostprep = ">=1.0.57"
 psutil = ">=5.9.5"
 six = ">=1.16.0"
-libcapella = ">=1.0.17"
+libcapella = ">=1.0.18"
 
 [tool.poetry.group.test.dependencies]
 pytest = ">=5.0.0"

@@ -61,21 +61,21 @@ class TestMainCapella(unittest.TestCase):
 
     def test_1(self):
         args = ["create", "--build", "capella", "--cloud", "capella", "--project", "pytest-project", "--name", "test-cluster",
-                "--region", "us-east-2", "--quantity", "3", "--provider", "aws", "--machine_type", "4x16", "--profile", "pytest"]
+                "--region", "us-east-2", "--quantity", "3", "--provider", "aws", "--machine_type", "4x16"]
         cm = CloudMgrCLI(args)
         project = Project(cm.options, cm.remainder)
         project.create()
 
     def test_2(self):
         args = ["add", "--build", "capella", "--cloud", "capella", "--project", "pytest-project", "--name", "test-cluster", "--region", "us-east-2", "--quantity", "2",
-                "--provider", "aws", "--machine_type", "4x16", "--services", "analytics", "--profile", "pytest"]
+                "--provider", "aws", "--machine_type", "4x16", "--services", "analytics"]
         cm = CloudMgrCLI(args)
         project = Project(cm.options, cm.remainder)
         project.add()
 
     def test_3(self):
         args = ["create", "--build", "capella", "--cloud", "capella", "--project", "pytest-project", "--name", "test-app-svc",
-                "--quantity", "2", "--machine_type", "4x8", "--type", "mobile", "--connect", "test-cluster", "--profile", "pytest"]
+                "--quantity", "2", "--machine_type", "4x8", "--type", "mobile", "--connect", "test-cluster"]
         cm = CloudMgrCLI(args)
         project = Project(cm.options, cm.remainder)
         project.create()

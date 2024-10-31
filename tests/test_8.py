@@ -56,7 +56,7 @@ class TestMainColumnar(unittest.TestCase):
 
     def test_1(self):
         args = ["create", "--build", "columnar", "--cloud", "capella", "--project", "pytest-columnar", "--name", "columnardb",
-                "--region", "us-east-1", "--quantity", "1", "--provider", "aws", "--machine_type", "4x32", "--profile", "pytest"]
+                "--region", "us-east-1", "--quantity", "1", "--provider", "aws", "--machine_type", "4x32"]
         cm = CloudMgrCLI(args)
         project = Project(cm.options, cm.remainder)
         project.create()

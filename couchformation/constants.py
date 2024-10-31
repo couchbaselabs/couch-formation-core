@@ -16,6 +16,7 @@ DEBUG_VERBOSE_LEVEL = 1
 ROOT_DIRECTORY = os.path.join(Path.home(), '.config', 'couch-formation')
 STATE_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'state')
 LOG_DIRECTORY = os.path.join(ROOT_DIRECTORY, 'log')
+CONFIG_FILE = os.path.join(ROOT_DIRECTORY, 'config.db')
 DATA_DIRECTORY = get_data_dir()
 NODE_PROFILES = os.path.join(DATA_DIRECTORY, "node_profiles.yaml")
 TARGET_PROFILES = os.path.join(DATA_DIRECTORY, "target_profiles.yaml")
