@@ -39,7 +39,7 @@ remote_download:
 		-t "Release $(PROJECT_VERSION)" \
 		-n "Release $(PROJECT_VERSION)" \
 		$(PROJECT_VERSION)
-release: commit pypi download remote_download remote
+release: pypi download remote_download remote
 container:
 		docker system prune -f
 		docker buildx prune -f
