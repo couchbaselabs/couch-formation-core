@@ -11,6 +11,8 @@ All notable changes to this project will be documented in this file.
 - Automatic peering for Capella with AWS and GCP
 - Support for Python 3.13
 - Deployment stage has been added to project state
+- Global configuration parameter subsystem with initial support for storing Capella settings
+- Ability to use a Capella project as opposed to always using the CF project as the Capella project
 
 ### Changed
 - The `show` subcommand should be used to display project IP addresses, hostnames, and credentials
@@ -20,6 +22,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Fixed numerous bugs and refactored code to better handle exceptions
+- Code cleanup
 
 ### Removed
 - Prerelease code designation
