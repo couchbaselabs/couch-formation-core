@@ -199,8 +199,8 @@ For Azure use ```az login``` to configure CLI access. Check [here](https://learn
 ## Capella Support
 The automation for Capella uses the v4 public API. To use the automation, set the `capella.token` and `capella.user` configuration parameters.
 ```
-cloudmgr config set capella.token abcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcd==
-cloudmgr config set capella.user michael.minichino@couchbase.com
+cloudmgr config set capella.token abcdabcdabcdabcdabcdabcdabcdabcdabcdabcd==
+cloudmgr config set capella.user john.doe@example.com
 ```
 By default, the Couch Formation project is used as the Capella project. To use a different Capella project, set the `capella.project` parameter.
 ```
