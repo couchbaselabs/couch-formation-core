@@ -121,6 +121,12 @@ class CloudMgrCLI(CLI):
             if self.options.name is None:
                 logger.error("Missing required parameter: name")
                 return
+            if not self.check_name(self.options.name):
+                logger.error(f"Invalid service name (name should conform to RFC1035): {self.options.name}")
+                return
+            if not self.check_name(self.options.project):
+                logger.error(f"Invalid project name (name should conform to RFC1035): {self.options.project}")
+                return
             project.add()
         elif self.options.command == "copy":
             if self.options.to is None:
