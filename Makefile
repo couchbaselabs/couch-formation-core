@@ -1,4 +1,4 @@
-.PHONY:	pypi build publish test commit patch minor major download remote_download remote
+.PHONY:	pypi build publish test commit patch minor major download remote_download remote prerelease
 export LOGPATH := $(shell pwd)/tests/log
 export PROJECT_NAME := $$(basename $$(pwd))
 export PROJECT_VERSION := $(shell cat VERSION)
@@ -33,11 +33,13 @@ download:
 		$(eval REV_FILE := $(shell ls -tr dist/*.whl | tail -1))
 		gh release upload --clobber -R "mminichino/$(PROJECT_NAME)" $(PROJECT_VERSION) $(REV_FILE)
 tag:
+		if gh release view -R "mminichino/$(PROJECT_NAME)" $(PROJECT_VERSION) >/dev/null 2>&1 ; then gh release delete -R "mminichino/$(PROJECT_NAME)" $(PROJECT_VERSION) --cleanup-tag -y ; fi
 		gh release create -R "mminichino/$(PROJECT_NAME)" \
 		-t "Release $(PROJECT_VERSION)" \
 		-n "Release $(PROJECT_VERSION)" \
 		$(PROJECT_VERSION)
 prerelease_tag:
+		if gh release view -R "mminichino/$(PROJECT_NAME)" $(PROJECT_VERSION) >/dev/null 2>&1 ; then gh release delete -R "mminichino/$(PROJECT_NAME)" $(PROJECT_VERSION) --cleanup-tag -y ; fi
 		gh release create --prerelease -R "mminichino/$(PROJECT_NAME)" \
 		-t "Release $(PROJECT_VERSION)" \
 		-n "Release $(PROJECT_VERSION)" \
@@ -50,6 +52,7 @@ remote_tag:
 		-t "Release $(PROJECT_VERSION)" \
 		-n "Release $(PROJECT_VERSION)" \
 		$(PROJECT_VERSION)
+prerelease: build prerelease_tag download
 release: pypi tag download remote_tag remote_download remote
 container:
 		docker system prune -f
