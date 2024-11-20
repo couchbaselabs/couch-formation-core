@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.0.1]
+
+### Added
+- New AWS, GCP, and Azure parameter `--machine_name` to specify a cloud dependent machine name
+
+### Changed
+- New project and service names must conform to RFC1035
+- Project clean now removes the project root directory as well as files
+
 ## [4.0.0]
 
 ### Notes
