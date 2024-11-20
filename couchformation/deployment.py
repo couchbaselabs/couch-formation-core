@@ -552,6 +552,7 @@ class NodeGroup(object):
         os.remove(network)
         metadata = os.path.join(self.project_dir, C.METADATA)
         os.remove(metadata)
+        FileManager().remove_tree(self.project_dir)
 
     def get_networks(self) -> List[KeyValueStore]:
         doc_list = self.net.doc_id_startswith('network')

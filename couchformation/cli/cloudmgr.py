@@ -1,6 +1,7 @@
 ##
 ##
 
+import re
 import logging
 import warnings
 import argparse
@@ -62,6 +63,12 @@ class CloudMgrCLI(CLI):
         config_parser.add_parser('set', help="Get Config Elements", parents=[opt_parser], add_help=False)
         config_parser.add_parser('unset', help="Get Config Elements", parents=[opt_parser], add_help=False)
 
+    @staticmethod
+    def check_name(value) -> bool:
+        if not bool(re.match(r"^[a-z]([-a-z0-9]*[a-z0-9])?$", value)) or len(value) > 63:
+            return False
+        return True
+
     def run(self):
         if not hasattr(self.options, 'json'):
             logger.info(f"Couch Formation v{couchformation.__version__}")
@@ -102,6 +109,12 @@ class CloudMgrCLI(CLI):
         if self.options.command == "create":
             if self.options.name is None:
                 logger.error("Missing required parameter: name")
+                return
+            if not self.check_name(self.options.name):
+                logger.error(f"Invalid service name (name should conform to RFC1035): {self.options.name}")
+                return
+            if not self.check_name(self.options.project):
+                logger.error(f"Invalid project name (name should conform to RFC1035): {self.options.project}")
                 return
             project.create()
         elif self.options.command == "add":

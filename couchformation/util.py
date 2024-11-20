@@ -14,7 +14,7 @@ import json
 import importlib
 from typing import Union, List, Callable
 from uuid import UUID
-from shutil import copyfile
+from shutil import copyfile, rmtree
 from functools import wraps
 from couchformation.provisioner.shell import RunShellCommand
 from couchformation.exception import FatalError
@@ -147,6 +147,10 @@ class FileManager(object):
                 rel_name = os.path.relpath(file_name, root_dir) if file_name.startswith(root_dir) else file_name
                 tar.add(file_name, arcname=rel_name)
                 progress_bar(n + 1, file_count, length=50)
+
+    @staticmethod
+    def remove_tree(path: str):
+        rmtree(path)
 
 
 class UUIDGen(object):
