@@ -30,16 +30,27 @@ build:
 publish:
 		poetry publish
 download:
+		$(eval REV_FILE := $(shell ls -tr dist/*.whl | tail -1))
+		gh release upload --clobber -R "mminichino/$(PROJECT_NAME)" $(PROJECT_VERSION) $(REV_FILE)
+tag:
 		gh release create -R "mminichino/$(PROJECT_NAME)" \
 		-t "Release $(PROJECT_VERSION)" \
 		-n "Release $(PROJECT_VERSION)" \
 		$(PROJECT_VERSION)
+prerelease_tag:
+		gh release create --prerelease -R "mminichino/$(PROJECT_NAME)" \
+		-t "Release $(PROJECT_VERSION)" \
+		-n "Release $(PROJECT_VERSION)" \
+		$(PROJECT_VERSION)
 remote_download:
+		$(eval REV_FILE := $(shell ls -tr dist/*.whl | tail -1))
+		gh release upload --clobber -R "couchbaselabs/$(PROJECT_NAME)" $(PROJECT_VERSION) $(REV_FILE)
+remote_tag:
 		gh release create -R "couchbaselabs/$(PROJECT_NAME)" \
 		-t "Release $(PROJECT_VERSION)" \
 		-n "Release $(PROJECT_VERSION)" \
 		$(PROJECT_VERSION)
-release: pypi download remote_download remote
+release: pypi tag download remote_tag remote_download remote
 container:
 		docker system prune -f
 		docker buildx prune -f
