@@ -47,7 +47,8 @@ class AzureDeployment(object):
         self.cloud = parameters.get('cloud')
         self.group = parameters.get('group')
         self.number = parameters.get('number')
-        self.machine_type = parameters.get('machine_type')
+        self.machine_type = parameters.get('machine_type') if parameters.get('machine_type') else '4x16'
+        self.machine_name = parameters.get('machine_name')
         self.ports = parameters.get('ports')
         self.ultra = parameters.get('ultra') if parameters.get('ultra') else False
         self.password = parameters.get('password') if parameters.get('password') else PasswordUtility().generate(16)
@@ -175,7 +176,10 @@ class AzureDeployment(object):
         else:
             virtualization = False
 
-        machine = MachineType(self.parameters).get_machine(self.machine_type, azure_location, virtualization)
+        if not self.machine_name:
+            machine = MachineType(self.parameters).get_machine(self.machine_type, azure_location, virtualization)
+        else:
+            machine = MachineType(self.parameters).details(self.machine_name)
         if not machine:
             raise AzureNodeError(f"can not find machine for type {machine_type}")
         machine_name = machine['name']

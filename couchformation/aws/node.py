@@ -47,7 +47,8 @@ class AWSDeployment(object):
         self.cloud = parameters.get('cloud')
         self.group = parameters.get('group')
         self.number = parameters.get('number')
-        self.machine_type = parameters.get('machine_type')
+        self.machine_type = parameters.get('machine_type') if parameters.get('machine_type') else '4x16'
+        self.machine_name = parameters.get('machine_name')
         self.ports = parameters.get('ports')
         self.tags = parameters.get('tags') if parameters.get('tags') else ''
         self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
@@ -142,7 +143,10 @@ class AWSDeployment(object):
         volume_size = int(self.volume_size)
         services = self.services
 
-        machine = MachineType(self.parameters).get_machine(self.machine_type, self.os_arch)
+        if not self.machine_name:
+            machine = MachineType(self.parameters).get_machine(self.machine_type, self.os_arch)
+        else:
+            machine = MachineType(self.parameters).details(self.machine_name)
         if not machine:
             raise AWSNodeError(f"can not find machine for type {machine_type}")
         machine_name = machine['name']

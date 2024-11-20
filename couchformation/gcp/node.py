@@ -45,7 +45,8 @@ class GCPDeployment(object):
         self.cloud = parameters.get('cloud')
         self.group = parameters.get('group')
         self.number = parameters.get('number')
-        self.machine_type = parameters.get('machine_type')
+        self.machine_type = parameters.get('machine_type') if parameters.get('machine_type') else '4x16'
+        self.machine_name = parameters.get('machine_name')
         self.ports = parameters.get('ports')
         self.volume_size = parameters.get('volume_size') if parameters.get('volume_size') else "256"
         self.services = parameters.get('services') if parameters.get('services') else "default"
@@ -141,7 +142,10 @@ class GCPDeployment(object):
         volume_size = self.volume_size
         services = self.services
 
-        machine = MachineType(self.parameters).get_machine(self.machine_type, subnet['zone'])
+        if not self.machine_name:
+            machine = MachineType(self.parameters).get_machine(self.machine_type, subnet['zone'])
+        else:
+            machine = MachineType(self.parameters).details(self.machine_name)
         if not machine:
             raise GCPNodeError(f"can not find machine for type {machine_type}")
         machine_name = machine['name']

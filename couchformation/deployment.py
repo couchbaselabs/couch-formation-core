@@ -238,7 +238,9 @@ class MetadataManager(object):
                     build = group['build'] if 'build' in group and group['build'] is not None else ''
                     region = group['region'] if 'region' in group and group['region'] is not None else ''
                     os_id = group['os_id'] if 'os_id' in group and group['os_id'] is not None else ''
-                    machine_type = group['machine_type'] if 'machine_type' in group and group['machine_type'] is not None else ''
+                    machine_type = group['machine_type'] if 'machine_type' in group and group['machine_type'] is not None \
+                        else group['machine_name'] if 'machine_name' in group and group['machine_name'] is not None \
+                        else ''
                     quantity = group['quantity'] if 'quantity' in group and group['quantity'] is not None else 1
                     log.info(f"| +- [{n+1}] ({build}) {quantity}x {os_id}{space * bool(os_id)}{machine_type} {region}{status}")
 

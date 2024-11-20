@@ -29,6 +29,9 @@ image:
 machine_type:
   type_class: str
   help: Cloud independent machine size CxM (CPUs + "x" + RAM in GiB) - e.g. 4x16
+machine_name:
+  type_class: str
+  help: Cloud dependent machine name
 managed_gcp_zone:
   type_class: str
   help: GCP peer network managed zone
