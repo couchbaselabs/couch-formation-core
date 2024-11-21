@@ -3,9 +3,10 @@
 
 import re
 import logging
-from typing import Union, List
+from typing import Union
 from couchformation.azure.driver.base import CloudBase, AzureDriverError
 from couchformation.azure.driver.constants import ComputeTypes
+from couchformation.retry import retry
 import couchformation.constants as C
 
 logger = logging.getLogger('couchformation.azure.driver.machine')
@@ -74,21 +75,32 @@ class MachineType(CloudBase):
 
         return result_list
 
+    @retry(3, 0.05)
     def get_machine(self, name: str, location: str, virtualization: bool = False):
         machine_list = self.get_machine_types(location, virtualization)
-        return next((m for m in machine_list if m['machine_type'] == name), None)
+        result = next((m for m in machine_list if m['machine_type'] == name and self.check_capacity(m['name'], location)), None)
+        if not result:
+            raise AzureDriverError(f"machine type {name} not available in location {location} or not enough capacity")
+        return result
 
-    def check_capacity(self, resource_list: List, machine_size: str, location: str):
-        for resource in resource_list:
+    def check_capacity(self, machine_size: str, location: str):
+        try:
+            resource_list = self.compute_client.resource_skus.list(filter=f"location eq '{location}'")
+        except Exception as err:
+            raise AzureDriverError(f"error getting vnet: {err}")
+
+        for resource in list(resource_list):
             if machine_size != resource.name:
                 continue
             zone_list = next((i.zones for i in resource.location_info if i.location == location), [])
             if set(zone_list) != set(self.azure_availability_zones):
                 return False
-            restriction = next((r.reason_code for r in resource.restrictions if location in r.values), None)
-            if restriction and restriction == "NotAvailableForSubscription":
+            restrictions = list(r.reason_code for r in resource.restrictions if location in r.values)
+            if len(restrictions) > 0:
                 return False
             return True
+
+        return False
 
     def details(self, machine_type: str) -> Union[dict, None]:
         try:
