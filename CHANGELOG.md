@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - New AWS, GCP, and Azure parameter `--machine_name` to specify a cloud dependent machine name
+- Retry on transient resource capacity errors with some Azure machine sizes 
 
 ### Changed
 - New project and service names must conform to RFC1035
