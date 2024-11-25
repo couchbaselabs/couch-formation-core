@@ -34,6 +34,10 @@ PARAMETERS = {
     'capella.project': {
         'type': 'string',
         'mutable': True
+    },
+    "ssh.key": {
+        'type': 'string',
+        'mutable': True
     }
 }
 

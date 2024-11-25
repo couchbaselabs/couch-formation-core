@@ -4,6 +4,7 @@
 import logging
 import os
 import rsa
+from pathlib import Path
 from enum import Enum
 from typing import Union, List
 from Crypto.PublicKey import RSA
@@ -11,13 +12,16 @@ from Crypto.Util.number import long_to_bytes
 from Crypto.Cipher import PKCS1_OAEP
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa as rsa_primitive
 import hashlib
 from cryptography.exceptions import UnsupportedAlgorithm
 from couchformation.exception import FatalError, NonFatalError
+from couchformation.util import FileManager
 
 logger = logging.getLogger('couchformation.ssh')
 logger.addHandler(logging.NullHandler())
-HOME_DIRECTORY = os.path.expanduser('~')
+HOME_DIRECTORY = str(Path.home())
+SSH_DIRECTORY = os.path.join(HOME_DIRECTORY, '.ssh')
 
 SSH_PATHS = [
     HOME_DIRECTORY + '/.ssh',
@@ -31,6 +35,10 @@ class SSHExtensions(Enum):
     PEM = ".pem"
     DER = ".der"
     KEY = ".key"
+
+
+class OpenSSHExtensions(Enum):
+    PUB = ".pub"
 
 
 class SSHError(FatalError):
@@ -225,3 +233,30 @@ class SSHUtil(object):
         SSHUtil.write_file(pub_file_name, gen_public_key)
 
         return pub_file_name
+
+    @staticmethod
+    def create_key_pair(key_file: str, overwrite: bool = False):
+        key = rsa_primitive.generate_private_key(backend=default_backend(), public_exponent=65537, key_size=2048)
+        private_key = key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.TraditionalOpenSSL, serialization.NoEncryption())
+        public_key = key.public_key().public_bytes(serialization.Encoding.OpenSSH, serialization.PublicFormat.OpenSSH)
+
+        pub_file_name = os.path.join(SSH_DIRECTORY, key_file + OpenSSHExtensions.PUB.value)
+        pem_file_name = os.path.join(SSH_DIRECTORY, key_file + SSHExtensions.PEM.value)
+
+        if os.path.exists(pub_file_name) and not overwrite:
+            raise SSHError(f"File {pub_file_name} already exists")
+        if os.path.exists(pem_file_name) and not overwrite:
+            raise SSHError(f"File {pem_file_name} already exists")
+
+        try:
+            if not os.path.exists(SSH_DIRECTORY):
+                FileManager().make_dir(SSH_DIRECTORY)
+        except Exception as err:
+            raise SSHError(f"can not create ssh dir: {err}")
+
+        SSHUtil.write_file(pub_file_name, public_key.decode('utf-8'))
+        logger.info(f"created ssh public key: {pub_file_name}")
+        SSHUtil.write_file(pem_file_name, private_key.decode('utf-8'))
+        logger.info(f"created ssh private key: {pem_file_name}")
+
+        return pub_file_name, pem_file_name

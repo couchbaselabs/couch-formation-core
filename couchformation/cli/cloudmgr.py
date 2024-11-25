@@ -12,6 +12,7 @@ from couchformation.cli.cli import CLI
 from couchformation.project import Project
 from couchformation.resources.config_manager import ConfigurationManager
 from couchformation.support.debug import CreateDebugPackage
+from couchformation.ssh import SSHUtil
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger()
@@ -57,11 +58,19 @@ class CloudMgrCLI(CLI):
         command_subparser.add_parser('login', help="Cloud Login", parents=[opt_parser], add_help=False)
         command_subparser.add_parser('help', help="Show Supported Options", parents=[opt_parser], add_help=False)
 
-        config_cmd = command_subparser.add_parser('config', help="Configuration Manager", parents=[opt_parser], add_help=False)
+        config_cmd = command_subparser.add_parser('config', help="Configuration Manager", add_help=False)
         config_parser = config_cmd.add_subparsers(dest='config_command')
-        config_parser.add_parser('get', help="Get Config Elements", parents=[opt_parser], add_help=False)
-        config_parser.add_parser('set', help="Get Config Elements", parents=[opt_parser], add_help=False)
-        config_parser.add_parser('unset', help="Get Config Elements", parents=[opt_parser], add_help=False)
+        config_parser.add_parser('get', help="Get Config Elements", add_help=False)
+        config_parser.add_parser('set', help="Get Config Elements", add_help=False)
+        config_parser.add_parser('unset', help="Get Config Elements", add_help=False)
+
+        ssh_opt_parser = argparse.ArgumentParser(add_help=False)
+        ssh_opt_parser.add_argument('-n', '--name', action='store', help="Key Name", default="cf-key-pair")
+        ssh_opt_parser.add_argument('-r', '--replace', action='store_true', help="Replace existing key")
+
+        ssh_cmd = command_subparser.add_parser('ssh', help="SSH Key Manager", add_help=False)
+        ssh_parser = ssh_cmd.add_subparsers(dest='ssh_command')
+        ssh_parser.add_parser('create', help="Create SSH Key Pair", parents=[ssh_opt_parser], add_help=False)
 
     @staticmethod
     def check_name(value) -> bool:
@@ -78,6 +87,10 @@ class CloudMgrCLI(CLI):
 
         if self.options.command == "config":
             self.config_mgr(self.options.config_command)
+            return
+
+        if self.options.command == "ssh":
+            self.ssh_mgr(self.options)
             return
 
         if self.options.command == "dump":
@@ -190,6 +203,15 @@ class CloudMgrCLI(CLI):
                 logger.error(f"Usage: unset key_name")
         else:
             logger.error(f"Unknown config command: {command}")
+
+    @staticmethod
+    def ssh_mgr(options: argparse.Namespace):
+        cm = ConfigurationManager()
+        if options.ssh_command == "create":
+            _, private_file = SSHUtil.create_key_pair(options.name, options.replace)
+            cm.set('ssh.key', private_file)
+        else:
+            logger.error(f"Unknown ssh command")
 
 
 def main(args=None):
