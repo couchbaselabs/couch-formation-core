@@ -78,7 +78,6 @@ PyYAML = { version = "!=6.0.0,!=5.4.0,!=5.4.1" }
 rsa = ">=4.9"
 pywinrm = ">=0.4.3"
 aiohttp = ">=3.9.3"
-pyhostprep = ">=1.0.57"
 psutil = ">=5.9.5"
 six = ">=1.16.0"
 libcapella = ">=1.0.18"
@@ -92,6 +91,7 @@ pytest-order = ">=1.2.0"
 [tool.poetry.group.dev.dependencies]
 bumpversion = "^0.6.0"
 poetry-core = ">=1.9.0"
+setuptools = ">=65.5.0"
 
 [build-system]
 requires = ["poetry-core"]
