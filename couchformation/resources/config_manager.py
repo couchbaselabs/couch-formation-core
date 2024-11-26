@@ -19,6 +19,10 @@ class ConfigError(FatalError):
 
 
 PARAMETERS = {
+    'aws.tags': {
+        'type': 'string',
+        'mutable': True
+    },
     'capella.token': {
         'type': 'string',
         'mutable': True

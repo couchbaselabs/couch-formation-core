@@ -21,6 +21,7 @@ from couchformation.ssh import SSHUtil
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import FileManager, synchronize, UUIDGen, parameter_to_dict, csv_dict_concat, dump_class_variables
+from couchformation.resources.config_manager import ConfigurationManager
 
 logger = logging.getLogger('couchformation.aws.network')
 logger.addHandler(logging.NullHandler())
@@ -44,7 +45,7 @@ class AWSNetwork(object):
         self.domain = parameters.get('domain')
         self.hosted_zone = parameters.get('hosted_zone')
         self.provider_id = parameters.get('provider_id')
-        self.tags = parameters.get('tags') if parameters.get('tags') else ''
+        self.tags = parameters.get('tags')
         self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
         self.build_ports = PortSettingSet().create().items()
 
@@ -61,6 +62,10 @@ class AWSNetwork(object):
         self.state = KeyValueStore(filename, document)
 
         self.aws_network = Network(self.parameters)
+
+        cm = ConfigurationManager()
+        if cm.get('aws.tags') and not self.tags:
+            self.tags = cm.get('aws.tags')
 
         self.tags = csv_dict_concat({"Project": self.project}, self.tags)
         self.tags = csv_dict_concat({"Service": self.name}, self.tags)

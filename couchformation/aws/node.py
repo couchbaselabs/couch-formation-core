@@ -19,6 +19,7 @@ from couchformation.config import get_state_file, get_state_dir, PortSettingSet,
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import FileManager, Synchronize, UUIDGen, parameter_to_dict, csv_dict_concat
+from couchformation.resources.config_manager import ConfigurationManager
 
 logger = logging.getLogger('couchformation.aws.node')
 logger.addHandler(logging.NullHandler())
@@ -50,7 +51,7 @@ class AWSDeployment(object):
         self.machine_type = parameters.get('machine_type') if parameters.get('machine_type') else '4x16'
         self.machine_name = parameters.get('machine_name')
         self.ports = parameters.get('ports')
-        self.tags = parameters.get('tags') if parameters.get('tags') else ''
+        self.tags = parameters.get('tags')
         self.allow = parameters.get('allow') if parameters.get('allow') else "0.0.0.0/0"
         self.volume_size = parameters.get('volume_size') if parameters.get('volume_size') else "256"
         self.volume_iops = parameters.get('volume_iops') if parameters.get('volume_iops') \
@@ -62,6 +63,10 @@ class AWSDeployment(object):
         self.node_name = f"{self.name}-node-{self.number:02d}"
         node_code = UUIDGen().text_hash(self.node_name)
         self.node_encoded = f"{self.asset_prefix}-{node_code}-node"
+
+        cm = ConfigurationManager()
+        if cm.get('aws.tags') and not self.tags:
+            self.tags = cm.get('aws.tags')
 
         self.tags = csv_dict_concat({"Project": self.project}, self.tags)
         self.tags = csv_dict_concat({"Service": self.name}, self.tags)
