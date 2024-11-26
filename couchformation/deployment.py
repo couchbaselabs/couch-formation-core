@@ -446,7 +446,7 @@ class NodeGroup(object):
         combined = dict_merge_not_none(self.net.as_dict, opt_merge)
 
         if group == 1:
-            self.net.clean()
+            self.net.remove(document)
             self.net.document(document)
             self.meta.document('network')
             self.net.update(combined)
