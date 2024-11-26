@@ -43,7 +43,6 @@ class TestMainDocker(object):
               "region": "us-east-2",
               "auth_mode": "sso",
               "profile": None,
-              "ssh_key": "/Users/michael/.ssh/mminichino-default-key-pair.pem",
               "cidr": None,
               "image": "couchbase/server",
               "quantity": "3",

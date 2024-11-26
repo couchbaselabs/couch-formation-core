@@ -14,6 +14,8 @@ class VolumeSpec:
     size: Optional[int] = attr.ib()
     run: Optional[str] = attr.ib()
     command: Optional[str] = attr.ib()
+    content: Optional[str] = attr.ib()
+    name: Optional[str] = attr.ib()
 
 
 @attr.s
@@ -23,8 +25,15 @@ class ContainerSpec:
     volume: Optional[VolumeSpec] = attr.ib(default=None)
     ports: Optional[str] = attr.ib(default="80,443")
 
-    def add_volume(self, v_type: str, directory: str, size: Union[int, None] = None, run: Union[str, None] = None, command: Union[str, None] = None):
-        self.volume = VolumeSpec(v_type, directory, size, run, command)
+    def add_volume(self,
+                   v_type: str,
+                   directory: str,
+                   size: Union[int, None] = None,
+                   run: Union[str, None] = None,
+                   command: Union[str, None] = None,
+                   content: Union[str, None] = None,
+                   name: Union[str, None] = None):
+        self.volume = VolumeSpec(v_type, directory, size, run, command, content, name)
 
     def add_ports(self, ports: str):
         self.ports = ports
@@ -72,7 +81,13 @@ class ContainerProfile(object):
                         profile.add_ports(settings.get('ports'))
                     if settings.get('volume'):
                         vol_spec = settings.get('volume')
-                        profile.add_volume(vol_spec.get('type'), vol_spec.get('directory'), vol_spec.get('size'), vol_spec.get('run'), vol_spec.get('command'))
+                        profile.add_volume(vol_spec.get('type'),
+                                           vol_spec.get('directory'),
+                                           vol_spec.get('size'),
+                                           vol_spec.get('run'),
+                                           vol_spec.get('command'),
+                                           vol_spec.get('content'),
+                                           vol_spec.get('name'))
                     self.config.add(profile)
             except yaml.YAMLError as err:
                 RuntimeError(f"Can not open target config file {self.cfg_file}: {err}")

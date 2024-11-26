@@ -110,6 +110,18 @@ class FileManager(object):
             cmd = command.split()
             RunShellCommand().cmd_exec(cmd, path)
 
+    def write_file(self, directory: str, filename: str, data: str):
+        self.make_dir(directory)
+        full_path = os.path.join(directory, filename)
+        try:
+            file_handle = open(full_path, 'w')
+            file_handle.write(data)
+            file_handle.write("\n")
+            file_handle.close()
+            return True
+        except OSError as err:
+            raise FileManagerError(f"can not write to file {full_path}: {err}.")
+
     @staticmethod
     def copy_file(source: Union[str, bytes], destination: Union[str, bytes]) -> None:
         try:

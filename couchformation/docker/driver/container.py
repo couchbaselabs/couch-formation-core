@@ -97,14 +97,11 @@ class Container(CloudBase):
             volume_mount = ip.volume.directory
             if ip.volume.size:
                 volume_size = ip.volume.size
-        if not dir_mount and ip.volume and ip.volume.run:
+        if not dir_mount and ip.volume and ip.volume.content and ip.volume.name:
             host_path = os.path.join(get_project_dir(self.project), self.name, 'mounts', name)
             dir_mount = host_path
-            if ip.volume.run:
-                run_cmd = self.process_command_vars(ip)
-            else:
-                run_cmd = None
-            FileManager().dir_populate(str(host_path), run_cmd)
+            data = self.process_template(ip)
+            FileManager().write_file(str(host_path), ip.volume.name, data)
         if not command and ip.volume and ip.volume.command:
             command = ip.volume.command
 
@@ -175,16 +172,16 @@ class Container(CloudBase):
         return ports
 
     @staticmethod
-    def get_file_parameters(input_text) -> Set[str]:
+    def get_template_tags(input_text) -> Set[str]:
         env = jinja2.Environment(undefined=jinja2.DebugUndefined)
         template = env.from_string(input_text)
         rendered = template.render()
         ast = env.parse(rendered)
         return find_undeclared_variables(ast)
 
-    def process_command_vars(self, profile: ContainerSpec) -> str:
+    def process_template(self, profile: ContainerSpec) -> str:
         tags = []
-        variables = self.get_file_parameters(profile.volume.run)
+        variables = self.get_template_tags(profile.volume.content)
         for variable in variables:
             if variable.startswith('port'):
                 ip_list = []
@@ -200,7 +197,7 @@ class Container(CloudBase):
             elif variable == 'dir_name' and profile.volume.directory:
                 tags.append((variable, profile.volume.directory))
         parameters = dict((a, b) for a, b in tags)
-        raw_template = jinja2.Template(profile.volume.run)
+        raw_template = jinja2.Template(profile.volume.content)
         return raw_template.render(parameters)
 
     def run_in_container(self, name: str, command: Union[str, List[str]], directory: Union[str, None] = None, root: bool = True):

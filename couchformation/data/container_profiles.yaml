@@ -10,7 +10,54 @@ couchbase/sync-gateway:
   builds: sgw
   ports: 4984-4986
   volume:
-    type: command
+    type: template
     directory: /tmp/config
-    run: "swmgr gateway configure -l {{ port_18091 }} -f sync_gateway.json -S /tmp/config"
     command: /tmp/config/sync_gateway.json
+    name: sync_gateway.json
+    content: |
+     {
+        "bootstrap": {
+         "group_id": "group1",
+         "server": "couchbases://{{ port_18091 }}",
+         "username": "Administrator",
+         "password": "password",
+         "server_tls_skip_verify": true,
+         "use_tls_server": true
+      },
+      "api": {
+        "admin_interface": ":4985"
+      },
+      "logging": {
+        "log_file_path": "{{ dir_name }}",
+        "redaction_level": "partial",
+        "console": {
+          "log_level": "debug",
+          "log_keys": ["*"]
+          },
+        "error": {
+          "enabled": true,
+          "rotation": {
+            "max_size": 20,
+            "max_age": 180
+            }
+          },
+        "warn": {
+          "enabled": true,
+          "rotation": {
+            "max_size": 20,
+            "max_age": 90
+            }
+          },
+        "info": {
+          "enabled": true,
+          "rotation": {
+            "max_size": 20,
+            "max_age": 90
+            }
+          },
+        "debug": {
+          "enabled": false
+          }
+      }
+     }
+
