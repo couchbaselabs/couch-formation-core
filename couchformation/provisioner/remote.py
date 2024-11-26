@@ -113,6 +113,8 @@ class RemoteProvisioner(object):
         cm = ConfigurationManager()
         if cm.get('ssh.key') and not self.ssh_key:
             self.ssh_key = cm.get('ssh.key')
+            self.parameters['ssh_key'] = self.ssh_key
+            logger.debug(f"Using SSH key {self.ssh_key} from stored config")
 
         logger.debug(f"Parameters:\n{json.dumps(self.parameters, indent=2)}")
 

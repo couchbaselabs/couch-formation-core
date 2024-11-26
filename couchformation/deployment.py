@@ -439,7 +439,6 @@ class NodeGroup(object):
 
     def create_network(self, parameters: argparse.Namespace, region, group=1):
         document = f"network:{self.cloud}:{region}"
-        self.net.document(document)
 
         opt_dict = vars(self.options)
         parm_dict = vars(parameters)
@@ -447,6 +446,8 @@ class NodeGroup(object):
         combined = dict_merge_not_none(self.net.as_dict, opt_merge)
 
         if group == 1:
+            self.net.clean()
+            self.net.document(document)
             self.meta.document('network')
             self.net.update(combined)
             self.meta[self.cloud] = True
