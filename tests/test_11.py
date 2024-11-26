@@ -12,8 +12,9 @@ from requests.auth import AuthBase
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 from couchformation.aws.driver.base import CloudBase
+from couchformation.resources.config_manager import ConfigurationManager
 from tests.interactive import aws_base
-from tests.common import start_container, stop_container, run_in_container, copy_home_env_to_container, ssh_key_relative_path, get_cmd_output, get_aws_tags
+from tests.common import start_container, stop_container, run_in_container, copy_home_env_to_container, ssh_key_relative_path, get_cmd_output
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger('couchformation.aws.driver.base')
@@ -67,20 +68,25 @@ class TestInstallAWS(object):
         time.sleep(1)
 
     def test_1(self):
+        cm = ConfigurationManager()
+        if cm.get('aws.tags'):
+            command = ['cloudmgr', 'config', 'set', 'aws.tags', cm.get('aws.tags')]
+            result = run_in_container(self.container_id, command, environment=self.environment)
+            assert result is True
+
+    def test_2(self):
         command = ["cloudmgr", "create", "--build", "cbs", "--cloud", "aws", "--project", "pytest-aws", "--name", "test-cluster",
                    "--region", "us-east-2", "--quantity", "3", "--os_id", "ubuntu", "--os_version", "22.04",
                    "--ssh_key", self.ssh_key_path, "--machine_type", "4x16"]
-        if get_aws_tags():
-            command.extend(["--tags", get_aws_tags()])
-        result = run_in_container(self.container_id, command, environment=self.environment)
-        assert result is True
-
-    def test_2(self):
-        command = ["cloudmgr", "deploy", "--project", "pytest-aws"]
         result = run_in_container(self.container_id, command, environment=self.environment)
         assert result is True
 
     def test_3(self):
+        command = ["cloudmgr", "deploy", "--project", "pytest-aws"]
+        result = run_in_container(self.container_id, command, environment=self.environment)
+        assert result is True
+
+    def test_4(self):
         command = ["cloudmgr", "list", "--project", "pytest-aws", "--json"]
         exit_code, output = get_cmd_output(self.container_id, command, environment=self.environment)
         assert exit_code == 0
@@ -101,7 +107,7 @@ class TestInstallAWS(object):
 
         assert response.status_code == 200
 
-    def test_4(self):
+    def test_5(self):
         command = ["cloudmgr", "destroy", "--project", "pytest-aws"]
         result = run_in_container(self.container_id, command, environment=self.environment)
         assert result is True

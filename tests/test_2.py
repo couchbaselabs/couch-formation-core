@@ -22,8 +22,8 @@ from couchformation.gcp.driver.machine import MachineType
 from couchformation.gcp.driver.firewall import Firewall
 from couchformation.gcp.driver.disk import Disk
 from couchformation.gcp.driver.image import Image
+from couchformation.resources.config_manager import ConfigurationManager
 from couchformation.ssh import SSHUtil
-from tests.common import ssh_key_path
 
 
 @pytest.mark.cf_gcp
@@ -48,7 +48,6 @@ class TestMainGCP(unittest.TestCase):
               "region": "us-central1",
               "auth_mode": None,
               "profile": None,
-              "ssh_key": ssh_key_path,
               "cidr": None,
               "os_id": "ubuntu",
               "os_version": "22.04",
@@ -63,6 +62,10 @@ class TestMainGCP(unittest.TestCase):
         self.os_id = self.parameters.get('os_id')
         self.os_version = self.parameters.get('os_version')
         self.machine_type = self.parameters.get('machine_type')
+
+        cm = ConfigurationManager()
+        if cm.get('ssh.key') and not self.ssh_key:
+            self.ssh_key = cm.get('ssh.key')
 
     def tearDown(self):
         time.sleep(1)

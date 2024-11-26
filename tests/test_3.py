@@ -21,8 +21,8 @@ from couchformation.azure.driver.instance import Instance
 from couchformation.azure.driver.machine import MachineType
 from couchformation.azure.driver.disk import Disk
 from couchformation.azure.driver.image import Image
+from couchformation.resources.config_manager import ConfigurationManager
 from couchformation.ssh import SSHUtil
-from tests.common import ssh_key_path
 
 
 @pytest.mark.cf_azure
@@ -47,7 +47,6 @@ class TestMainAzure(unittest.TestCase):
               "region": "eastus",
               "auth_mode": None,
               "profile": None,
-              "ssh_key": ssh_key_path,
               "cidr": None,
               "os_id": "ubuntu",
               "os_version": "22.04",
@@ -62,6 +61,10 @@ class TestMainAzure(unittest.TestCase):
         self.os_id = self.parameters.get('os_id')
         self.os_version = self.parameters.get('os_version')
         self.machine_type = self.parameters.get('machine_type')
+
+        cm = ConfigurationManager()
+        if cm.get('ssh.key') and not self.ssh_key:
+            self.ssh_key = cm.get('ssh.key')
 
     def tearDown(self):
         time.sleep(1)

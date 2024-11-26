@@ -24,9 +24,9 @@ from couchformation.aws.driver.nsg import SecurityGroup
 from couchformation.aws.driver.route import RouteTable
 from couchformation.aws.driver.sshkey import SSHKey
 from couchformation.aws.driver.image import Image
+from couchformation.resources.config_manager import ConfigurationManager
 from couchformation.ssh import SSHUtil
 from couchformation.util import parameter_to_dict
-from tests.common import ssh_key_path, get_aws_tags
 
 
 @pytest.mark.cf_aws
@@ -51,7 +51,6 @@ class TestMainAWS(unittest.TestCase):
               "region": "us-east-2",
               "auth_mode": "sso",
               "profile": None,
-              "ssh_key": ssh_key_path,
               "cidr": None,
               "os_id": "ubuntu",
               "os_version": "22.04",
@@ -59,8 +58,7 @@ class TestMainAWS(unittest.TestCase):
               "quantity": "3",
               "services": None,
               "volume_iops": None,
-              "volume_size": None,
-              "tags": get_aws_tags()
+              "volume_size": None
             }
         self.project = self.parameters.get('project')
         self.ssh_key = self.parameters.get('ssh_key')
@@ -68,6 +66,12 @@ class TestMainAWS(unittest.TestCase):
         self.os_version = self.parameters.get('os_version')
         self.machine_type = self.parameters.get('machine_type')
         self.tags = self.parameters.get('tags')
+
+        cm = ConfigurationManager()
+        if cm.get('aws.tags') and not self.tags:
+            self.tags = cm.get('aws.tags')
+        if cm.get('ssh.key') and not self.ssh_key:
+            self.ssh_key = cm.get('ssh.key')
 
     def tearDown(self):
         time.sleep(1)

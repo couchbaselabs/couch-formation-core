@@ -66,6 +66,8 @@ class AWSNetwork(object):
         cm = ConfigurationManager()
         if cm.get('aws.tags') and not self.tags:
             self.tags = cm.get('aws.tags')
+        if os.environ.get('AWS_TAGS') and not self.tags:
+            self.tags = os.environ.get('AWS_TAGS')
 
         self.tags = csv_dict_concat({"Project": self.project}, self.tags)
         self.tags = csv_dict_concat({"Service": self.name}, self.tags)
