@@ -49,7 +49,6 @@ aws:
     - tags
   required:
     - region
-    - ssh_key
     - os_id
     - os_version
     - quantity
@@ -102,7 +101,6 @@ gcp:
     - managed_gcp_zone
   required:
     - region
-    - ssh_key
     - os_id
     - os_version
     - quantity
@@ -155,7 +153,6 @@ azure:
     - ports
   required:
     - region
-    - ssh_key
     - os_id
     - os_version
     - quantity
