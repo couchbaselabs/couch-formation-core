@@ -69,6 +69,8 @@ class AWSDeployment(object):
             self.tags = cm.get('aws.tags')
         if os.environ.get('AWS_TAGS') and not self.tags:
             self.tags = os.environ.get('AWS_TAGS')
+        if cm.get('ssh.key') and not self.ssh_key:
+            self.ssh_key = cm.get('ssh.key')
 
         self.tags = csv_dict_concat({"Project": self.project}, self.tags)
         self.tags = csv_dict_concat({"Service": self.name}, self.tags)

@@ -38,7 +38,6 @@ class GCPNetwork(object):
         self.region = parameters.get('region')
         self.auth_mode = parameters.get('auth_mode')
         self.profile = parameters.get('profile')
-        self.ssh_key = parameters.get('ssh_key')
         self.cloud = parameters.get('cloud')
         self.domain = parameters.get('domain')
         self.peer_project = parameters.get('peer_gcp_project')

@@ -20,6 +20,7 @@ from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import FileManager, Synchronize, UUIDGen
 from couchformation.util import PasswordUtility
+from couchformation.resources.config_manager import ConfigurationManager
 
 logger = logging.getLogger('couchformation.azure.node')
 logger.addHandler(logging.NullHandler())
@@ -71,6 +72,10 @@ class AzureDeployment(object):
         self.data_encoded = f"{self.asset_prefix}-{node_code}-data"
         self.pub_ip_encoded = f"{self.asset_prefix}-{node_code}-pub-ip"
         self.nic_encoded = f"{self.asset_prefix}-{node_code}-nic"
+
+        cm = ConfigurationManager()
+        if cm.get('ssh.key') and not self.ssh_key:
+            self.ssh_key = cm.get('ssh.key')
 
         filename = get_state_file(self.project, self.name)
 

@@ -18,6 +18,7 @@ from couchformation.ssh import SSHUtil
 from couchformation.exception import FatalError
 from couchformation.kvdb import KeyValueStore
 from couchformation.util import FileManager, Synchronize, UUIDGen
+from couchformation.resources.config_manager import ConfigurationManager
 
 logger = logging.getLogger('couchformation.gcp.node')
 logger.addHandler(logging.NullHandler())
@@ -60,6 +61,10 @@ class GCPDeployment(object):
         self.node_encoded = f"{self.asset_prefix}-{node_code}-node"
         self.swap_encoded = f"{self.asset_prefix}-{node_code}-swap"
         self.data_encoded = f"{self.asset_prefix}-{node_code}-data"
+
+        cm = ConfigurationManager()
+        if cm.get('ssh.key') and not self.ssh_key:
+            self.ssh_key = cm.get('ssh.key')
 
         filename = get_state_file(self.project, self.name)
 

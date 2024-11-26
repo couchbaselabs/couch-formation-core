@@ -14,7 +14,7 @@ from requests.adapters import HTTPAdapter
 from couchformation.aws.driver.base import CloudBase
 from couchformation.resources.config_manager import ConfigurationManager
 from tests.interactive import aws_base
-from tests.common import start_container, stop_container, run_in_container, copy_home_env_to_container, ssh_key_relative_path, get_cmd_output
+from tests.common import start_container, stop_container, run_in_container, copy_home_env_to_container, get_cmd_output
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger('couchformation.aws.driver.base')
@@ -47,7 +47,6 @@ class TestInstallAWS(object):
     container_id = None
     environment = {}
     container_name = 'pytest'
-    ssh_key_path = os.path.join('/home/ubuntu', ssh_key_relative_path)
 
     @classmethod
     def setup_class(cls):
@@ -74,10 +73,13 @@ class TestInstallAWS(object):
             result = run_in_container(self.container_id, command, environment=self.environment)
             assert result is True
 
+        command = ['cloudmgr', 'ssh', 'create', '--name', 'pytest-key-pair']
+        result = run_in_container(self.container_id, command, environment=self.environment)
+        assert result is True
+
     def test_2(self):
         command = ["cloudmgr", "create", "--build", "cbs", "--cloud", "aws", "--project", "pytest-aws", "--name", "test-cluster",
-                   "--region", "us-east-2", "--quantity", "3", "--os_id", "ubuntu", "--os_version", "22.04",
-                   "--ssh_key", self.ssh_key_path, "--machine_type", "4x16"]
+                   "--region", "us-east-2", "--quantity", "3", "--os_id", "ubuntu", "--os_version", "22.04", "--machine_type", "4x16"]
         result = run_in_container(self.container_id, command, environment=self.environment)
         assert result is True
 

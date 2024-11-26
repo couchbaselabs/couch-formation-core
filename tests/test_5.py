@@ -21,7 +21,6 @@ sys.path.append(current)
 
 from couchformation.project import Project
 from couchformation.cli.cloudmgr import CloudMgrCLI
-from tests.common import ssh_key_path
 
 
 class BasicAuth(AuthBase):
@@ -60,16 +59,14 @@ class TestMainGCP(unittest.TestCase):
 
     def test_1(self):
         args = ["create", "--build", "cbs", "--cloud", "gcp", "--project", "pytest-gcp", "--name", "test-cluster",
-                "--region", "us-central1", "--quantity", "3", "--os_id", "ubuntu", "--os_version", "22.04",
-                "--ssh_key", ssh_key_path, "--machine_type", "4x16"]
+                "--region", "us-central1", "--quantity", "3", "--os_id", "ubuntu", "--os_version", "22.04", "--machine_type", "4x16"]
         cm = CloudMgrCLI(args)
         project = Project(cm.options, cm.remainder)
         project.create()
 
     def test_2(self):
         args = ["add", "--build", "cbs", "--cloud", "gcp", "--project", "pytest-gcp", "--name", "test-cluster",
-                "--region", "us-central1", "--quantity", "2", "--os_id", "ubuntu", "--os_version", "22.04",
-                "--ssh_key", ssh_key_path, "--machine_type", "4x16", "--services", "analytics"]
+                "--region", "us-central1", "--quantity", "2", "--os_id", "ubuntu", "--os_version", "22.04", "--machine_type", "4x16", "--services", "analytics"]
         cm = CloudMgrCLI(args)
         project = Project(cm.options, cm.remainder)
         project.add()
