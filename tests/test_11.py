@@ -73,7 +73,7 @@ class TestInstallAWS(object):
             result = run_in_container(self.container_id, command, environment=self.environment)
             assert result is True
 
-        command = ['cloudmgr', 'ssh', 'create', '--name', 'pytest-key-pair']
+        command = ['cloudmgr', 'ssh', 'create', '--name', 'pytest-key-pair', '-r']
         result = run_in_container(self.container_id, command, environment=self.environment)
         assert result is True
 

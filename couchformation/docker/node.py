@@ -51,6 +51,11 @@ class DockerDeployment(object):
             if result is None:
                 logger.warning(f"Removing stale state entry for container {self.state.get('instance_id')}")
                 del self.state['instance_id']
+        else:
+            container_id = Container(self.parameters).get_container_id(self.node_name)
+            if container_id:
+                logger.warning(f"Importing orphaned container {self.node_name}")
+                self.state['instance_id'] = container_id
 
     def deploy(self):
         self.check_state()

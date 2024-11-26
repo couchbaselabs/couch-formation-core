@@ -27,6 +27,8 @@ class DockerNetwork(object):
         self.project = parameters.get('project')
         self.cloud = parameters.get('cloud')
 
+        self.net_name = f"{self.project}-net"
+
         filename = get_state_file(self.project, 'common')
 
         try:
@@ -46,12 +48,16 @@ class DockerNetwork(object):
             if network is None:
                 logger.warning(f"Removing stale state entry for network {self.state.get('network')}")
                 del self.state['network']
+        else:
+            network = Network(self.parameters).get_network(self.net_name)
+            if network:
+                logger.warning(f"Importing orphaned entry for network {self.net_name}")
+                self.state['network'] = network
 
     @synchronize()
     def create_vpc(self):
         self.check_state()
         cidr_util = NetworkDriver()
-        net_name = f"{self.project}-net"
 
         for net in self.docker_network.cidr_list:
             cidr_util.add_network(net)
@@ -64,10 +70,10 @@ class DockerNetwork(object):
                 subnet_list = list(cidr_util.get_next_subnet())
                 subnet_cycle = cycle(subnet_list[1:])
                 subnet_cidr = next(subnet_cycle)
-                Network(self.parameters).create(net_name, subnet_cidr)
-                self.state['network'] = net_name
+                Network(self.parameters).create(self.net_name, subnet_cidr)
+                self.state['network'] = self.net_name
                 self.state['network_cidr'] = subnet_cidr
-                logger.info(f"Created network {net_name}")
+                logger.info(f"Created network {self.net_name}")
 
             self.state['state'] = State.DEPLOYED.value
         except Exception as err:
