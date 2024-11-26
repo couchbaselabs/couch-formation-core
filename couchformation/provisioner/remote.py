@@ -13,6 +13,7 @@ from couchformation.exception import NonFatalError
 from couchformation.config import NodeList, get_state_dir
 from couchformation.provisioner.ssh import RunSSHCommand
 from couchformation.provisioner.sftp import SFTPFile, SFTPFileObject
+from couchformation.resources.config_manager import ConfigurationManager
 import couchformation.constants as C
 
 logger = logging.getLogger('couchformation.provisioner.remote')
@@ -108,6 +109,10 @@ class RemoteProvisioner(object):
         else:
             self.public_host_list = 'null'
         self.use_private_ip = self.parameters.get('use_private_ip') if self.parameters.get('use_private_ip') else False
+
+        cm = ConfigurationManager()
+        if cm.get('ssh.key') and not self.ssh_key:
+            self.ssh_key = cm.get('ssh.key')
 
         logger.debug(f"Parameters:\n{json.dumps(self.parameters, indent=2)}")
 
