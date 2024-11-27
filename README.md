@@ -176,6 +176,26 @@ cloudmgr update --project dev01 --name node --machine_type 8x32
 cloudmgr update --project dev01 --name testdb --group 2 --machine_type 4x16
 ```
 
+### Remove a service from a project:
+```
+cloudmgr remove --project dev01 --name testdb
+```
+
+### Remove an entire project:
+```
+cloudmgr clean --project dev01
+```
+
+### Create a SSH key to use with Couch Formation:
+```
+cloudmgr ssh create
+```
+
+### Set configuration parameters (see table below for all supported parameters):
+```
+cloudmgr config set ssh.key /Users/jdoe/.ssh/jdoe-default-key-pair.pem
+```
+
 ## AWS SSO Support
 ### Setup AWS CLI SSO:
 ```
@@ -215,12 +235,14 @@ pip3 install wheel
 pip3 install couchformation
 ```
 ## Configuration Parameters
-| Parameter       | Description                |
-|-----------------|----------------------------|
-| capella.token   | Capella API token          |
-| capella.user    | Capella user email address |
-| capella.user.id | Capella user ID            |
-| capella.project | Capella project            |
+| Parameter       | Description                      |
+|-----------------|----------------------------------|
+| aws.tags        | Default tags for AWS deployments |
+| capella.token   | Capella API token                |
+| capella.user    | Capella user email address       |
+| capella.user.id | Capella user ID                  |
+| capella.project | Capella project                  |
+| ssh.key         | Default SSH key                  |
 ## Operating System Information
 
 | ID            | Operating System         | Versions     | AWS User      | GCP User  | Azure User |

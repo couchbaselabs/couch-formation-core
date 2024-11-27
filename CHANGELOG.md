@@ -7,10 +7,17 @@ All notable changes to this project will be documented in this file.
 ### Added
 - New AWS, GCP, and Azure parameter `--machine_name` to specify a cloud dependent machine name
 - Retry on transient resource capacity errors with some Azure machine sizes 
+- Added the `aws.tags` configuration setting to provide a default set of tags for AWS deployments
+- Added the `ssh.key` configuration setting to provide a default SSH key
+- Added the ability to create a SSH key to use with Couch Formation via `cloudmgr ssh create`
 
 ### Changed
 - New project and service names must conform to RFC1035
 - Project clean now removes the project root directory as well as files
+- Refactored the Docker driver to no longer depend on a locally installed `host-prep-lib`
+
+### Fixed
+- Fixed the Docker driver state check to properly identify orphaned resources
 
 ## [4.0.0]
 
