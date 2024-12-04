@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Union, List
 
 from couchformation.aws.driver.base import CloudBase, AWSDriverError
-from couchformation.aws.driver.constants import AWSEbsDisk, AWSTagStruct, EbsVolume, AWSTag, PlacementType
+from couchformation.aws.driver.constants import AWSEbsDisk, AWSEphemeralDisk, AWSTagStruct, EbsVolume, AWSTag, PlacementType
 from couchformation.ssh import SSHUtil
 
 logger = logging.getLogger('couchformation.aws.driver.instance')
@@ -50,7 +50,8 @@ class Instance(CloudBase):
             placement: PlacementType = PlacementType.ZONE,
             host_id: str = None,
             enable_winrm: bool = False,
-            tags: dict = None):
+            tags: dict = None,
+            ephemeral: bool = False):
         volume_type = "gp3"
         kwargs = {}
         try:
@@ -66,8 +67,11 @@ class Instance(CloudBase):
         disk_list = [
             AWSEbsDisk.build(root_dev, EbsVolume(volume_type, root_size, 3000)).as_dict,
             AWSEbsDisk.build(f"{root_disk_prefix}b", EbsVolume(volume_type, swap_size, swap_iops)).as_dict,
-            AWSEbsDisk.build(f"{root_disk_prefix}c", EbsVolume(volume_type, data_size, data_iops)).as_dict,
         ]
+        if ephemeral:
+            disk_list.append(AWSEphemeralDisk.build(f"{root_disk_prefix}c", "ephemeral0").as_dict)
+        else:
+            disk_list.append(AWSEbsDisk.build(f"{root_disk_prefix}c", EbsVolume(volume_type, data_size, data_iops)).as_dict)
         i_tag = AWSTagStruct.build("instance")
         i_tag.add(AWSTag("Name", name))
         if tags:

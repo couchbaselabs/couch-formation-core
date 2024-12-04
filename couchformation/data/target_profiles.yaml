@@ -47,12 +47,14 @@ aws:
     - hosted_zone
     - provider_id
     - tags
+    - ephemeral
   required:
     - region
     - os_id
     - os_version
     - quantity
-  boolean: []
+  boolean:
+    - ephemeral
 gcp:
   base:
     couchformation.gcp.driver.base:

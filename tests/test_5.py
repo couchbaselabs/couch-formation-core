@@ -43,6 +43,7 @@ class BasicAuth(AuthBase):
 @pytest.mark.cf_gcp
 @pytest.mark.cf_windows
 @pytest.mark.cf_posix
+@pytest.mark.cf_basic
 @pytest.mark.order(5)
 class TestMainGCP(unittest.TestCase):
 

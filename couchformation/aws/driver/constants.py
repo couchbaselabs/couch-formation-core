@@ -103,6 +103,23 @@ class AWSEbsDisk(object):
 
 
 @attr.s
+class AWSEphemeralDisk(object):
+    DeviceName = attr.ib(validator=io(str))
+    VirtualName = attr.ib(validator=io(str))
+
+    @classmethod
+    def build(cls, device: str, virtual: str):
+        return cls(
+            device,
+            virtual
+        )
+
+    @property
+    def as_dict(self):
+        return self.__dict__
+
+
+@attr.s
 class AWSEbsDiskTypes(object):
     ebs_type_list = [
         {

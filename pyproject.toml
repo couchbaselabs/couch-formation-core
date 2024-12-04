@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "couchformation"
 description = "Couchbase Cloud Automation"
-version = "4.0.1"
+version = "4.0.2"
 readme = "README.md"
 authors = ["Michael Minichino <info@unix.us.com>"]
 classifiers = [
@@ -125,7 +125,8 @@ markers = [
     "cf_columnar: marks a test as a Columnar test",
     "cf_windows: marks a test as a Windows safe test",
     "cf_posix: marks a test as a macOS or Linux safe test",
-    "cf_cli: marks a test as a CLI simulation test"
+    "cf_cli: marks a test as a CLI simulation test",
+    "cf_basic: marks a test as a basic test"
 ]
 
 [tool.tox]

@@ -56,6 +56,7 @@ class AWSDeployment(object):
         self.volume_size = parameters.get('volume_size') if parameters.get('volume_size') else "256"
         self.volume_iops = parameters.get('volume_iops') if parameters.get('volume_iops') \
             else next((aws_storage_matrix[s] for s in aws_storage_matrix if s >= int(self.volume_size)), "3000")
+        self.ephemeral = parameters.get('ephemeral') if parameters.get('ephemeral') else False
         self.services = parameters.get('services') if parameters.get('services') else "default"
 
         project_uid = MetadataManager(self.project).project_uid
@@ -214,7 +215,8 @@ class AWSDeployment(object):
                                                     placement=placement,
                                                     host_id=host_id,
                                                     enable_winrm=enable_winrm,
-                                                    tags=parameter_to_dict(self.tags))
+                                                    tags=parameter_to_dict(self.tags),
+                                                    ephemeral=self.ephemeral)
 
         self.state['instance_id'] = instance_id
         self.state['name'] = self.node_encoded

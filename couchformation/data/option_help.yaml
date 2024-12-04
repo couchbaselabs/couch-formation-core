@@ -17,6 +17,9 @@ dir_mount:
 domain:
   type_class: str
   help: DNS domain (enables DNS integration - domain must be setup in cloud provider)
+ephemeral:
+  type_class: bool
+  help: Use AWS EC2 instance store (ephemeral) volumes
 feature:
   type_class: str
   help: Feature selection (if supported - cloud and build specific)
