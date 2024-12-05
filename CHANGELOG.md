@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.0.2]
+
+### Added
+- New AWS optional boolean parameter `--ephemeral` to use the instance ephemeral disk for the data volume as opposed to an EBS volume
+
 ## [4.0.1]
 
 ### Added

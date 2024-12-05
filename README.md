@@ -196,6 +196,11 @@ cloudmgr ssh create
 cloudmgr config set ssh.key /Users/jdoe/.ssh/jdoe-default-key-pair.pem
 ```
 
+### Get help on supported parameters:
+```
+cloudmgr help --cloud aws
+```
+
 ## AWS SSO Support
 ### Setup AWS CLI SSO:
 ```
